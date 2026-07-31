@@ -1,0 +1,40 @@
+.pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.navButton {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #c5ced6;
+  border-radius: 6px;
+  background: #e5e7eb;
+  color: #374151;
+  cursor: pointer;
+}
+
+.navButton:hover:not(:disabled) {
+  background: #d1d5db;
+}
+
+.navButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pageBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  height: 34px;
+  padding: 0 0.75rem;
+  border-radius: 6px;
+  background: #cfe8f8;
+  color: #043d59;
+  font-size: 0.9rem;
+  font-weight: 700;
+}

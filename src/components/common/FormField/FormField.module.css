@@ -1,0 +1,14 @@
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.label {
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.required {
+  color: #dc2626;
+}

@@ -1,0 +1,65 @@
+.shell {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  background: #eef2f4;
+  color: #111827;
+  font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.shellCollapsed .body {
+  grid-template-columns: 88px minmax(0, 1fr);
+}
+
+.mainColumn {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.content {
+  min-width: 0;
+  min-height: 0;
+  padding: 0.9rem 1rem 1rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.notFound {
+  display: grid;
+  place-content: center;
+  gap: 0.75rem;
+  min-height: 100vh;
+  padding: 2rem;
+  background: #eef2f4;
+  text-align: center;
+}
+
+.notFound h1 {
+  margin: 0;
+  color: #043d59;
+}
+
+.notFound p {
+  margin: 0 0 0.5rem;
+  color: #6b7280;
+}
+
+@media (max-width: 900px) {
+  .body,
+  .shellCollapsed .body {
+    grid-template-columns: 1fr;
+  }
+}

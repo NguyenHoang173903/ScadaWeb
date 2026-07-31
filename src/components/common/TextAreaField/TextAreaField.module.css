@@ -1,0 +1,23 @@
+.textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #c5d6de;
+  border-radius: 8px;
+  background: #e8f4f8;
+  color: #111827;
+  font: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  resize: vertical;
+}
+
+.textarea:focus {
+  border-color: #043d59;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(4, 61, 89, 0.12);
+}
+
+.textarea::placeholder {
+  color: #9aa7b2;
+}

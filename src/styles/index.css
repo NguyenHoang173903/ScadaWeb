@@ -1,7 +1,7 @@
 :root {
-  color: #0f172a;
-  background: #f8fafc;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #f8fafc;
+  background: #050a18;
+  font-family: "Be Vietnam Pro", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -22,4 +22,11 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }

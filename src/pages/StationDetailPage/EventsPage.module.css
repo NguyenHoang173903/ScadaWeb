@@ -1,0 +1,48 @@
+.page {
+  display: grid;
+  gap: 0.85rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.tabsWrap {
+  border-radius: 10px;
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+}
+
+.tablePanel {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.operationLogTable :global(th) {
+  white-space: normal;
+  line-height: 1.25;
+  vertical-align: middle;
+}
+
+.badgeCell {
+  display: inline-flex;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.badgeCell :global(span) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cellText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

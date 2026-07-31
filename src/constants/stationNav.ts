@@ -1,0 +1,80 @@
+import type { LucideIcon } from 'lucide-react'
+import {
+  Activity,
+  BarChart3,
+  ClipboardList,
+  FileText,
+  GitBranch,
+  Network,
+  Users,
+} from 'lucide-react'
+
+export type StationNavItem = {
+  id: string
+  label: string
+  path: string
+  icon: LucideIcon
+  children?: { id: string; label: string; path: string }[]
+}
+
+export const STATION_NAV_ITEMS: StationNavItem[] = [
+  {
+    id: 'schematic',
+    label: 'Sơ đồ nguyên lý',
+    path: 'schematic',
+    icon: GitBranch,
+  },
+  {
+    id: 'process',
+    label: 'Sơ đồ công nghệ',
+    path: 'process',
+    icon: Network,
+  },
+  {
+    id: 'devices',
+    label: 'Danh sách thiết bị',
+    path: 'devices',
+    icon: ClipboardList,
+    children: [
+      { id: 'devices-1-5', label: 'Thiết bị 1-5', path: 'devices/1-5' },
+      { id: 'devices-6-10', label: 'Thiết bị 6-10', path: 'devices/6-10' },
+    ],
+  },
+  {
+    id: 'charts',
+    label: 'Đồ thị',
+    path: 'charts',
+    icon: BarChart3,
+    children: [
+      { id: 'charts-temperature', label: 'Đồ thị nhiệt', path: 'charts/temperature' },
+      { id: 'charts-current', label: 'Đồ thị dòng', path: 'charts/current' },
+    ],
+  },
+  {
+    id: 'reports',
+    label: 'Báo cáo',
+    path: 'reports',
+    icon: FileText,
+  },
+  {
+    id: 'events',
+    label: 'Sự kiện',
+    path: 'events',
+    icon: Activity,
+    children: [
+      { id: 'events-existing', label: 'Lỗi tồn tại', path: 'events/existing' },
+      { id: 'events-history', label: 'Lịch sử', path: 'events/history' },
+      {
+        id: 'events-operation-log',
+        label: 'Nhật ký vận hành',
+        path: 'events/operation-log',
+      },
+    ],
+  },
+  {
+    id: 'team',
+    label: 'Tổ vận hành',
+    path: 'team',
+    icon: Users,
+  },
+]

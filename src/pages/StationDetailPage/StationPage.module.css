@@ -1,0 +1,392 @@
+.page {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.panel {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 420px;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid #cfd8dc;
+  border-radius: 12px;
+  background: #ffffff;
+  /* Một thanh cuộn ngang duy nhất cho sơ đồ */
+  overflow-x: auto;
+}
+
+.panel h2 {
+  margin: 0 0 0.5rem;
+  color: #043d59;
+  font-size: 1.2rem;
+}
+
+.panel p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.hint {
+  margin-top: 0.85rem !important;
+  color: #6b7280 !important;
+}
+
+.diagramStage {
+  width: 100%;
+  min-width: 0;
+}
+
+/* One strip: SVG + mid boxes + bottom cards share the same width */
+.diagramInner {
+  position: relative;
+  width: 100%;
+  min-width: 1100px;
+}
+
+.diagramLayer {
+  position: relative;
+  width: 100%;
+}
+
+.diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.processSvgHost {
+  width: 100%;
+  line-height: 0;
+}
+
+.processSvgHost svg,
+.processDiagramSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* —— Thông số điện (top-right, above busbar) —— */
+.electricalBox {
+  position: absolute;
+  top: 1.2%;
+  right: 18%;
+  z-index: 3;
+  width: 16.4%;
+  min-width: 150px;
+  max-width: 230px;
+  font-size: clamp(0.52rem, 0.78vw, 0.7rem);
+  line-height: 1.32;
+  pointer-events: none;
+}
+
+.electricalHead {
+  padding: 0.3em 0.45em;
+  background: #043d59;
+  color: #ffffff;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid #043d59;
+}
+
+.electricalBody {
+  margin: 0;
+  padding: 0.3em 0.45em 0.4em;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid #6b7280;
+  border-top: none;
+}
+
+.electricalBody li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5em;
+  white-space: nowrap;
+}
+
+.electricalBody span {
+  color: #111827;
+}
+
+.electricalBody strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+.electricalBody em {
+  font-style: normal;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+/*
+  I/V boxes: left of feeder, between MCCB/X and KĐM
+  sdnl.svg ≈ y298–340 / 543 → top≈54.9%
+*/
+.measureBox {
+  position: absolute;
+  top: 54.9%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.28em;
+  width: 5.2%;
+  min-width: 52px;
+  max-width: 78px;
+  /* % tính theo chiều rộng ô → scale theo diagram; -100% = mép phải sát cột */
+  transform: translateX(-135%);
+  padding: 0.35em 0.45em;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid #1f2937;
+  font-family: Poppins, "Be Vietnam Pro", sans-serif;
+  font-size: clamp(0.5rem, 0.7vw, 0.64rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: #111827;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.measureBox > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.45em;
+}
+
+.measureBox span,
+.measureBox strong {
+  font-family: inherit;
+  font-weight: 500;
+}
+
+/* —— Bottom pump cards (in flow, above legend — không đè chú thích) —— */
+.pumpCardsLayer {
+  position: relative;
+  width: 100%;
+  height: 5rem;
+  margin-top: 0.55rem;
+  margin-bottom: 0.85rem;
+}
+
+.pumpCard {
+  position: absolute;
+  top: 0;
+  width: 8%;
+  min-width: 76px;
+  max-width: 118px;
+  transform: translateX(-50%);
+  font-size: clamp(0.48rem, 0.7vw, 0.64rem);
+  line-height: 1.25;
+  border: 1px solid #6b7280;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.pumpCardHead {
+  padding: 0.28em 0.3em;
+  color: #ffffff;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: #043d59;
+}
+
+.pumpCardBody {
+  padding: 0.35em 0.4em 0.4em;
+  background: #ffffff;
+  font-family: Poppins, "Be Vietnam Pro", sans-serif;
+  font-weight: 500;
+}
+
+.pumpCardBody > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.3em;
+  margin-bottom: 0.28em;
+  white-space: nowrap;
+}
+
+.pumpCardBody > div:last-child {
+  margin-bottom: 0;
+}
+
+.pumpCardBody span,
+.pumpCardBody strong,
+.pumpCardBody em {
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.pumpCardBody span {
+  color: #111827;
+}
+
+.pumpCardBody strong {
+  color: #111827;
+}
+
+.pumpCardBody em {
+  font-style: normal;
+  color: #4b5563;
+}
+
+/*
+  Process diagram (sdcn.svg): cards under yellow pumps
+  Pump bottom ≈ y418 / 727 → top≈57.5%
+*/
+.processInner {
+  min-width: 1200px;
+}
+
+.processInner .diagramLayer {
+  position: relative;
+  width: 100%;
+  /* Dịch sơ đồ sang trái (giữ đủ nội dung, không crop viewBox) */
+  transform: translateX(-4%);
+}
+
+.processPumpCard {
+  top: 57.5%;
+  z-index: 2;
+  width: 5.8%;
+  min-width: 68px;
+  max-width: 96px;
+  font-size: clamp(0.4rem, 0.5vw, 0.5rem);
+  line-height: 1.25;
+  pointer-events: none;
+}
+
+.processPumpCard .pumpCardHead {
+  padding: 0.35em 0.25em;
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.processPumpCard .pumpCardBody {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  min-height: 3.1em;
+  padding: 0.5em 0.35em 0.55em;
+}
+
+.processPumpCard .pumpCardBody > div {
+  margin-bottom: 0;
+  gap: 0.2em;
+}
+
+/* —— Process diagram labels: Bể Xả / Sông Hồng / mực nước —— */
+.processBasinLabel {
+  position: absolute;
+  top: 9.5%;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  color: #1f2937;
+  font-family: Poppins, "Be Vietnam Pro", sans-serif;
+  font-size: clamp(1.15rem, 2vw, 1.65rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 55%);
+}
+
+.processRiverRow {
+  position: absolute;
+  top: 89.5%;
+  left: 42%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  pointer-events: none;
+}
+
+.processRiverLabel {
+  color: #ffffff;
+  font-family: Poppins, "Be Vietnam Pro", sans-serif;
+  font-size: clamp(0.85rem, 1.35vw, 1.15rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 35%);
+}
+
+.processWaterBox {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.35em 0.7em;
+  border: 1px solid #6b7280;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
+  font-family: Poppins, "Be Vietnam Pro", sans-serif;
+  font-size: clamp(0.72rem, 1.05vw, 0.92rem);
+  font-weight: 500;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.processWaterBox strong {
+  font-weight: 600;
+}
+
+/* —— Legend —— */
+.schematicLegend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.15rem 1.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #1f2937;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.schematicLegend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legendDot {
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 25%);
+}
+
+.dotRunning {
+  background: #22c55e;
+}
+
+.dotError {
+  background: #eab308;
+}
+
+.dotStopped {
+  background: #ef4444;
+}
+
+.dotUnknown {
+  background: #9ca3af;
+}

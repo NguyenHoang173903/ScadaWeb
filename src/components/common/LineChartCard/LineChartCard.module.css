@@ -1,0 +1,33 @@
+.card {
+  padding: 1rem 1.15rem 1.1rem;
+  border: 1px solid #cfd8dc;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.title {
+  margin: 0 0 0.35rem;
+  color: #043d59;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.chartWrap {
+  width: 100%;
+  min-height: 320px;
+}
+
+.chartWrap :global(.recharts-legend-item) {
+  cursor: pointer;
+  user-select: none;
+}
+
+.legendItem {
+  color: #374151;
+}
+
+.legendItemHidden {
+  color: #9ca3af;
+  text-decoration: line-through;
+}

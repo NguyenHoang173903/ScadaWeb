@@ -1,0 +1,54 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 48px;
+  padding: 0 1rem 0 0.5rem;
+  background: #043d59;
+  color: #ffffff;
+}
+
+.tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  overflow-x: auto;
+}
+
+.tab {
+  position: relative;
+  padding: 0.9rem 1.1rem;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.98rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: #ffffff;
+}
+
+.active {
+  color: #ffffff;
+}
+
+.active::after {
+  content: "";
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0;
+  left: 0.85rem;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: #ffffff;
+}
+
+.trailing {
+  display: inline-flex;
+  align-items: center;
+  color: #ffffff;
+}

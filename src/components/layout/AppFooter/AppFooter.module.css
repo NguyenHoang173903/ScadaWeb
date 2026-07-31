@@ -1,0 +1,40 @@
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 42px;
+  padding: 0.55rem 1.15rem;
+  border-top: 1px solid #dde3e8;
+  background: #f3f5f7;
+  color: #6b7280;
+  font-size: 0.82rem;
+}
+
+.left,
+.center,
+.right {
+  min-width: 0;
+}
+
+.left {
+  text-transform: lowercase;
+}
+
+.right {
+  color: #043d59;
+  text-decoration: none;
+}
+
+.right:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 800px) {
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding-block: 0.7rem;
+  }
+}
