@@ -1,15 +1,17 @@
 .page {
-  --text: #f8fafc;
-  --muted: #94a3b8;
-  --accent: #38bdf8;
-  --accent-strong: #0ea5e9;
+  --text: #17324d;
+  --muted: #607487;
+  --accent: #087eae;
+  --accent-strong: #056b98;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-border: rgba(36, 127, 150, 0.58);
 
   display: grid;
   place-items: center;
   min-height: 100vh;
   overflow: hidden;
   color: var(--text);
-  background: #050a18;
+  background: #e7f0f1;
   font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
 }
 
@@ -29,6 +31,16 @@
   object-fit: fill;
   user-select: none;
   pointer-events: none;
+  filter: saturate(0.62) brightness(1.35) contrast(0.78);
+}
+
+.stage::after {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  content: "";
+  background: rgba(242, 248, 246, 0.62);
+  pointer-events: none;
 }
 
 /*
@@ -45,16 +57,16 @@
   width: 34.4%;
   height: 72.2%;
   padding: 2% 3.2% 2.2%;
-  border: 1px solid rgba(56, 189, 248, 0.45);
+  border: 1px solid var(--surface-border);
   border-radius: 0.9cqw;
   background: linear-gradient(
     180deg,
-    rgba(8, 20, 42, 0.98) 0%,
-    rgba(5, 14, 30, 0.99) 100%
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(244, 250, 250, 0.91) 100%
   );
   box-shadow:
-    0 0 24px rgba(14, 165, 233, 0.28),
-    0 16px 40px rgba(0, 0, 0, 0.45);
+    0 8px 18px rgba(30, 78, 93, 0.16),
+    0 20px 42px rgba(30, 78, 93, 0.14);
   container-type: size;
   container-name: login;
 }
@@ -89,7 +101,7 @@
   font-weight: 800;
   letter-spacing: 0.02em;
   line-height: 1.2;
-  text-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+  text-shadow: none;
 }
 
 .subtitle::after {
@@ -101,7 +113,7 @@
   margin: 1.2cqh auto 0;
   border-radius: 999px;
   background: var(--accent);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+  box-shadow: none;
 }
 
 .form {
@@ -131,21 +143,21 @@
   width: 100%;
   height: 9.4cqh;
   padding: 0 8.5cqw 0 9.5cqw;
-  border: 1px solid rgba(100, 116, 139, 0.55);
+  border: 1px solid rgba(73, 137, 157, 0.62);
   border-radius: 1.6cqh;
-  background: rgba(2, 8, 23, 0.9);
+  background: rgba(255, 255, 255, 0.8);
   color: var(--text);
   font-size: 3cqh;
   outline: none;
 }
 
 .field input::placeholder {
-  color: #64748b;
+  color: #718494;
 }
 
 .field input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 0.35cqh rgba(14, 165, 233, 0.2);
+  box-shadow: 0 0 0 0.35cqh rgba(8, 126, 174, 0.16);
 }
 
 .eyeButton {
@@ -160,7 +172,7 @@
   border: 0;
   border-radius: 0.8cqh;
   background: transparent;
-  color: #94a3b8;
+  color: #617686;
   cursor: pointer;
 }
 
@@ -199,7 +211,7 @@
 .forgot {
   border: 0;
   background: transparent;
-  color: #7dd3fc;
+  color: #087eae;
   font-size: 2.5cqh;
   cursor: pointer;
 }
@@ -232,8 +244,8 @@
 .primaryButton {
   border: 0;
   color: white;
-  background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 55%, #0284c7 100%);
-  box-shadow: 0 0.8cqh 2.2cqh rgba(14, 165, 233, 0.4);
+  background: linear-gradient(180deg, #168dc0 0%, #087eae 55%, #056b98 100%);
+  box-shadow: 0 0.8cqh 1.8cqh rgba(8, 105, 145, 0.24);
 }
 
 .primaryButton:hover {
@@ -246,7 +258,7 @@
   align-items: center;
   gap: 1.5cqw;
   margin: 0.3cqh 0;
-  color: #64748b;
+  color: #738797;
   font-size: 2.4cqh;
 }
 
@@ -257,15 +269,15 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(148, 163, 184, 0.45),
+    rgba(102, 138, 151, 0.42),
     transparent
   );
 }
 
 .ssoButton {
-  border: 1px solid rgba(56, 189, 248, 0.55);
-  background: rgba(2, 8, 23, 0.35);
-  color: var(--text);
+  border: 1px solid rgba(8, 126, 174, 0.66);
+  background: rgba(255, 255, 255, 0.54);
+  color: var(--accent-strong);
 }
 
 .ssoButton:hover {
