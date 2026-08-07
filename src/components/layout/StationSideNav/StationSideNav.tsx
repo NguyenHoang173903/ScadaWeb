@@ -1,15 +1,10 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { ROUTES } from '@/constants/routes'
 import { STATION_NAV_ITEMS, type StationNavItem } from '@/constants/stationNav'
 import styles from './StationSideNav.module.css'
-
-type StationSideNavProps = {
-  collapsed: boolean
-  onToggleCollapse: () => void
-}
 
 function defaultChildPath(item: StationNavItem) {
   return item.children?.[0]?.path ?? item.path
@@ -19,10 +14,7 @@ function isGroupActive(pathname: string, item: StationNavItem) {
   return pathname.includes(`/${item.path}`)
 }
 
-export function StationSideNav({
-  collapsed,
-  onToggleCollapse,
-}: StationSideNavProps) {
+export function StationSideNav() {
   const navigate = useNavigate()
   const { stationId = '' } = useParams()
   const location = useLocation()
@@ -41,7 +33,7 @@ export function StationSideNav({
   }, [location.pathname])
 
   return (
-    <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}>
+    <aside className={styles.sidebar}>
       <button
         type="button"
         className={styles.logoButton}
@@ -69,10 +61,6 @@ export function StationSideNav({
                   className={`${styles.navItem} ${styles.navParent} ${parentActive ? styles.active : ''}`}
                   title={item.label}
                   onClick={() => {
-                    if (collapsed) {
-                      navigate(firstChildTo)
-                      return
-                    }
                     setOpenGroups((prev) => {
                       const nextOpen = !prev[item.id]
                       if (nextOpen && !parentActive) {
@@ -83,18 +71,14 @@ export function StationSideNav({
                   }}
                 >
                   <Icon size={18} />
-                  {!collapsed ? (
-                    <>
-                      <span className={styles.navLabel}>{item.label}</span>
-                      <ChevronDown
-                        size={16}
-                        className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}
-                      />
-                    </>
-                  ) : null}
+                  <span className={styles.navLabel}>{item.label}</span>
+                  <ChevronDown
+                    size={16}
+                    className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}
+                  />
                 </button>
 
-                {!collapsed && isOpen ? (
+                {isOpen ? (
                   <div className={styles.subNav}>
                     {item.children!.map((child) => (
                       <NavLink
@@ -123,20 +107,11 @@ export function StationSideNav({
               title={item.label}
             >
               <Icon size={18} />
-              {!collapsed ? <span>{item.label}</span> : null}
+              <span>{item.label}</span>
             </NavLink>
           )
         })}
       </nav>
-
-      <button
-        type="button"
-        className={styles.collapseButton}
-        onClick={onToggleCollapse}
-      >
-        {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
-        {!collapsed ? <span>Thu gọn</span> : null}
-      </button>
     </aside>
   )
 }

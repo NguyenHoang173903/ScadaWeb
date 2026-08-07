@@ -1,10 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { Eye, EyeOff, Lock, ShieldCheck, UserRound } from 'lucide-react'
+import { Eye, EyeOff, Lock, LogIn, ShieldCheck, UserRound } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
-import {
-  APP_SUBTITLE,
-  APP_TITLE,
-} from '@/constants/config'
 import styles from './LoginPage.module.css'
 
 type LoginFormProps = {
@@ -30,8 +26,8 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
     <section className={styles.loginCard}>
       <div className={styles.brand}>
         <img src={logoTlhn} alt="UBND Thành phố Hà Nội" className={styles.logo} />
-        <h1 className={styles.title}>{APP_TITLE}</h1>
-        <p className={styles.subtitle}>{APP_SUBTITLE}</p>
+        <h1 className={styles.title}>HỆ THỐNG CƠ SỞ DỮ LIỆU SỐ</h1>
+        <p className={styles.subtitle}>CÔNG TY TNHH MTV THỦY LỢI HÀ NỘI</p>
       </div>
 
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -84,7 +80,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
         </div>
 
         <button type="submit" className={styles.primaryButton}>
-          <UserRound size={18} />
+          <LogIn size={18} />
           ĐĂNG NHẬP
         </button>
 

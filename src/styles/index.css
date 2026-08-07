@@ -10,6 +10,16 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Keep Leaflet panes under dashboard glass panels */
+.leaflet-pane {
+  z-index: 1;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 10;
+}
+
 * {
   box-sizing: border-box;
 }

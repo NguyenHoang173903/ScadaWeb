@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Navigate, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/common/Button'
 import { AppFooter } from '@/components/layout/AppFooter'
@@ -11,7 +10,6 @@ import styles from './StationLayout.module.css'
 export function StationLayout() {
   const { stationId = '' } = useParams()
   const navigate = useNavigate()
-  const [collapsed, setCollapsed] = useState(false)
   const station = getPumpStationById(stationId)
 
   if (!station) {
@@ -27,12 +25,9 @@ export function StationLayout() {
   }
 
   return (
-    <div className={`${styles.shell} ${collapsed ? styles.shellCollapsed : ''}`}>
+    <div className={styles.shell}>
       <div className={styles.body}>
-        <StationSideNav
-          collapsed={collapsed}
-          onToggleCollapse={() => setCollapsed((value) => !value)}
-        />
+        <StationSideNav />
 
         <div className={styles.mainColumn}>
           <StationTopNav

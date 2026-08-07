@@ -17,10 +17,6 @@
   overflow: hidden;
 }
 
-.shellCollapsed .body {
-  grid-template-columns: 88px minmax(0, 1fr);
-}
-
 .mainColumn {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -58,8 +54,7 @@
 }
 
 @media (max-width: 900px) {
-  .body,
-  .shellCollapsed .body {
+  .body {
     grid-template-columns: 1fr;
   }
 }

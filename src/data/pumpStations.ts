@@ -168,5 +168,61 @@ export const PUMP_STATIONS: PumpStation[] = [
 ]
 
 export function getPumpStationById(id: string) {
-  return PUMP_STATIONS.find((station) => station.id === id)
+  if (!id) return undefined
+  return (
+    PUMP_STATIONS.find((station) => station.id === id) ??
+    readDynamicStations()[id]
+  )
+}
+
+const DYNAMIC_STORAGE_KEY = 'scadaweb.dynamic-pump-stations'
+
+type MapStationLike = {
+  id: string
+  name: string
+  lat: number
+  lng: number
+  routeId?: string
+}
+
+function readDynamicStations(): Record<string, PumpStation> {
+  try {
+    const raw = sessionStorage.getItem(DYNAMIC_STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, PumpStation>
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeDynamicStations(stations: Record<string, PumpStation>) {
+  try {
+    sessionStorage.setItem(DYNAMIC_STORAGE_KEY, JSON.stringify(stations))
+  } catch {
+    // Ignore quota / private mode errors.
+  }
+}
+
+/** Register a KML/KMZ map point so detail routes work even without mock catalog match. */
+export function ensureMapPumpStation(station: MapStationLike): string {
+  const routeId = station.routeId || station.id
+  if (PUMP_STATIONS.some((item) => item.id === routeId)) return routeId
+
+  const next: PumpStation = {
+    id: routeId,
+    name: station.name.startsWith('Trạm') ? station.name : `Trạm ${station.name}`,
+    code: routeId.slice(0, 12).toUpperCase(),
+    address: `Tọa độ ${station.lat.toFixed(5)}, ${station.lng.toFixed(5)}`,
+    status: 'Đang hoạt động',
+    pumps: 0,
+    capacity: '—',
+    lat: station.lat,
+    lng: station.lng,
+  }
+
+  const all = readDynamicStations()
+  all[routeId] = next
+  writeDynamicStations(all)
+  return routeId
 }
