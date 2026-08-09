@@ -50,12 +50,12 @@
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
-  flex: 1 1 280px;
+  flex: 0 1 auto;
 }
 
 .logo {
-  width: 48px;
-  height: 48px;
+  width: 80px;
+  height: 80px;
   flex-shrink: 0;
   object-fit: contain;
   border-radius: 50%;
@@ -64,33 +64,49 @@
 
 .brandText {
   min-width: 0;
+  text-align: center;
 }
 
 .brandTitle {
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
+  color: #ffffff;
+  font-family: Poppins, "Be Vietnam Pro", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.25;
   white-space: nowrap;
+  text-align: center;
 }
 
 .brandSubtitle {
   margin: 0.15rem 0 0;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 500;
+  color: #ffffff;
+  font-family: Poppins, "Be Vietnam Pro", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.2;
   white-space: nowrap;
+  text-align: center;
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  flex: 0 1 auto;
+  margin-left: auto;
 }
 
 .stats {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 0.55rem;
   flex: 0 1 auto;
+  margin-right: 1.25rem;
 }
 
 .statBadge {
@@ -109,9 +125,16 @@
   cursor: pointer;
 }
 
-.statBadge:hover,
-.statActive {
+.statBadge:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.statActive,
+.statBadge.statActive:hover {
+  background: rgba(79, 209, 197, 0.45);
+  border-color: transparent;
+  box-shadow: none;
+  color: #ffffff;
 }
 
 .statBadge strong {
@@ -131,14 +154,6 @@
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
 }
 
-.topRight {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.55rem;
-  flex: 1 1 280px;
-}
-
 .layersButton {
   display: inline-flex;
   align-items: center;
@@ -154,15 +169,22 @@
   cursor: pointer;
 }
 
-.layersButton:hover,
-.layersButtonActive {
+.layersButton:hover {
   background: rgba(255, 255, 255, 0.18);
+}
+
+.layersButtonActive,
+.layersButton.layersButtonActive:hover {
+  background: rgba(79, 209, 197, 0.45);
+  border-color: transparent;
+  box-shadow: none;
+  color: #ffffff;
 }
 
 .clock {
   color: rgba(255, 255, 255, 0.88);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -235,7 +257,7 @@
 
 .legendPanel {
   position: absolute;
-  top: 320px;
+  top: 250px;
   left: 1680px;
   right: auto;
   z-index: 20;
@@ -265,7 +287,7 @@
 }
 
 .legendRaised {
-  top: 320px;
+  top: 250px;
 }
 
 .legendPanel h2,
@@ -335,19 +357,23 @@
     flex: 1 1 auto;
   }
 
-  .stats {
-    order: 3;
-    width: 100%;
-    justify-content: flex-start;
+  .topRight {
     flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .stats {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .brandTitle {
-    font-size: 0.85rem;
+    font-size: 18px;
     white-space: normal;
   }
 
   .brandSubtitle {
+    font-size: 18px;
     white-space: normal;
   }
 }
@@ -366,7 +392,7 @@
   }
 
   .legendPanel {
-    top: 320px;
+    top: 250px;
     left: auto;
     right: 0.75rem;
     bottom: auto;

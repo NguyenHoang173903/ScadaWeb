@@ -19,6 +19,10 @@ export type MapStation = {
   mediaUrls?: Record<string, string>
   /** Matched app route id when available */
   routeId?: string
+  /** Station code from database when available */
+  code?: string
+  /** True when KMZ/KML description was matched for this station */
+  hasKmzInfo?: boolean
 }
 
 export const STATION_TYPE_COLOR: Record<MapStationType, string> = {
@@ -114,6 +118,7 @@ export function extractStationsFromGeoJson(
 
     const name = getFeatureName(feature) || `Điểm ${lat.toFixed(4)}, ${lng.toFixed(4)}`
     const type = typeFromFeature(name)
+    const description = getFeatureDescription(feature)
     const color = STATION_TYPE_COLOR[type]
 
     stations.push({
@@ -123,10 +128,11 @@ export function extractStationsFromGeoJson(
       lng,
       type,
       color,
-      description: getFeatureDescription(feature),
+      description,
       mediaBaseUrl,
       mediaUrls,
       routeId: matchRouteId(name),
+      hasKmzInfo: Boolean(description.trim()),
     })
   }
 
@@ -156,4 +162,89 @@ export function extractStationsFromLayers(
   }
 
   return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name, 'vi'))
+}
+
+function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number) {
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const dLat = toRad(bLat - aLat)
+  const dLng = toRad(bLng - aLng)
+  const lat1 = toRad(aLat)
+  const lat2 = toRad(bLat)
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+}
+
+function namesMatchForKmz(dbName: string, kmzName: string) {
+  const dbKey = normalizeStationKey(dbName)
+  const kmzKey = normalizeStationKey(kmzName)
+  if (!dbKey || !kmzKey) return false
+  if (dbKey === kmzKey) return true
+
+  // Avoid loose includes on short names (e.g. "phu dong").
+  const [shorter, longer] =
+    dbKey.length <= kmzKey.length ? [dbKey, kmzKey] : [kmzKey, dbKey]
+  return shorter.length >= 16 && longer.includes(shorter)
+}
+
+/** Max distance to attach a KMZ placemark to a DB pump (~120m). */
+const KMZ_MATCH_MAX_DISTANCE_KM = 0.12
+
+function findKmzMatchForPump(dbName: string, dbLat: number, dbLng: number, kmzPumps: MapStation[]) {
+  const byName = kmzPumps.find((station) => namesMatchForKmz(dbName, station.name))
+  if (byName) return byName
+
+  let best: MapStation | undefined
+  let bestDistance = Infinity
+  for (const station of kmzPumps) {
+    const distance = distanceKm(dbLat, dbLng, station.lat, station.lng)
+    if (distance < bestDistance) {
+      bestDistance = distance
+      best = station
+    }
+  }
+
+  if (best && bestDistance <= KMZ_MATCH_MAX_DISTANCE_KM) return best
+  return undefined
+}
+
+/**
+ * Pump markers come from database (`PUMP_STATIONS`).
+ * KMZ/KML only enriches description when a matching placemark exists.
+ * Rain / level points still come from KMZ Point placemarks.
+ */
+export function buildMapStations(
+  layers: Array<{
+    geojson: FeatureCollection
+    visible?: boolean
+    mediaBaseUrl?: string
+    mediaUrls?: Record<string, string>
+  }>,
+): MapStation[] {
+  const fromKmz = extractStationsFromLayers(layers)
+  const kmzPumps = fromKmz.filter((station) => station.type === 'pump')
+  const sensors = fromKmz.filter((station) => station.type !== 'pump')
+
+  const pumpsFromDb: MapStation[] = PUMP_STATIONS.map((db) => {
+    const match = findKmzMatchForPump(db.name, db.lat, db.lng, kmzPumps)
+    const description = match?.description?.trim() ? match.description : undefined
+
+    return {
+      id: db.id,
+      name: db.name,
+      lat: db.lat,
+      lng: db.lng,
+      type: 'pump' as const,
+      color: STATION_TYPE_COLOR.pump,
+      code: db.code,
+      routeId: db.id,
+      description,
+      mediaBaseUrl: description ? match?.mediaBaseUrl : undefined,
+      mediaUrls: description ? match?.mediaUrls : undefined,
+      hasKmzInfo: Boolean(description),
+    }
+  })
+
+  return [...pumpsFromDb, ...sensors].sort((a, b) => a.name.localeCompare(b.name, 'vi'))
 }

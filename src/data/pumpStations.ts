@@ -165,6 +165,28 @@ export const PUMP_STATIONS: PumpStation[] = [
     lat: 20.87,
     lng: 105.86,
   },
+  {
+    id: 'tuyen-tieu-7-xa-nhanh-1',
+    name: 'Tuyến tiêu 7 Xã Nhánh 1',
+    code: 'TB-TT7N1',
+    address: 'CN Xí nghiệp thủy lợi Gia Lâm – Cụm Phù Đổng, Hà Nội',
+    status: 'Đang hoạt động',
+    pumps: 2,
+    capacity: '850 m³/h',
+    lat: 21.07153406324338,
+    lng: 105.9445170968886,
+  },
+  {
+    id: 'tuyen-tieu-7-xa-nhanh-2',
+    name: 'Tuyến tiêu 7 Xã nhánh 2',
+    code: 'TB-TT7N2',
+    address: 'CN Xí nghiệp thủy lợi Gia Lâm – Cụm Phù Đổng, Hà Nội',
+    status: 'Ngưng hoạt động',
+    pumps: 2,
+    capacity: '720 m³/h',
+    lat: 21.06345849989141,
+    lng: 105.9434764881519,
+  },
 ]
 
 export function getPumpStationById(id: string) {

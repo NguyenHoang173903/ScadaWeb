@@ -12,6 +12,7 @@ import {
   StationSchematicPage,
   StationTeamPage,
 } from '@/pages/StationDetailPage'
+import { StationDataUpdatePage } from '@/pages/StationDataUpdatePage'
 import { UsersPage } from '@/pages/UsersPage'
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path={ROUTES.login} element={<LoginPage />} />
         <Route path={ROUTES.dashboard} element={<DashboardPage />} />
         <Route path={ROUTES.users} element={<UsersPage />} />
+        <Route path={ROUTES.stationDataUpdate} element={<StationDataUpdatePage />} />
         <Route path={ROUTES.stationRoot} element={<StationLayout />}>
           <Route index element={<StationIndexRedirect />} />
           <Route path="schematic" element={<StationSchematicPage />} />

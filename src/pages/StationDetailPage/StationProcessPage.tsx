@@ -9,7 +9,15 @@ export function StationProcessPage() {
   const [pumps] = useState<ProcessPumpCard[]>(PROCESS_PUMPS)
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${styles.processPage}`}>
+      <section className={styles.panel}>
+        <div className={styles.diagramStage}>
+          <div className={`${styles.diagramInner} ${styles.processInner}`}>
+            <ProcessDiagram pumps={pumps} />
+          </div>
+        </div>
+      </section>
+
       <StationAlertBar
         count={2}
         alerts={[
@@ -20,14 +28,6 @@ export function StationProcessPage() {
           },
         ]}
       />
-
-      <section className={styles.panel}>
-        <div className={styles.diagramStage}>
-          <div className={`${styles.diagramInner} ${styles.processInner}`}>
-            <ProcessDiagram pumps={pumps} />
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

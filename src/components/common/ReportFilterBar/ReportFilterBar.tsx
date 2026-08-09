@@ -1,4 +1,3 @@
-import { CalendarDays } from 'lucide-react'
 import { Button } from '@/components/common/Button'
 import { FormField } from '@/components/common/FormField'
 import { SelectField } from '@/components/common/SelectField'
@@ -36,15 +35,12 @@ export function ReportFilterBar({
   return (
     <div className={styles.bar}>
       <FormField label="Ngày báo cáo" htmlFor="report-date">
-        <div className={styles.dateField}>
-          <TextField
-            id="report-date"
-            type="date"
-            value={values.reportDate}
-            onChange={(event) => patch({ reportDate: event.target.value })}
-          />
-          <CalendarDays size={16} className={styles.dateIcon} aria-hidden />
-        </div>
+        <TextField
+          id="report-date"
+          type="date"
+          value={values.reportDate}
+          onChange={(event) => patch({ reportDate: event.target.value })}
+        />
       </FormField>
 
       <FormField label="Giờ bắt đầu" htmlFor="report-start-time">

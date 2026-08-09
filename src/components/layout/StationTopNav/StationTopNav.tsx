@@ -11,13 +11,9 @@ type StationTopNavProps = {
   userRole?: string
 }
 
-function formatTime(date: Date) {
-  return date.toLocaleTimeString('vi-VN', {
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
+function formatDateTime(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 export function StationTopNav({
@@ -27,13 +23,13 @@ export function StationTopNav({
   userRole = 'Quản trị viên',
 }: StationTopNavProps) {
   const navigate = useNavigate()
-  const [now, setNow] = useState(() => formatTime(new Date()))
+  const [now, setNow] = useState(() => formatDateTime(new Date()))
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setNow(formatTime(new Date()))
+      setNow(formatDateTime(new Date()))
     }, 1000)
 
     return () => window.clearInterval(timer)

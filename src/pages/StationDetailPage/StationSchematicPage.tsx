@@ -5,6 +5,10 @@ import styles from './StationPage.module.css'
 export function StationSchematicPage() {
   return (
     <div className={styles.page}>
+      <section className={styles.panel}>
+        <SchematicDiagram />
+      </section>
+
       <StationAlertBar
         count={2}
         alerts={[
@@ -15,10 +19,6 @@ export function StationSchematicPage() {
           },
         ]}
       />
-
-      <section className={styles.panel}>
-        <SchematicDiagram />
-      </section>
     </div>
   )
 }

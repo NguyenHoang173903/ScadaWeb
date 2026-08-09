@@ -3,7 +3,7 @@ import L, { type PathOptions } from 'leaflet'
 import 'leaflet.markercluster'
 import type { Feature } from 'geojson'
 import {
-  extractStationsFromLayers,
+  buildMapStations,
   STATION_TYPE_COLOR,
   type MapStation,
 } from './extractStations'
@@ -15,6 +15,14 @@ import styles from './DashboardMap.module.css'
 
 const HANOI_CENTER: L.LatLngTuple = [21.0285, 105.8542]
 const CLUSTER_DISABLE_ZOOM = 17
+
+/** Northern Vietnam — prevents zooming/panning out of the region. */
+const NORTH_VIETNAM_BOUNDS = L.latLngBounds(
+  [19.8, 102.1], // SW
+  [23.55, 108.1], // NE
+)
+const MAP_MIN_ZOOM = 7
+const MAP_MAX_ZOOM = 18
 
 const SATELLITE_TILE =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
@@ -94,15 +102,24 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
     const map = L.map(el, {
       center: HANOI_CENTER,
       zoom: 10,
+      minZoom: MAP_MIN_ZOOM,
+      maxZoom: MAP_MAX_ZOOM,
+      maxBounds: NORTH_VIETNAM_BOUNDS,
+      maxBoundsViscosity: 1,
       zoomControl: false,
       attributionControl: false,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true,
+      touchZoom: true,
+      keyboard: true,
     })
 
     L.control.zoom({ position: 'bottomleft' }).addTo(map)
 
     L.tileLayer(SATELLITE_TILE, {
       attribution: 'Tiles &copy; Esri',
-      maxZoom: 19,
+      maxZoom: MAP_MAX_ZOOM,
     }).addTo(map)
 
     const clusters = L.markerClusterGroup({
@@ -184,7 +201,11 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
       const bounds = first?.getBounds()
       if (bounds?.isValid()) {
         overviewBoundsRef.current = bounds
-        map.fitBounds(bounds, { padding: [48, 48], maxZoom: 12 })
+        map.fitBounds(bounds, {
+          padding: [48, 48],
+          maxZoom: 12,
+          animate: false,
+        })
         fittedRef.current = true
       }
     }
@@ -195,13 +216,15 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
     if (!clusters || mapReady === 0) return
 
     clusters.clearLayers()
-    const stations = extractStationsFromLayers(layers)
+    const stations = buildMapStations(layers)
 
     stations.forEach((station) => {
       const color = station.color ?? STATION_TYPE_COLOR[station.type]
       const marker = L.marker([station.lat, station.lng], {
         icon: createStationIcon(color),
         riseOnHover: true,
+        interactive: true,
+        keyboard: true,
       })
 
       marker.bindTooltip(station.name, {

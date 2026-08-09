@@ -9,8 +9,8 @@
   min-width: 0;
   max-width: 100%;
   min-height: 420px;
-  padding: 1.25rem 1.35rem;
-  border: 1px solid #cfd8dc;
+  padding: 0;
+  border: none;
   border-radius: 12px;
   background: #ffffff;
   /* Một thanh cuộn ngang duy nhất cho sơ đồ */
@@ -46,6 +46,12 @@
   min-width: 1100px;
 }
 
+/* sdnl_3 schematic: shrink composition to 98% */
+.schematicInner {
+  width: 98%;
+  margin-inline: auto;
+}
+
 .diagramLayer {
   position: relative;
   width: 100%;
@@ -79,26 +85,30 @@
   min-width: 150px;
   max-width: 230px;
   font-size: clamp(0.52rem, 0.78vw, 0.7rem);
-  line-height: 1.32;
+  line-height: 1.4;
   pointer-events: none;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .electricalHead {
-  padding: 0.3em 0.45em;
+  padding: 0.35em 0.45em;
   background: #043d59;
   color: #ffffff;
   font-weight: 600;
   text-align: center;
   border: 1px solid #043d59;
+  border-radius: 10px 10px 0 0;
 }
 
 .electricalBody {
   margin: 0;
-  padding: 0.3em 0.45em 0.4em;
+  padding: 0.36em 0.45em 0.48em;
   list-style: none;
   background: #ffffff;
   border: 1px solid #6b7280;
   border-top: none;
+  border-radius: 0 0 10px 10px;
 }
 
 .electricalBody li {
@@ -106,6 +116,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 0.5em;
+  padding: 0.04em 0;
   white-space: nowrap;
 }
 
@@ -125,12 +136,12 @@
 }
 
 /*
-  I/V boxes: left of feeder, between MCCB/X and KĐM
-  sdnl.svg ≈ y298–340 / 543 → top≈54.9%
+  I/V boxes: left of feeder, between disconnect X and MCCB
+  sdnl_3.svg ≈ y298–340 / 683 → top≈43.6%
 */
 .measureBox {
   position: absolute;
-  top: 54.9%;
+  top: 43.6%;
   z-index: 2;
   display: flex;
   flex-direction: column;
@@ -139,8 +150,8 @@
   width: 5.2%;
   min-width: 52px;
   max-width: 78px;
-  /* % tính theo chiều rộng ô → scale theo diagram; -100% = mép phải sát cột */
-  transform: translateX(-135%);
+  /* % theo chiều rộng ô; gần -100% = mép phải sát cột hơn */
+  transform: translateX(-95%);
   padding: 0.35em 0.45em;
   box-sizing: border-box;
   background: #ffffff;
@@ -167,15 +178,6 @@
   font-weight: 500;
 }
 
-/* —— Bottom pump cards (in flow, above legend — không đè chú thích) —— */
-.pumpCardsLayer {
-  position: relative;
-  width: 100%;
-  height: 5rem;
-  margin-top: 0.55rem;
-  margin-bottom: 0.85rem;
-}
-
 .pumpCard {
   position: absolute;
   top: 0;
@@ -189,6 +191,46 @@
   border-radius: 10px;
   overflow: hidden;
   background: #ffffff;
+}
+
+/*
+  Schematic (sdnl_3.svg): cards under motor icons
+  Motor bottom ≈ y535 / 683 → ~78.3%
+*/
+.schematicPumpCard {
+  top: 81%;
+  z-index: 2;
+  width: 7.54%;
+  min-width: 88px;
+  max-width: 125px;
+  transform: translateX(-50%);
+  border-radius: 8px;
+  font-size: clamp(0.52rem, 0.65vw, 0.65rem);
+  line-height: 1.25;
+  pointer-events: none;
+}
+
+.schematicPumpCard .pumpCardHead {
+  padding: 0.63em 0.25em;
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.schematicPumpCard .pumpCardBody {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  min-height: 7.26em;
+  padding: 0.9em 0.35em 0.99em;
+}
+
+.schematicPumpCard .pumpCardBody > div {
+  margin-bottom: 0;
+  gap: 0.2em;
 }
 
 .pumpCardHead {
@@ -242,26 +284,70 @@
 }
 
 /*
-  Process diagram (sdcn.svg): cards under yellow pumps
-  Pump bottom ≈ y418 / 727 → top≈57.5%
+  Process diagram (sdcn_1.svg): cards above yellow pumps
+  Pump top ≈ y292 / 728 → ~40%; translateY(-100%) neo đáy thẻ sát đầu icon
 */
+.processPage {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  overflow: hidden;
+}
+
+.processPage .panel {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+}
+
+.processPage .diagramStage {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .processInner {
-  min-width: 1200px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .processInner .diagramLayer {
   position: relative;
   width: 100%;
-  /* Dịch sơ đồ sang trái (giữ đủ nội dung, không crop viewBox) */
-  transform: translateX(-4%);
+  max-width: 100%;
+}
+
+.processInner .processSvgHost {
+  width: 100%;
+  line-height: 0;
+}
+
+.processInner .processSvgHost svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .processPumpCard {
-  top: 57.5%;
+  top: 40%;
   z-index: 2;
   width: 5.8%;
   min-width: 68px;
   max-width: 96px;
+  transform: translate(-50%, -100%);
+  border-radius: 6px;
   font-size: clamp(0.4rem, 0.5vw, 0.5rem);
   line-height: 1.25;
   pointer-events: none;
@@ -352,9 +438,9 @@
 .schematicLegend {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 1.15rem 1.75rem;
-  margin: 0;
+  margin: calc(0.65rem - 4px) 0 0 1.25rem;
   padding: 0;
   list-style: none;
   color: #1f2937;
@@ -385,6 +471,10 @@
 
 .dotStopped {
   background: #ef4444;
+}
+
+.dotMaintenance {
+  background: #2563eb;
 }
 
 .dotUnknown {

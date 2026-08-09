@@ -30,6 +30,7 @@
 .stationMarker {
   background: transparent !important;
   border: none !important;
+  cursor: pointer;
 }
 
 .stationDot {
@@ -38,6 +39,8 @@
   height: 14px;
   border-radius: 50%;
   border: 1.5px solid rgba(255, 255, 255, 0.85);
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .clusterIcon {

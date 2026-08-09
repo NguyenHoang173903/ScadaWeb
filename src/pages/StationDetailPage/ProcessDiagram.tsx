@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import processDiagramSvg from '@/assets/images/sdcn.svg?raw'
+import processDiagramSvg from '@/assets/images/sdcn_1.svg?raw'
 import {
   PROCESS_PUMPS,
   PROCESS_WIDTH,

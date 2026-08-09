@@ -1,4 +1,3 @@
-import { CalendarDays } from 'lucide-react'
 import { Button } from '@/components/common/Button'
 import { SelectField } from '@/components/common/SelectField'
 import { TextField } from '@/components/common/TextField'
@@ -48,28 +47,24 @@ export function EventFilterBar({
 
       <div className={styles.rangeGroup}>
         <span className={styles.rangeLabel}>Từ</span>
-        <div className={styles.dateField}>
-          <TextField
-            type="date"
-            value={values.fromDate}
-            onChange={(event) => patch({ fromDate: event.target.value })}
-            aria-label="Từ ngày"
-          />
-          <CalendarDays size={16} className={styles.dateIcon} aria-hidden />
-        </div>
+        <TextField
+          className={styles.dateField}
+          type="date"
+          value={values.fromDate}
+          onChange={(event) => patch({ fromDate: event.target.value })}
+          aria-label="Từ ngày"
+        />
       </div>
 
       <div className={styles.rangeGroup}>
         <span className={styles.rangeLabel}>đến</span>
-        <div className={styles.dateField}>
-          <TextField
-            type="date"
-            value={values.toDate}
-            onChange={(event) => patch({ toDate: event.target.value })}
-            aria-label="Đến ngày"
-          />
-          <CalendarDays size={16} className={styles.dateIcon} aria-hidden />
-        </div>
+        <TextField
+          className={styles.dateField}
+          type="date"
+          value={values.toDate}
+          onChange={(event) => patch({ toDate: event.target.value })}
+          aria-label="Đến ngày"
+        />
       </div>
 
       {showKeyword ? (

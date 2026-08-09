@@ -25,6 +25,12 @@ export function StationDevicesPage() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.grid}>
+        {pumps.map((pump) => (
+          <DeviceCard key={pump.id} pump={pump} />
+        ))}
+      </div>
+
       <StationAlertBar
         count={2}
         alerts={[
@@ -35,14 +41,6 @@ export function StationDevicesPage() {
           },
         ]}
       />
-
-      <section className={styles.panel}>
-        <div className={styles.grid}>
-          {pumps.map((pump) => (
-            <DeviceCard key={pump.id} pump={pump} />
-          ))}
-        </div>
-      </section>
     </div>
   )
 }

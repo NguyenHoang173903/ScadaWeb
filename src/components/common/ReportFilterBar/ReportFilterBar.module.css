@@ -16,24 +16,6 @@
   max-width: 220px;
 }
 
-.dateField {
-  position: relative;
-}
-
-.dateField :global(input) {
-  padding-right: 2.1rem;
-  width: 100%;
-}
-
-.dateIcon {
-  position: absolute;
-  right: 0.7rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #6b7280;
-  pointer-events: none;
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;

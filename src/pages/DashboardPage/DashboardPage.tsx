@@ -4,7 +4,7 @@ import { ChevronDown, Layers, LogOut, UserRound, Users } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { DashboardMap, FeatureInfoPanel, LayerPanel, StationListPanel } from '@/components/map'
 import {
-  extractStationsFromLayers,
+  buildMapStations,
   type MapStation,
   type MapStationType,
 } from '@/components/map/extractStations'
@@ -19,7 +19,7 @@ import {
   importLayerPackage,
   parseLayerUrl,
 } from '@/components/map/parseLayerFile'
-import { ROUTES, stationDetailPath } from '@/constants/routes'
+import { ROUTES, stationDataUpdatePath, stationDetailPath } from '@/constants/routes'
 import { ensureMapPumpStation } from '@/data/pumpStations'
 import styles from './DashboardPage.module.css'
 
@@ -162,7 +162,7 @@ export function DashboardPage() {
     setSelectedStation(null)
   }
 
-  const mapStations = useMemo(() => extractStationsFromLayers(layers), [layers])
+  const mapStations = useMemo(() => buildMapStations(layers), [layers])
   const pumpStations = useMemo(
     () => mapStations.filter((station) => station.type === 'pump'),
     [mapStations],
@@ -208,56 +208,60 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className={styles.stats}>
-          <button
-            type="button"
-            className={`${styles.statBadge} ${listType === 'pump' ? styles.statActive : ''}`}
-            aria-expanded={listType === 'pump'}
-            onClick={() => openStationList('pump')}
-          >
-            <span className={styles.statDot} style={{ background: '#0CFF0C' }} />
-            <strong>{pumpStations.length}</strong>
-            <span>trạm bơm</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.statBadge} ${listType === 'rain' ? styles.statActive : ''}`}
-            aria-expanded={listType === 'rain'}
-            onClick={() => openStationList('rain')}
-          >
-            <span className={styles.statDot} style={{ background: '#F4B400' }} />
-            <strong>{rainStations.length}</strong>
-            <span>Đo mưa</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.statBadge} ${listType === 'level' ? styles.statActive : ''}`}
-            aria-expanded={listType === 'level'}
-            onClick={() => openStationList('level')}
-          >
-            <span className={styles.statDot} style={{ background: '#2D7DD2' }} />
-            <strong>{levelStations.length}</strong>
-            <span>Đo mực nước</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.layersButton} ${layersOpen ? styles.layersButtonActive : ''}`}
-            title="Lớp bản đồ"
-            aria-expanded={layersOpen}
-            onClick={() => {
-              setLayersOpen((open) => !open)
-              setListType(null)
-            }}
-          >
-            <Layers size={16} />
-            <span>Lớp bản đồ</span>
-          </button>
-        </div>
-
         <div className={styles.topRight}>
+          <div className={styles.stats}>
+            <button
+              type="button"
+              className={`${styles.statBadge} ${listType === 'pump' ? styles.statActive : ''}`}
+              aria-expanded={listType === 'pump'}
+              onClick={() => openStationList('pump')}
+            >
+              <span className={styles.statDot} style={{ background: '#0CFF0C' }} />
+              <strong>{pumpStations.length}</strong>
+              <span>trạm bơm</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.statBadge} ${listType === 'rain' ? styles.statActive : ''}`}
+              aria-expanded={listType === 'rain'}
+              onClick={() => openStationList('rain')}
+            >
+              <span className={styles.statDot} style={{ background: '#F4B400' }} />
+              <strong>{rainStations.length}</strong>
+              <span>Đo mưa</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.statBadge} ${listType === 'level' ? styles.statActive : ''}`}
+              aria-expanded={listType === 'level'}
+              onClick={() => openStationList('level')}
+            >
+              <span className={styles.statDot} style={{ background: '#2D7DD2' }} />
+              <strong>{levelStations.length}</strong>
+              <span>Đo mực nước</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.layersButton} ${layersOpen ? styles.layersButtonActive : ''}`}
+              title="Lớp bản đồ"
+              aria-expanded={layersOpen}
+              onClick={() => {
+                setLayersOpen((open) => {
+                  const next = !open
+                  if (next) setSelectedStation(null)
+                  return next
+                })
+                setListType(null)
+              }}
+            >
+              <Layers size={16} />
+              <span>Lớp bản đồ</span>
+            </button>
+          </div>
+
           <time className={styles.clock} dateTime={new Date().toISOString()}>
             {now}
           </time>
@@ -306,7 +310,8 @@ export function DashboardPage() {
         </div>
       </header>
 
-      {!selectedStation ? (
+      {(!selectedStation ||
+        !(selectedStation.hasKmzInfo ?? Boolean(selectedStation.description?.trim()))) ? (
         <aside className={`${styles.legendPanel} ${layersOpen ? styles.legendRaised : ''}`}>
           <h2>Chú thích</h2>
           <ul className={styles.legendList}>
@@ -327,6 +332,7 @@ export function DashboardPage() {
           onClose={() => setListType(null)}
           onSelect={(station) => {
             setListType(null)
+            setLayersOpen(false)
             if (station.type === 'pump') {
               const routeId = ensureMapPumpStation(station)
               navigate(stationDetailPath(routeId))
@@ -340,6 +346,11 @@ export function DashboardPage() {
       <FeatureInfoPanel
         station={selectedStation}
         onClose={() => setSelectedStation(null)}
+        onUpdateData={(station) => {
+          const routeId = station.routeId ?? ensureMapPumpStation(station)
+          setSelectedStation(null)
+          navigate(stationDataUpdatePath(routeId))
+        }}
       />
 
       <LayerPanel

@@ -1,28 +1,65 @@
-import schematicDiagram from '@/assets/images/sdnl.svg'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import schematicDiagramSvg from '@/assets/images/sdnl_3.svg?raw'
 import {
   ELECTRICAL_PARAMS,
   PUMP_BRANCHES,
   SCHEMATIC_WIDTH,
+  applySchematicPumpColors,
   formatOne,
   formatTwo,
+  type PumpBranch,
 } from './schematicMock'
 import styles from './StationPage.module.css'
 
 function leftPercent(x: number) {
-  return `${(x / SCHEMATIC_WIDTH) * 100}%`
+  /* lệch trái so với tâm cột SVG */
+  return `${(x / SCHEMATIC_WIDTH) * 100 - 2.5}%`
 }
 
-export function SchematicDiagram() {
+function prepareInlineSvg(raw: string) {
+  return raw
+    .replace(/<\?xml[^>]*>/i, '')
+    .replace(
+      /<svg([^>]*)>/i,
+      `<svg$1 role="img" aria-label="Sơ đồ nguyên lý trạm bơm" class="${styles.diagram}">`,
+    )
+}
+
+type SchematicDiagramProps = {
+  /** Trạng thái runtime từng bơm — đổi màu KĐM + motor */
+  pumps?: PumpBranch[]
+}
+
+export function SchematicDiagram({ pumps = PUMP_BRANCHES }: SchematicDiagramProps) {
   const e = ELECTRICAL_PARAMS
+  const svgHostRef = useRef<HTMLDivElement>(null)
+  const [svgHtml] = useState(() => prepareInlineSvg(schematicDiagramSvg))
+
+  const pumpKey = useMemo(
+    () =>
+      pumps
+        .map(
+          (p) =>
+            `${p.id}:${p.motorStatus}/${p.kdmStatus}/${p.lockStatus}`,
+        )
+        .join('|'),
+    [pumps],
+  )
+
+  useEffect(() => {
+    const host = svgHostRef.current
+    if (!host) return
+    applySchematicPumpColors(host, pumps)
+  }, [pumpKey, pumps, svgHtml])
 
   return (
     <div className={styles.diagramStage}>
-      <div className={styles.diagramInner}>
+      <div className={`${styles.diagramInner} ${styles.schematicInner}`}>
         <div className={styles.diagramLayer}>
-          <img
-            src={schematicDiagram}
-            alt="Sơ đồ nguyên lý trạm bơm"
-            className={styles.diagram}
+          <div
+            ref={svgHostRef}
+            className={styles.processSvgHost}
+            dangerouslySetInnerHTML={{ __html: svgHtml }}
           />
 
           <aside className={styles.electricalBox} aria-label="Thông số điện">
@@ -77,7 +114,7 @@ export function SchematicDiagram() {
             </ul>
           </aside>
 
-          {PUMP_BRANCHES.map((pump) => (
+          {pumps.map((pump) => (
             <div
               key={`m-${pump.id}`}
               className={styles.measureBox}
@@ -110,14 +147,13 @@ export function SchematicDiagram() {
               </div>
             </div>
           ))}
-        </div>
 
-        <div className={styles.pumpCardsLayer}>
-          {PUMP_BRANCHES.map((pump) => (
+          {pumps.map((pump) => (
             <article
               key={`c-${pump.id}`}
-              className={styles.pumpCard}
+              className={`${styles.pumpCard} ${styles.schematicPumpCard}`}
               style={{ left: leftPercent(pump.x) }}
+              data-status={pump.motorStatus}
             >
               <header className={styles.pumpCardHead}>
                 {pump.label} - {pump.powerKw}kW
@@ -153,6 +189,10 @@ export function SchematicDiagram() {
         <li>
           <span className={`${styles.legendDot} ${styles.dotStopped}`} />
           Dừng
+        </li>
+        <li>
+          <span className={`${styles.legendDot} ${styles.dotMaintenance}`} />
+          Đang bảo trì, sửa chữa
         </li>
         <li>
           <span className={`${styles.legendDot} ${styles.dotUnknown}`} />

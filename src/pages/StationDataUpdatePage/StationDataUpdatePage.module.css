@@ -1,0 +1,124 @@
+.page {
+  min-height: 100vh;
+  background: #eef2f4;
+  color: #111827;
+  font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
+}
+
+.main {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem 1.25rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.panel {
+  padding: 1.35rem 1.4rem 1.5rem;
+  border: 1px solid #9aa7b2;
+  border-radius: 12px;
+  background: #f3f5f6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.4rem 1.75rem;
+}
+
+.column {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.uploadButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 52px;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: #0d9488;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.uploadButton:hover {
+  background: #0f766e;
+}
+
+.imageName {
+  margin: 0.35rem 0 0;
+  color: #4b5563;
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.9rem;
+}
+
+.notFound {
+  margin: 0;
+  color: #6b7280;
+}
+
+.backButton {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.backButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .main {
+    padding: 0.85rem;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
+}

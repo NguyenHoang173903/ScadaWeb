@@ -1,4 +1,3 @@
-import { CalendarDays } from 'lucide-react'
 import { Button } from '@/components/common/Button'
 import { SelectField } from '@/components/common/SelectField'
 import { TextField } from '@/components/common/TextField'
@@ -43,15 +42,13 @@ export function ChartFilterBar({
 
       <div className={styles.rangeGroup}>
         <span className={styles.rangeLabel}>Từ</span>
-        <label className={styles.dateField}>
-          <TextField
-            type="date"
-            value={values.fromDate}
-            onChange={(event) => patch({ fromDate: event.target.value })}
-            aria-label="Từ ngày"
-          />
-          <CalendarDays size={16} className={styles.dateIcon} aria-hidden />
-        </label>
+        <TextField
+          className={styles.dateField}
+          type="date"
+          value={values.fromDate}
+          onChange={(event) => patch({ fromDate: event.target.value })}
+          aria-label="Từ ngày"
+        />
         <TextField
           className={styles.timeField}
           type="time"
@@ -64,15 +61,13 @@ export function ChartFilterBar({
 
       <div className={styles.rangeGroup}>
         <span className={styles.rangeLabel}>đến</span>
-        <label className={styles.dateField}>
-          <TextField
-            type="date"
-            value={values.toDate}
-            onChange={(event) => patch({ toDate: event.target.value })}
-            aria-label="Đến ngày"
-          />
-          <CalendarDays size={16} className={styles.dateIcon} aria-hidden />
-        </label>
+        <TextField
+          className={styles.dateField}
+          type="date"
+          value={values.toDate}
+          onChange={(event) => patch({ toDate: event.target.value })}
+          aria-label="Đến ngày"
+        />
         <TextField
           className={styles.timeField}
           type="time"
