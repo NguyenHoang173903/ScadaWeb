@@ -24,8 +24,10 @@ const NORTH_VIETNAM_BOUNDS = L.latLngBounds(
 const MAP_MIN_ZOOM = 7
 const MAP_MAX_ZOOM = 18
 
-const SATELLITE_TILE =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+const ARCGIS_API_KEY = import.meta.env.VITE_ARCGIS_API_KEY?.trim() ?? ''
+
+/** Esri World Imagery — ArcGIS Location Platform API key only (no anonymous fallback) */
+const SATELLITE_TILE = `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${encodeURIComponent(ARCGIS_API_KEY)}`
 
 const asColor = (value: unknown): string | undefined =>
   typeof value === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value)
@@ -85,6 +87,7 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const overlayRef = useRef<Map<string, L.GeoJSON>>(new Map())
+  const geojsonByIdRef = useRef<Map<string, MapOverlayLayer['geojson']>>(new Map())
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null)
   const fittedRef = useRef(false)
   const overviewBoundsRef = useRef<L.LatLngBounds | null>(null)
@@ -144,6 +147,7 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
     return () => {
       overlayRef.current.forEach((layer) => layer.remove())
       overlayRef.current.clear()
+      geojsonByIdRef.current.clear()
       clusters.clearLayers()
       map.removeLayer(clusters)
       clusterRef.current = null
@@ -163,6 +167,7 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
       if (!activeIds.has(id)) {
         instance.remove()
         overlayRef.current.delete(id)
+        geojsonByIdRef.current.delete(id)
         fittedRef.current = false
       }
     })
@@ -170,6 +175,7 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
     layers.forEach((layerConfig) => {
       let instance = overlayRef.current.get(layerConfig.id)
       const featureStyle = styleFromFeature(layerConfig)
+      const boundGeojson = geojsonByIdRef.current.get(layerConfig.id)
 
       if (!instance) {
         instance = L.geoJSON(layerConfig.geojson, {
@@ -184,6 +190,14 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
           },
         })
         overlayRef.current.set(layerConfig.id, instance)
+        geojsonByIdRef.current.set(layerConfig.id, layerConfig.geojson)
+        fittedRef.current = false
+      } else if (boundGeojson !== layerConfig.geojson) {
+        // Same layer id but new KMZ/KML data — rebuild geometry.
+        instance.clearLayers()
+        instance.addData(layerConfig.geojson)
+        instance.setStyle(featureStyle)
+        geojsonByIdRef.current.set(layerConfig.id, layerConfig.geojson)
         fittedRef.current = false
       } else {
         instance.setStyle(featureStyle)

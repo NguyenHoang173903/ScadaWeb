@@ -18,7 +18,7 @@ export type MapOverlayLayer = {
   objectUrls?: string[]
 }
 
-export const DEFAULT_CANAL_LAYER_ID = 'layer-hethongkenh'
+export const DEFAULT_CANAL_LAYER_ID = 'layer-active'
 
 export const DEFAULT_LAYER_STYLE = {
   opacity: 1,

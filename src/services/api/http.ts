@@ -47,3 +47,30 @@ export async function http<T>(
 
   return (await response.json()) as T
 }
+
+/** Multipart upload — do not set Content-Type (browser sets boundary). */
+export async function httpFormData<T>(
+  path: string,
+  options: Omit<RequestInit, 'body'> & { body: FormData },
+): Promise<T> {
+  const { body, headers, ...rest } = options
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...rest,
+    headers: {
+      Accept: 'application/json',
+      ...headers,
+    },
+    body,
+  })
+
+  if (!response.ok) {
+    throw await parseError(response)
+  }
+
+  if (response.status === 204) {
+    return undefined as T
+  }
+
+  return (await response.json()) as T
+}

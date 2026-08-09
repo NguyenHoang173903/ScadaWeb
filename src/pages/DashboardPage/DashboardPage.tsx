@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronDown, Layers, LogOut, UserRound, Users } from 'lucide-react'
+import { ChevronDown, Layers, UserRound } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { DashboardMap, FeatureInfoPanel, LayerPanel, StationListPanel } from '@/components/map'
 import {
@@ -8,19 +8,15 @@ import {
   type MapStation,
   type MapStationType,
 } from '@/components/map/extractStations'
-import {
-  DEFAULT_CANAL_LAYER_ID,
-  DEFAULT_LAYER_STYLE,
-  type MapOverlayLayer,
-} from '@/components/map/layerTypes'
-import {
-  disposeLayerMedia,
-  disposeLayersMedia,
-  importLayerPackage,
-  parseLayerUrl,
-} from '@/components/map/parseLayerFile'
+import type { MapOverlayLayer } from '@/components/map/layerTypes'
 import { ROUTES, stationDataUpdatePath, stationDetailPath } from '@/constants/routes'
 import { ensureMapPumpStation } from '@/data/pumpStations'
+import {
+  deleteActiveMapLayer,
+  resolveActiveMapLayer,
+  updateActiveMapLayerMeta,
+  uploadActiveMapLayer,
+} from '@/services/mapLayers'
 import styles from './DashboardPage.module.css'
 
 const LEGEND_ITEMS = [
@@ -29,15 +25,9 @@ const LEGEND_ITEMS = [
   { id: 'level', label: 'Điểm đo mực nước tự động', color: '#2D7DD2' },
 ] as const
 
-const DEFAULT_MEDIA_BASE = '/layers/hethongkenh/'
-
 function formatNow(date: Date) {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-}
-
-function layerNameFromFile(fileName: string) {
-  return fileName.replace(/\.(kml|kmz)$/i, '') || 'Lớp mới'
 }
 
 export function DashboardPage() {
@@ -51,9 +41,6 @@ export function DashboardPage() {
   const [now, setNow] = useState(() => formatNow(new Date()))
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const layersRef = useRef<MapOverlayLayer[]>([])
-  layersRef.current = layers
-
   useEffect(() => {
     const timer = window.setInterval(() => {
       setNow(formatNow(new Date()))
@@ -66,30 +53,23 @@ export function DashboardPage() {
 
     void (async () => {
       try {
-        const geojson = await parseLayerUrl('/layers/hethongkenh.kml')
+        const layer = await resolveActiveMapLayer()
         if (cancelled) return
-
-        const canalLayer: MapOverlayLayer = {
-          id: DEFAULT_CANAL_LAYER_ID,
-          name: 'Hệ thống kênh',
-          geojson,
-          visible: true,
-          opacity: DEFAULT_LAYER_STYLE.opacity,
-          weight: DEFAULT_LAYER_STYLE.weight,
-          color: DEFAULT_LAYER_STYLE.color,
-          mediaBaseUrl: DEFAULT_MEDIA_BASE,
+        if (layer) {
+          setLayers([layer])
+          setSelectedLayerId(layer.id)
+        } else {
+          setLayers([])
+          setSelectedLayerId(null)
         }
-
-        setLayers([canalLayer])
-        setSelectedLayerId(canalLayer.id)
       } catch {
-        // Map still works without the default canal layer.
+        // Map still works without an uploaded layer.
       }
     })()
 
     return () => {
       cancelled = true
-      disposeLayersMedia(layersRef.current)
+      // Do not revoke KMZ media here — owned by mapLayers memory cache.
     }
   }, [])
 
@@ -113,26 +93,9 @@ export function DashboardPage() {
 
   const handleUpload = async (file: File) => {
     try {
-      const imported = await importLayerPackage(file)
-      const id = `layer-${Date.now()}`
-      const next: MapOverlayLayer = {
-        id,
-        name: layerNameFromFile(file.name),
-        geojson: imported.geojson,
-        visible: true,
-        opacity: DEFAULT_LAYER_STYLE.opacity,
-        weight: DEFAULT_LAYER_STYLE.weight,
-        color: DEFAULT_LAYER_STYLE.color,
-        mediaUrls: imported.mediaUrls,
-        objectUrls: imported.objectUrls,
-      }
-
-      // Replace old layers + revoke previous KMZ blob media (images, ...).
-      setLayers((prev) => {
-        disposeLayersMedia(prev)
-        return [next]
-      })
-      setSelectedLayerId(id)
+      const next = await uploadActiveMapLayer(file)
+      setLayers([next])
+      setSelectedLayerId(next.id)
       setSelectedStation(null)
       setLayersOpen(true)
     } catch {
@@ -144,22 +107,34 @@ export function DashboardPage() {
     id: string,
     patch: Partial<Pick<MapOverlayLayer, 'opacity' | 'weight' | 'visible'>>,
   ) => {
-    setLayers((prev) => prev.map((layer) => (layer.id === id ? { ...layer, ...patch } : layer)))
+    setLayers((prev) =>
+      prev.map((layer) => {
+        if (layer.id !== id) return layer
+        const next = { ...layer, ...patch }
+        void updateActiveMapLayerMeta({
+          opacity: next.opacity,
+          weight: next.weight,
+          visible: next.visible,
+          name: next.name,
+          color: next.color,
+        })
+        return next
+      }),
+    )
   }
 
-  const removeLayer = (id: string) => {
-    setLayers((prev) => {
-      const removed = prev.find((layer) => layer.id === id)
-      if (removed) disposeLayerMedia(removed)
+  const removeLayer = (_id: string) => {
+    void (async () => {
+      setSelectedStation(null)
+      setSelectedLayerId(null)
+      setLayers([])
 
-      const next = prev.filter((layer) => layer.id !== id)
-      setSelectedLayerId((current) => {
-        if (current !== id) return current
-        return next[0]?.id ?? null
-      })
-      return next
-    })
-    setSelectedStation(null)
+      try {
+        await deleteActiveMapLayer()
+      } catch {
+        // Ignore persistence errors; UI already cleared the layer.
+      }
+    })()
   }
 
   const mapStations = useMemo(() => buildMapStations(layers), [layers])
@@ -281,28 +256,28 @@ export function DashboardPage() {
             </button>
 
             {menuOpen ? (
-              <div className={styles.dropdown}>
+              <div className={styles.dropdown} role="menu">
                 <button
                   type="button"
                   className={styles.dropdownItem}
+                  role="menuitem"
                   onClick={() => {
                     setMenuOpen(false)
                     navigate(ROUTES.users)
                   }}
                 >
-                  <Users size={16} />
                   Quản lý người dùng
                 </button>
                 <button
                   type="button"
                   className={styles.dropdownItem}
+                  role="menuitem"
                   onClick={() => {
                     setMenuOpen(false)
                     navigate(ROUTES.login)
                   }}
                 >
-                  <LogOut size={16} />
-                  Đăng xuất
+                  Logout
                 </button>
               </div>
             ) : null}

@@ -64,11 +64,6 @@ export const STATION_NAV_ITEMS: StationNavItem[] = [
     children: [
       { id: 'events-existing', label: 'Lỗi tồn tại', path: 'events/existing' },
       { id: 'events-history', label: 'Lịch sử', path: 'events/history' },
-      {
-        id: 'events-operation-log',
-        label: 'Nhật ký vận hành',
-        path: 'events/operation-log',
-      },
     ],
   },
   {

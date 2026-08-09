@@ -46,9 +46,9 @@
   min-width: 1100px;
 }
 
-/* sdnl_3 schematic: shrink composition to 98% */
+/* sdnl_3 schematic: shrink a bit so topbar + diagram + taller legend fit */
 .schematicInner {
-  width: 98%;
+  width: 92%;
   margin-inline: auto;
 }
 
@@ -438,14 +438,17 @@
 .schematicLegend {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-start;
-  gap: 1.15rem 1.75rem;
-  margin: calc(0.65rem - 4px) 0 0 1.25rem;
-  padding: 0;
+  gap: 1.15rem 2.5rem;
+  min-height: 2.6rem;
+  margin: 0.35rem 0 0.15rem 1.25rem;
+  padding: 0.55rem 0.25rem 0.55rem 0;
   list-style: none;
   color: #1f2937;
   font-size: 0.82rem;
   font-weight: 500;
+  box-sizing: border-box;
 }
 
 .schematicLegend li {

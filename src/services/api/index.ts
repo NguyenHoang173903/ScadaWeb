@@ -1,2 +1,2 @@
 export { apiClient } from './client'
-export { http } from './http'
+export { http, httpFormData } from './http'

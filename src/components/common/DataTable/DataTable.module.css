@@ -77,7 +77,7 @@
 
 .footer {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
@@ -85,11 +85,25 @@
   box-sizing: border-box;
 }
 
+.footerMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
 .total {
   margin: 0;
   color: #374151;
   font-size: 0.95rem;
   font-weight: 600;
+}
+
+.updateHint {
+  margin: 0;
+  color: #043d59;
+  font-size: 0.88rem;
+  font-weight: 400;
 }
 
 .footerExtra {

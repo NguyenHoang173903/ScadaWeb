@@ -75,6 +75,7 @@ export function ExistingErrorsPage() {
           minRows={8}
           totalCount={totalRecords}
           emptyText="Không có dữ liệu"
+          updateHint="Dữ liệu cập nhật 30 phút 1 lần"
           footer={
             <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
           }

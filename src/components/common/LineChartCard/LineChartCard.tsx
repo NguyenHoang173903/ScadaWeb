@@ -115,8 +115,12 @@ export function LineChartCard({
                 stroke={item.color}
                 strokeWidth={2.5}
                 hide={hiddenKeys.has(item.key)}
-                dot={{ r: 4, strokeWidth: 0, fill: item.color }}
-                activeDot={{ r: 5 }}
+                dot={
+                  item.showDot === false
+                    ? false
+                    : { r: 4, strokeWidth: 0, fill: item.color }
+                }
+                activeDot={item.showDot === false ? false : { r: 5 }}
                 connectNulls
               />
             ))}

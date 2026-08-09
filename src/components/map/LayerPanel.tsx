@@ -128,10 +128,10 @@ export function LayerPanel({
                   }`}
                   onClick={() => setLoginLayerVisible(false)}
                 >
+                  Ẩn
                   <span className={`${styles.checkbox} ${!loginVisible ? styles.checkboxOn : ''}`}>
                     {!loginVisible ? '✓' : null}
                   </span>
-                  Ẩn
                 </button>
                 <button
                   type="button"
@@ -140,10 +140,10 @@ export function LayerPanel({
                   }`}
                   onClick={() => setLoginLayerVisible(true)}
                 >
+                  Hiện
                   <span className={`${styles.checkbox} ${loginVisible ? styles.checkboxOn : ''}`}>
                     {loginVisible ? '✓' : null}
                   </span>
-                  Hiện
                 </button>
               </div>
             </div>

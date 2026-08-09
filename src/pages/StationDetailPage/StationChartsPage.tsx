@@ -48,7 +48,7 @@ export function StationChartsPage() {
 
       {chartType === 'temperature' ? (
         <LineChartCard
-          title="Biểu đồ nhiệt độ theo thời gian"
+          title="Biểu đồ nhiệt độ động cơ / ổ bi đang vận hành"
           yLabel="Nhiệt độ (độ C)"
           xLabel="Thời gian"
           data={TEMPERATURE_CHART_DATA}

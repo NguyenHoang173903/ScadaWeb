@@ -1,12 +1,24 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronDown, Clock3, LogOut, MapPin, UserRound, Users } from 'lucide-react'
+import {
+  ChevronDown,
+  Clock3,
+  LogOut,
+  MapPin,
+  Network,
+  UserRound,
+  Users,
+  type LucideProps,
+} from 'lucide-react'
 import { ROUTES } from '@/constants/routes'
 import styles from './StationTopNav.module.css'
 
 type StationTopNavProps = {
   title: string
   address: string
+  /** Optional 3rd line (page description) */
+  subtitle?: string
+  subtitleIcon?: ComponentType<LucideProps>
   userName?: string
   userRole?: string
 }
@@ -19,6 +31,8 @@ function formatDateTime(date: Date) {
 export function StationTopNav({
   title,
   address,
+  subtitle,
+  subtitleIcon: SubtitleIcon = Network,
   userName = 'Admin',
   userRole = 'Quản trị viên',
 }: StationTopNavProps) {
@@ -54,6 +68,12 @@ export function StationTopNav({
           <MapPin size={15} />
           <span>{address}</span>
         </p>
+        {subtitle ? (
+          <p className={styles.subtitle}>
+            <SubtitleIcon size={15} />
+            <span>{subtitle}</span>
+          </p>
+        ) : null}
       </div>
 
       <div className={styles.right}>

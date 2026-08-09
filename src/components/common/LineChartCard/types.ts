@@ -2,6 +2,8 @@ export type LineChartSeries = {
   key: string
   label: string
   color: string
+  /** Default true — set false for threshold/limit lines */
+  showDot?: boolean
 }
 
 export type LineChartPoint = {

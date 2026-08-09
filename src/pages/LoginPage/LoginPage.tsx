@@ -9,19 +9,13 @@ import {
   MapPinned,
 } from 'lucide-react'
 import { DashboardMap } from '@/components/map'
-import {
-  DEFAULT_CANAL_LAYER_ID,
-  DEFAULT_LAYER_STYLE,
-  type MapOverlayLayer,
-} from '@/components/map/layerTypes'
-import { parseLayerUrl } from '@/components/map/parseLayerFile'
+import type { MapOverlayLayer } from '@/components/map/layerTypes'
 import { APP_COPYRIGHT, APP_SUPPORT_EMAIL, APP_VERSION } from '@/constants/config'
 import { ROUTES } from '@/constants/routes'
 import { getLoginLayerVisible } from '@/settings/loginLayerSettings'
+import { resolveActiveMapLayer } from '@/services/mapLayers'
 import { LoginForm } from './LoginForm'
 import styles from './LoginPage.module.css'
-
-const DEFAULT_MEDIA_BASE = '/layers/hethongkenh/'
 
 const SERVICE_ITEMS = [
   { id: 'gis', lines: ['BẢN ĐỒ', 'GIS'], Icon: MapPinned },
@@ -46,21 +40,9 @@ export function LoginPage() {
       }
 
       try {
-        const geojson = await parseLayerUrl('/layers/hethongkenh.kml')
+        const layer = await resolveActiveMapLayer()
         if (cancelled) return
-
-        setLayers([
-          {
-            id: DEFAULT_CANAL_LAYER_ID,
-            name: 'Hệ thống kênh',
-            geojson,
-            visible: true,
-            opacity: DEFAULT_LAYER_STYLE.opacity,
-            weight: DEFAULT_LAYER_STYLE.weight,
-            color: DEFAULT_LAYER_STYLE.color,
-            mediaBaseUrl: DEFAULT_MEDIA_BASE,
-          },
-        ])
+        setLayers(layer ? [layer] : [])
       } catch {
         // Login page still works without the map layer.
       }
@@ -68,6 +50,7 @@ export function LoginPage() {
 
     return () => {
       cancelled = true
+      // Do not revoke KMZ media here — owned by mapLayers memory cache.
     }
   }, [])
 
@@ -90,7 +73,7 @@ export function LoginPage() {
           {SERVICE_ITEMS.map(({ id, lines, Icon }) => (
             <button key={id} type="button" className={styles.serviceItem}>
               <span className={styles.serviceIcon}>
-                <Icon size={22} />
+                <Icon size={22} strokeWidth={1.8} />
               </span>
               <span className={styles.serviceLabel}>
                 {lines.map((line) => (
@@ -100,13 +83,13 @@ export function LoginPage() {
             </button>
           ))}
         </nav>
-      </div>
 
-      <footer className={styles.footer}>
-        <span>Version {APP_VERSION}</span>
-        <span>{APP_COPYRIGHT}</span>
-        <a href={`mailto:${APP_SUPPORT_EMAIL}`}>{APP_SUPPORT_EMAIL}</a>
-      </footer>
+        <footer className={styles.footer}>
+          <span>{APP_COPYRIGHT}</span>
+          <span>v{APP_VERSION}</span>
+          <a href={`mailto:${APP_SUPPORT_EMAIL}`}>{APP_SUPPORT_EMAIL}</a>
+        </footer>
+      </div>
     </div>
   )
 }

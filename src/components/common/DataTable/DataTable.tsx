@@ -21,6 +21,8 @@ type DataTableProps<T> = {
   totalCount?: number
   totalUnit?: string
   showTotal?: boolean
+  /** Dòng ghi chú dưới tổng, ví dụ chu kỳ cập nhật */
+  updateHint?: string
   footer?: ReactNode
 }
 
@@ -35,6 +37,7 @@ export function DataTable<T>({
   totalCount,
   totalUnit = 'bản ghi',
   showTotal = true,
+  updateHint,
   footer,
 }: DataTableProps<T>) {
   const placeholderCount = Math.max(0, minRows - data.length)
@@ -115,12 +118,17 @@ export function DataTable<T>({
         </table>
       </div>
 
-      {showTotal || footer ? (
+      {showTotal || footer || updateHint ? (
         <div className={styles.footer}>
-          {showTotal ? (
-            <p className={styles.total}>
-              Tổng: {resolvedTotal} {totalUnit}
-            </p>
+          {showTotal || updateHint ? (
+            <div className={styles.footerMeta}>
+              {showTotal ? (
+                <p className={styles.total}>
+                  Tổng: {resolvedTotal} {totalUnit}
+                </p>
+              ) : null}
+              {updateHint ? <p className={styles.updateHint}>{updateHint}</p> : null}
+            </div>
           ) : (
             <span />
           )}

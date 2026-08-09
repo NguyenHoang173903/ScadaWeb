@@ -22,12 +22,6 @@
   box-sizing: border-box;
 }
 
-.operationLogTable :global(th) {
-  white-space: normal;
-  line-height: 1.25;
-  vertical-align: middle;
-}
-
 .badgeCell {
   display: inline-flex;
   max-width: 100%;

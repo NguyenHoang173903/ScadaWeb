@@ -4,31 +4,47 @@
   justify-content: space-between;
   gap: 1rem;
   min-height: 72px;
-  padding: 0.7rem 1.15rem;
+  padding: 0.45rem 1.15rem;
   background: #ffffff;
   border-bottom: 1px solid #dde3e8;
+  color: #043d59;
 }
 
 .left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
 }
 
 .left h1 {
   margin: 0;
   color: #043d59;
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
-.address {
-  display: inline-flex;
+.address,
+.subtitle {
+  display: flex;
   align-items: center;
   gap: 0.35rem;
-  margin: 0.3rem 0 0;
-  color: #6b7280;
-  font-size: 0.88rem;
+  width: 100%;
+  margin: 0.18rem 0 0;
+  color: #043d59;
+  font-size: 0.82rem;
+}
+
+.subtitle {
+  margin-top: 0.38rem;
+}
+
+.subtitle svg,
+.address svg {
+  flex-shrink: 0;
+  color: #043d59;
 }
 
 .right {
@@ -42,7 +58,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: #374151;
+  color: #043d59;
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
 }
@@ -59,7 +75,7 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #111827;
+  color: #043d59;
   cursor: pointer;
 }
 
@@ -73,8 +89,9 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #e5e7eb;
-  color: #374151;
+  background: rgba(4, 61, 89, 0.1);
+  color: #043d59;
+  border: 1px solid rgba(4, 61, 89, 0.25);
 }
 
 .userMeta {
@@ -85,10 +102,12 @@
 
 .userMeta strong {
   font-size: 0.95rem;
+  color: #043d59;
 }
 
 .userMeta small {
-  color: #6b7280;
+  color: #043d59;
+  opacity: 0.75;
   font-size: 0.78rem;
 }
 
@@ -118,7 +137,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #111827;
+  color: #043d59;
   font-size: 0.9rem;
   cursor: pointer;
 }
@@ -134,6 +153,6 @@
   }
 
   .left h1 {
-    font-size: 1.15rem;
+    font-size: 1.05rem;
   }
 }
