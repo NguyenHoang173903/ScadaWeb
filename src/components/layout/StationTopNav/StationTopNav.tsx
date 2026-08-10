@@ -5,20 +5,22 @@ import {
   Clock3,
   LogOut,
   MapPin,
-  Network,
   UserRound,
   Users,
   type LucideProps,
 } from 'lucide-react'
+import { SchemaIcon } from '@/components/icons/SchemaIcon'
 import { ROUTES } from '@/constants/routes'
 import styles from './StationTopNav.module.css'
+
+type SubtitleIcon = ComponentType<Pick<LucideProps, 'size' | 'className' | 'color'>>
 
 type StationTopNavProps = {
   title: string
   address: string
   /** Optional 3rd line (page description) */
   subtitle?: string
-  subtitleIcon?: ComponentType<LucideProps>
+  subtitleIcon?: SubtitleIcon
   userName?: string
   userRole?: string
 }
@@ -32,7 +34,7 @@ export function StationTopNav({
   title,
   address,
   subtitle,
-  subtitleIcon: SubtitleIcon = Network,
+  subtitleIcon: SubtitleIcon = SchemaIcon,
   userName = 'Admin',
   userRole = 'Quản trị viên',
 }: StationTopNavProps) {

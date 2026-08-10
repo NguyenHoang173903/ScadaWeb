@@ -70,7 +70,7 @@ export function StationSideNav() {
                     })
                   }}
                 >
-                  <Icon size={18} />
+                  <Icon size={22} />
                   <span className={styles.navLabel}>{item.label}</span>
                   <ChevronDown
                     size={16}
@@ -106,7 +106,7 @@ export function StationSideNav() {
               }
               title={item.label}
             >
-              <Icon size={18} />
+              <Icon size={22} />
               <span>{item.label}</span>
             </NavLink>
           )

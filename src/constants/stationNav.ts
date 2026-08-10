@@ -1,19 +1,22 @@
-import type { LucideIcon } from 'lucide-react'
+import type { ComponentType } from 'react'
+import type { LucideIcon, LucideProps } from 'lucide-react'
 import {
   Activity,
-  BarChart3,
-  ClipboardList,
-  FileText,
-  GitBranch,
-  Network,
   Users,
 } from 'lucide-react'
+import { PumpListIcon } from '@/components/icons/PumpListIcon'
+import { ReportIcon } from '@/components/icons/ReportIcon'
+import { SchemaIcon } from '@/components/icons/SchemaIcon'
+import { TechnoDiagramIcon } from '@/components/icons/TechnoDiagramIcon'
+import { TrendIcon } from '@/components/icons/TrendIcon'
+
+type NavIcon = LucideIcon | ComponentType<Pick<LucideProps, 'size' | 'className' | 'color'>>
 
 export type StationNavItem = {
   id: string
   label: string
   path: string
-  icon: LucideIcon
+  icon: NavIcon
   children?: { id: string; label: string; path: string }[]
 }
 
@@ -22,19 +25,19 @@ export const STATION_NAV_ITEMS: StationNavItem[] = [
     id: 'schematic',
     label: 'Sơ đồ nguyên lý',
     path: 'schematic',
-    icon: GitBranch,
+    icon: SchemaIcon,
   },
   {
     id: 'process',
     label: 'Sơ đồ công nghệ',
     path: 'process',
-    icon: Network,
+    icon: TechnoDiagramIcon,
   },
   {
     id: 'devices',
     label: 'Danh sách thiết bị',
     path: 'devices',
-    icon: ClipboardList,
+    icon: PumpListIcon,
     children: [
       { id: 'devices-1-5', label: 'Thiết bị 1-5', path: 'devices/1-5' },
       { id: 'devices-6-10', label: 'Thiết bị 6-10', path: 'devices/6-10' },
@@ -44,7 +47,7 @@ export const STATION_NAV_ITEMS: StationNavItem[] = [
     id: 'charts',
     label: 'Đồ thị',
     path: 'charts',
-    icon: BarChart3,
+    icon: TrendIcon,
     children: [
       { id: 'charts-temperature', label: 'Đồ thị nhiệt', path: 'charts/temperature' },
       { id: 'charts-current', label: 'Đồ thị dòng', path: 'charts/current' },
@@ -54,7 +57,7 @@ export const STATION_NAV_ITEMS: StationNavItem[] = [
     id: 'reports',
     label: 'Báo cáo',
     path: 'reports',
-    icon: FileText,
+    icon: ReportIcon,
   },
   {
     id: 'events',

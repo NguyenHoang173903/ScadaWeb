@@ -1,6 +1,11 @@
 import { Navigate, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ClipboardList, FolderTree, List, ListTree, Network, TrendingUp, Users } from 'lucide-react'
+import { Activity, Users } from 'lucide-react'
 import { Button } from '@/components/common/Button'
+import { PumpListIcon } from '@/components/icons/PumpListIcon'
+import { ReportIcon } from '@/components/icons/ReportIcon'
+import { SchemaIcon } from '@/components/icons/SchemaIcon'
+import { TechnoDiagramIcon } from '@/components/icons/TechnoDiagramIcon'
+import { TrendIcon } from '@/components/icons/TrendIcon'
 import { AppFooter } from '@/components/layout/AppFooter'
 import { StationSideNav } from '@/components/layout/StationSideNav'
 import { StationTopNav } from '@/components/layout/StationTopNav'
@@ -39,32 +44,32 @@ export function StationLayout() {
   const pageSubtitle = isSchematicPage
     ? {
         text: `Sơ đồ một sợi hệ thống điện điều khiển trạm bơm ${stationShortName}`,
-        icon: Network,
+        icon: SchemaIcon,
       }
     : isProcessPage
       ? {
           text: 'Sơ đồ bố trí các tổ máy bơm',
-          icon: FolderTree,
+          icon: TechnoDiagramIcon,
         }
       : isDevicesPage
         ? {
             text: 'Thông số kỹ thuật đang vận hành các tổ máy bơm',
-            icon: List,
+            icon: PumpListIcon,
           }
         : isChartsPage
           ? {
               text: 'Đồ thị theo dõi thông số máy bơm',
-              icon: TrendingUp,
+              icon: TrendIcon,
             }
           : isReportsPage
             ? {
                 text: 'Bảng thống kê dữ liệu thông số kỹ thuật của hệ thống',
-                icon: ClipboardList,
+                icon: ReportIcon,
               }
             : isEventsPage
               ? {
                   text: 'Bảng thống kê sự kiện của hệ thống',
-                  icon: ListTree,
+                  icon: Activity,
                 }
               : isTeamPage
                 ? {

@@ -54,7 +54,7 @@ export function StationChartsPage() {
           data={TEMPERATURE_CHART_DATA}
           series={TEMPERATURE_SERIES}
           yDomain={[0, 40]}
-          height={460}
+          height={540}
         />
       ) : (
         <LineChartCard
@@ -64,7 +64,7 @@ export function StationChartsPage() {
           data={CURRENT_CHART_DATA}
           series={CURRENT_SERIES}
           yDomain={[0, 40]}
-          height={460}
+          height={540}
         />
       )}
     </div>

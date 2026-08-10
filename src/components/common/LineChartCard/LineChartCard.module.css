@@ -23,11 +23,47 @@
   user-select: none;
 }
 
-.legendItem {
+.legend {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  width: 100%;
+  padding-top: 0.5rem;
+  padding-left: 2.5rem;
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.35rem 1.1rem;
+}
+
+.legendItem,
+.legendItemHidden {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #374151;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .legendItemHidden {
   color: #9ca3af;
   text-decoration: line-through;
+}
+
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 50%;
 }
