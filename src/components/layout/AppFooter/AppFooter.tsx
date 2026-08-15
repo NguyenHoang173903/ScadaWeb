@@ -20,10 +20,12 @@ export function AppFooter({
   return (
     <footer className={styles.footer}>
       <span className={styles.left}>{leftText}</span>
-      <span className={styles.center}>{copyright}</span>
-      <a className={styles.right} href={`mailto:${supportEmail}`}>
-        {supportEmail}
-      </a>
+      <div className={styles.rightGroup}>
+        <span className={styles.copyright}>{copyright}</span>
+        <a className={styles.right} href={`mailto:${supportEmail}`}>
+          {supportEmail}
+        </a>
+      </div>
     </footer>
   )
 }

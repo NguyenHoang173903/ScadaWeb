@@ -43,7 +43,12 @@ export function SearchToolbar({
           {searchLabel}
         </Button>
         {onRefresh ? (
-          <Button type="button" variant="secondary" onClick={onRefresh}>
+          <Button
+            type="button"
+            variant="secondary"
+            className={styles.resetButton}
+            onClick={onRefresh}
+          >
             {refreshLabel}
           </Button>
         ) : null}

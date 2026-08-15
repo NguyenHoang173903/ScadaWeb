@@ -82,7 +82,7 @@ export function EventFilterBar({
         <Button variant="primary" className={styles.filterButton} onClick={onFilter}>
           Lọc
         </Button>
-        <Button variant="secondary" onClick={onReset}>
+        <Button variant="secondary" className={styles.resetButton} onClick={onReset}>
           {resetLabel}
         </Button>
         <Button variant="primary" onClick={onExport}>

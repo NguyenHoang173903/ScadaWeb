@@ -76,7 +76,7 @@ export function ReportFilterBar({
         <Button variant="primary" className={styles.filterButton} onClick={onFilter}>
           Lọc
         </Button>
-        <Button variant="secondary" onClick={onReset}>
+        <Button variant="secondary" className={styles.resetButton} onClick={onReset}>
           Làm mới
         </Button>
         <Button variant="primary" onClick={onExport}>

@@ -29,3 +29,11 @@
   align-items: center;
   gap: 0.55rem;
 }
+
+.actions .resetButton {
+  background: #eef2f4;
+}
+
+.actions .resetButton:hover:not(:disabled) {
+  background: #e4eaee;
+}

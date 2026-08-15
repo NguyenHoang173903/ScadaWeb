@@ -60,6 +60,14 @@
   filter: brightness(1.05);
 }
 
+.actions .resetButton {
+  background: #eef2f4;
+}
+
+.actions .resetButton:hover:not(:disabled) {
+  background: #e4eaee;
+}
+
 @media (max-width: 900px) {
   .searchField {
     max-width: none;

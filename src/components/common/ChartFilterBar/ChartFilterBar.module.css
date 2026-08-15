@@ -63,3 +63,11 @@
   margin-left: auto;
   flex: 0 0 auto;
 }
+
+.actions .resetButton {
+  background: #eef2f4;
+}
+
+.actions .resetButton:hover:not(:disabled) {
+  background: #e4eaee;
+}
