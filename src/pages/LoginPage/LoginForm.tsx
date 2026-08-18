@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Eye, EyeOff, Lock, LogIn, ShieldCheck, UserRound } from 'lucide-react'
+import { Eye, EyeOff, Lock, LogIn, UserRound } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { APP_COMPANY } from '@/constants/config'
 import styles from './LoginPage.module.css'
@@ -83,15 +83,6 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
         <button type="submit" className={styles.primaryButton}>
           <LogIn size={18} />
           ĐĂNG NHẬP
-        </button>
-
-        <div className={styles.divider}>
-          <span>hoặc</span>
-        </div>
-
-        <button type="button" className={styles.ssoButton}>
-          <ShieldCheck size={18} />
-          ĐĂNG NHẬP SSO
         </button>
       </form>
     </section>

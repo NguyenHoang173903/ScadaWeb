@@ -2,7 +2,6 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string
-  readonly VITE_ARCGIS_API_KEY?: string
   /** `mock` (default) | `api` — map KMZ storage backend */
   readonly VITE_MAP_LAYER_STORAGE?: string
 }

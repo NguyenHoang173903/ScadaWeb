@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import L, { type PathOptions } from 'leaflet'
 import 'leaflet.markercluster'
 import type { Feature } from 'geojson'
+import { ARCGIS_API_KEY } from '@/constants/config'
 import {
   buildMapStations,
   STATION_TYPE_COLOR,
@@ -24,9 +25,7 @@ const NORTH_VIETNAM_BOUNDS = L.latLngBounds(
 const MAP_MIN_ZOOM = 7
 const MAP_MAX_ZOOM = 18
 
-const ARCGIS_API_KEY = import.meta.env.VITE_ARCGIS_API_KEY?.trim() ?? ''
-
-/** Esri World Imagery — ArcGIS Location Platform API key only (no anonymous fallback) */
+/** Esri World Imagery — ArcGIS Location Platform API key */
 const SATELLITE_TILE = `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${encodeURIComponent(ARCGIS_API_KEY)}`
 
 const asColor = (value: unknown): string | undefined =>
