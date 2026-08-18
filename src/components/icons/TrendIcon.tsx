@@ -1,15 +1,12 @@
-type TrendIconProps = {
-  size?: number
-  className?: string
-  color?: string
-}
+import { resolveIconSize, type AppIconProps } from './types'
 
 /** Inline trend.svg so fill follows currentColor (sidebar white / topbar brand). */
-export function TrendIcon({ size = 18, className, color = 'currentColor' }: TrendIconProps) {
+export function TrendIcon({ size = 18, className, color = 'currentColor' }: AppIconProps) {
+  const dim = resolveIconSize(size)
   return (
     <svg
-      width={size}
-      height={size}
+      width={dim}
+      height={dim}
       viewBox="0 0 28 28"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

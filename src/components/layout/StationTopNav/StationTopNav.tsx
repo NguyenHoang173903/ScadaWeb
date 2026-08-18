@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChevronDown,
@@ -7,20 +7,18 @@ import {
   MapPin,
   UserRound,
   Users,
-  type LucideProps,
 } from 'lucide-react'
 import { SchemaIcon } from '@/components/icons/SchemaIcon'
+import type { AppIcon } from '@/components/icons/types'
 import { ROUTES } from '@/constants/routes'
 import styles from './StationTopNav.module.css'
-
-type SubtitleIcon = ComponentType<Pick<LucideProps, 'size' | 'className' | 'color'>>
 
 type StationTopNavProps = {
   title: string
   address: string
   /** Optional 3rd line (page description) */
   subtitle?: string
-  subtitleIcon?: SubtitleIcon
+  subtitleIcon?: AppIcon
   userName?: string
   userRole?: string
 }

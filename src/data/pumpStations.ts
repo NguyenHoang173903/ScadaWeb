@@ -15,7 +15,7 @@ export const PUMP_STATIONS: PumpStation[] = [
     id: 'ap-bac',
     name: 'Trạm Ấp Bắc',
     code: 'TB-AB',
-    address: 'Thôn Võng La, xã Võng La, huyện Đông Anh, thành phố Hà Nội',
+    address: 'Thôn Võng La, xã Võng La, thành phố Hà Nội',
     status: 'Đang hoạt động',
     pumps: 10,
     capacity: '1.200 m³/h',

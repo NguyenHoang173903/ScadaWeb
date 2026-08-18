@@ -10,6 +10,7 @@ import {
 } from '@/components/map/extractStations'
 import type { MapOverlayLayer } from '@/components/map/layerTypes'
 import { ROUTES, stationDataUpdatePath, stationDetailPath } from '@/constants/routes'
+import { APP_COMPANY } from '@/constants/config'
 import { ensureMapPumpStation } from '@/data/pumpStations'
 import {
   deleteActiveMapLayer,
@@ -179,7 +180,7 @@ export function DashboardPage() {
           <img src={logoTlhn} alt="Logo thủy lợi Hà Nội" className={styles.logo} />
           <div className={styles.brandText}>
             <p className={styles.brandTitle}>HỆ THỐNG CƠ SỞ DỮ LIỆU SỐ</p>
-            <p className={styles.brandSubtitle}>CÔNG TY TNHH MTV THỦY LỢI HÀ NỘI</p>
+            <p className={styles.brandSubtitle}>{APP_COMPANY}</p>
           </div>
         </div>
 

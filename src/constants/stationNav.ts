@@ -1,22 +1,19 @@
-import type { ComponentType } from 'react'
-import type { LucideIcon, LucideProps } from 'lucide-react'
 import {
   Activity,
   Users,
 } from 'lucide-react'
+import type { AppIcon } from '@/components/icons/types'
 import { PumpListIcon } from '@/components/icons/PumpListIcon'
 import { ReportIcon } from '@/components/icons/ReportIcon'
 import { SchemaIcon } from '@/components/icons/SchemaIcon'
 import { TechnoDiagramIcon } from '@/components/icons/TechnoDiagramIcon'
 import { TrendIcon } from '@/components/icons/TrendIcon'
 
-type NavIcon = LucideIcon | ComponentType<Pick<LucideProps, 'size' | 'className' | 'color'>>
-
 export type StationNavItem = {
   id: string
   label: string
   path: string
-  icon: NavIcon
+  icon: AppIcon
   children?: { id: string; label: string; path: string }[]
 }
 

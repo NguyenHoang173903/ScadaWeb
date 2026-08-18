@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Eye, EyeOff, Lock, LogIn, ShieldCheck, UserRound } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
+import { APP_COMPANY } from '@/constants/config'
 import styles from './LoginPage.module.css'
 
 type LoginFormProps = {
@@ -27,7 +28,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
       <div className={styles.brand}>
         <img src={logoTlhn} alt="UBND Thành phố Hà Nội" className={styles.logo} />
         <h1 className={styles.title}>HỆ THỐNG CƠ SỞ DỮ LIỆU SỐ</h1>
-        <p className={styles.subtitle}>CÔNG TY TNHH MTV THỦY LỢI HÀ NỘI</p>
+        <p className={styles.subtitle}>{APP_COMPANY}</p>
       </div>
 
       <form className={styles.form} onSubmit={handleSubmit}>
