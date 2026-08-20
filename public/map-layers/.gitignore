@@ -1,0 +1,5 @@
+# Local map layers (KMZ + geometry.geojson + manifest).
+# Each developer uploads their own files via the Layer panel — not shared via git.
+*
+!.gitignore
+!.gitkeep
