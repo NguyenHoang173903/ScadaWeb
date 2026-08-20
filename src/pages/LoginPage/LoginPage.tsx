@@ -11,7 +11,7 @@ import type { MapOverlayLayer } from '@/components/map/layerTypes'
 import { APP_COPYRIGHT, APP_SUPPORT_EMAIL, APP_VERSION } from '@/constants/config'
 import { ROUTES } from '@/constants/routes'
 import { getLoginLayerVisible } from '@/settings/loginLayerSettings'
-import { resolveActiveMapLayer } from '@/services/mapLayers'
+import { peekCachedMapLayers, resolveMapLayers } from '@/services/mapLayers'
 import { LoginForm } from './LoginForm'
 import styles from './LoginPage.module.css'
 
@@ -34,7 +34,9 @@ const SERVICE_ITEMS: ServiceItem[] = [
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const [layers, setLayers] = useState<MapOverlayLayer[]>([])
+  const [layers, setLayers] = useState<MapOverlayLayer[]>(() =>
+    getLoginLayerVisible() ? peekCachedMapLayers() : [],
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -46,9 +48,9 @@ export function LoginPage() {
       }
 
       try {
-        const layer = await resolveActiveMapLayer()
+        const loaded = await resolveMapLayers()
         if (cancelled) return
-        setLayers(layer ? [layer] : [])
+        setLayers(loaded)
       } catch {
         // Login page still works without the map layer.
       }
@@ -65,7 +67,7 @@ export function LoginPage() {
       <div className={styles.shell}>
         <div className={styles.workspace}>
           <div className={styles.mapPane}>
-            <DashboardMap layers={layers} />
+            <DashboardMap layers={layers} zoomLocked />
           </div>
 
           <LoginForm

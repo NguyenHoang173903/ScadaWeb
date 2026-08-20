@@ -80,9 +80,11 @@ function createClusterIcon(cluster: L.MarkerCluster) {
 type Props = {
   layers: MapOverlayLayer[]
   onSelectStation?: (station: MapStation) => void
+  /** Lock pan + zoom (login decorative map). */
+  zoomLocked?: boolean
 }
 
-export function DashboardMap({ layers, onSelectStation }: Props) {
+export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const overlayRef = useRef<Map<string, L.GeoJSON>>(new Map())
@@ -91,11 +93,16 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
   const fittedRef = useRef(false)
   const overviewBoundsRef = useRef<L.LatLngBounds | null>(null)
   const onSelectRef = useRef(onSelectStation)
+  const zoomLockedRef = useRef(zoomLocked)
   const [mapReady, setMapReady] = useState(0)
 
   useEffect(() => {
     onSelectRef.current = onSelectStation
   }, [onSelectStation])
+
+  useEffect(() => {
+    zoomLockedRef.current = zoomLocked
+  }, [zoomLocked])
 
   useEffect(() => {
     const el = containerRef.current
@@ -110,14 +117,17 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
       maxBoundsViscosity: 1,
       zoomControl: false,
       attributionControl: false,
-      scrollWheelZoom: true,
-      doubleClickZoom: true,
-      boxZoom: true,
-      touchZoom: true,
-      keyboard: true,
+      dragging: !zoomLocked,
+      scrollWheelZoom: !zoomLocked,
+      doubleClickZoom: !zoomLocked,
+      boxZoom: !zoomLocked,
+      touchZoom: !zoomLocked,
+      keyboard: !zoomLocked,
     })
 
-    L.control.zoom({ position: 'bottomleft' }).addTo(map)
+    if (!zoomLocked) {
+      L.control.zoom({ position: 'bottomleft' }).addTo(map)
+    }
 
     L.tileLayer(SATELLITE_TILE, {
       attribution: 'Tiles &copy; Esri',
@@ -126,8 +136,8 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
 
     const clusters = L.markerClusterGroup({
       showCoverageOnHover: false,
-      zoomToBoundsOnClick: true,
-      spiderfyOnMaxZoom: true,
+      zoomToBoundsOnClick: !zoomLocked,
+      spiderfyOnMaxZoom: !zoomLocked,
       disableClusteringAtZoom: CLUSTER_DISABLE_ZOOM,
       maxClusterRadius: 55,
       iconCreateFunction: createClusterIcon,
@@ -154,22 +164,43 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
       mapRef.current = null
       fittedRef.current = false
     }
-  }, [])
+  }, [zoomLocked])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || mapReady === 0) return
 
     const activeIds = new Set(layers.map((layer) => layer.id))
+    const removedIds: string[] = []
 
-    overlayRef.current.forEach((instance, id) => {
-      if (!activeIds.has(id)) {
-        instance.remove()
-        overlayRef.current.delete(id)
-        geojsonByIdRef.current.delete(id)
-        fittedRef.current = false
-      }
+    overlayRef.current.forEach((_, id) => {
+      if (!activeIds.has(id)) removedIds.push(id)
     })
+
+    for (const id of removedIds) {
+      const instance = overlayRef.current.get(id)
+      if (!instance) continue
+      if (map.hasLayer(instance)) {
+        map.removeLayer(instance)
+      }
+      instance.clearLayers()
+      instance.remove()
+      overlayRef.current.delete(id)
+      geojsonByIdRef.current.delete(id)
+      fittedRef.current = false
+    }
+
+    if (layers.length === 0) {
+      overlayRef.current.forEach((instance) => {
+        if (map.hasLayer(instance)) map.removeLayer(instance)
+        instance.clearLayers()
+        instance.remove()
+      })
+      overlayRef.current.clear()
+      geojsonByIdRef.current.clear()
+      fittedRef.current = false
+      return
+    }
 
     layers.forEach((layerConfig) => {
       let instance = overlayRef.current.get(layerConfig.id)
@@ -215,10 +246,17 @@ export function DashboardMap({ layers, onSelectStation }: Props) {
       if (bounds?.isValid()) {
         overviewBoundsRef.current = bounds
         map.fitBounds(bounds, {
-          padding: [48, 48],
-          maxZoom: 12,
+          padding: zoomLockedRef.current ? [24, 24] : [48, 48],
+          maxZoom: zoomLockedRef.current ? 13 : 12,
           animate: false,
         })
+        if (zoomLockedRef.current) {
+          // Nudge in one level for a tighter login framing.
+          const nudged = Math.min(map.getZoom() + 1, 14)
+          map.setView(map.getCenter(), nudged, { animate: false })
+          map.setMinZoom(nudged)
+          map.setMaxZoom(nudged)
+        }
         fittedRef.current = true
       }
     }

@@ -31,8 +31,12 @@ export function StationLayout() {
     )
   }
 
-  const stationShortName = station.name.replace(/^Trạm\s+/i, '')
-  const title = `Trạm bơm ${stationShortName}`
+  const stationShortName = station.name
+    .replace(/^Trạm\s+bơm\s+/i, '')
+    .replace(/^Trạm\s+/i, '')
+  const title = /^Trạm\s+bơm\b/i.test(station.name)
+    ? station.name
+    : `Trạm bơm ${stationShortName}`
   const isSchematicPage = /\/schematic\/?$/.test(location.pathname)
   const isProcessPage = /\/process\/?$/.test(location.pathname)
   const isDevicesPage = /\/devices(\/|$)/.test(location.pathname)

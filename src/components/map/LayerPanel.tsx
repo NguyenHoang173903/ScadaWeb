@@ -65,10 +65,10 @@ export function LayerPanel({
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload size={18} />
-          <span>Tải lên KML/KMZ (thay thế lớp hiện tại)</span>
+          <span>Tải lên KML/KMZ</span>
         </button>
 
-        {layers.length > 1 ? (
+        {layers.length > 0 ? (
           <div className={styles.layerTabs}>
             {layers.map((layer) => (
               <button

@@ -13,10 +13,11 @@ import { ROUTES, stationDataUpdatePath, stationDetailPath } from '@/constants/ro
 import { APP_COMPANY } from '@/constants/config'
 import { ensureMapPumpStation } from '@/data/pumpStations'
 import {
-  deleteActiveMapLayer,
-  resolveActiveMapLayer,
-  updateActiveMapLayerMeta,
-  uploadActiveMapLayer,
+  deleteMapLayer,
+  peekCachedMapLayers,
+  resolveMapLayers,
+  updateMapLayerMeta,
+  uploadMapLayer,
 } from '@/services/mapLayers'
 import styles from './DashboardPage.module.css'
 
@@ -36,8 +37,10 @@ export function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [listType, setListType] = useState<MapStationType | null>(null)
   const [layersOpen, setLayersOpen] = useState(false)
-  const [layers, setLayers] = useState<MapOverlayLayer[]>([])
-  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
+  const [layers, setLayers] = useState<MapOverlayLayer[]>(() => peekCachedMapLayers())
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(
+    () => peekCachedMapLayers()[0]?.id ?? null,
+  )
   const [selectedStation, setSelectedStation] = useState<MapStation | null>(null)
   const [now, setNow] = useState(() => formatNow(new Date()))
   const menuRef = useRef<HTMLDivElement>(null)
@@ -54,15 +57,10 @@ export function DashboardPage() {
 
     void (async () => {
       try {
-        const layer = await resolveActiveMapLayer()
+        const loaded = await resolveMapLayers()
         if (cancelled) return
-        if (layer) {
-          setLayers([layer])
-          setSelectedLayerId(layer.id)
-        } else {
-          setLayers([])
-          setSelectedLayerId(null)
-        }
+        setLayers(loaded)
+        setSelectedLayerId(loaded[0]?.id ?? null)
       } catch {
         // Map still works without an uploaded layer.
       }
@@ -94,8 +92,8 @@ export function DashboardPage() {
 
   const handleUpload = async (file: File) => {
     try {
-      const next = await uploadActiveMapLayer(file)
-      setLayers([next])
+      const next = await uploadMapLayer(file)
+      setLayers((prev) => [...prev, next])
       setSelectedLayerId(next.id)
       setSelectedStation(null)
       setLayersOpen(true)
@@ -112,7 +110,7 @@ export function DashboardPage() {
       prev.map((layer) => {
         if (layer.id !== id) return layer
         const next = { ...layer, ...patch }
-        void updateActiveMapLayerMeta({
+        void updateMapLayerMeta(id, {
           opacity: next.opacity,
           weight: next.weight,
           visible: next.visible,
@@ -124,18 +122,19 @@ export function DashboardPage() {
     )
   }
 
-  const removeLayer = (_id: string) => {
-    void (async () => {
-      setSelectedStation(null)
-      setSelectedLayerId(null)
-      setLayers([])
+  const removeLayer = (id: string) => {
+    setSelectedStation(null)
+    const next = layers.filter((layer) => layer.id !== id)
+    setLayers(next)
+    setSelectedLayerId((current) =>
+      current === id || (current != null && !next.some((layer) => layer.id === current))
+        ? (next[0]?.id ?? null)
+        : current,
+    )
 
-      try {
-        await deleteActiveMapLayer()
-      } catch {
-        // Ignore persistence errors; UI already cleared the layer.
-      }
-    })()
+    void deleteMapLayer(id).catch(() => {
+      // Ignore persistence errors; UI already cleared the layer.
+    })
   }
 
   const mapStations = useMemo(() => buildMapStations(layers), [layers])
@@ -286,9 +285,10 @@ export function DashboardPage() {
         </div>
       </header>
 
-      {(!selectedStation ||
+      {!layersOpen &&
+      (!selectedStation ||
         !(selectedStation.hasKmzInfo ?? Boolean(selectedStation.description?.trim()))) ? (
-        <aside className={`${styles.legendPanel} ${layersOpen ? styles.legendRaised : ''}`}>
+        <aside className={styles.legendPanel}>
           <h2>Chú thích</h2>
           <ul className={styles.legendList}>
             {LEGEND_ITEMS.map((item) => (

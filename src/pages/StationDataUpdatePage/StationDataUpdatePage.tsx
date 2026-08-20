@@ -101,7 +101,7 @@ export function StationDataUpdatePage() {
                     id="projectName"
                     value={values.projectName}
                     onChange={(event) => updateField('projectName', event.target.value)}
-                    placeholder="Trạm bơm dã chiến Ấp Bắc"
+                    placeholder="Trạm Bơm Dã Chiến Ấp Bắc"
                   />
                 </FormField>
                 <FormField label="Đơn vị quản lý" htmlFor="managementUnit" required>

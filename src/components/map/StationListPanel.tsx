@@ -34,7 +34,7 @@ function resolveCard(station: MapStation) {
   const statusColor = online ? ONLINE_COLOR : OFFLINE_COLOR
 
   return {
-    name: catalog?.name ?? station.name,
+    name: station.name || catalog?.name || '—',
     code,
     online,
     statusLabel,

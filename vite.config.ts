@@ -2,11 +2,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { mapLayersFsPlugin } from './vite.mapLayersFs'
 
 const rootDir = fileURLToPath(new URL('.', import.meta.url))
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), mapLayersFsPlugin(rootDir)],
   resolve: {
     alias: {
       '@': path.resolve(rootDir, 'src'),

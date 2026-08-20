@@ -182,10 +182,17 @@ function namesMatchForKmz(dbName: string, kmzName: string) {
   if (!dbKey || !kmzKey) return false
   if (dbKey === kmzKey) return true
 
-  // Avoid loose includes on short names (e.g. "phu dong").
   const [shorter, longer] =
     dbKey.length <= kmzKey.length ? [dbKey, kmzKey] : [kmzKey, dbKey]
-  return shorter.length >= 16 && longer.includes(shorter)
+
+  // "ap bac" ⊂ "bom da chien ap bac" — all tokens of the shorter name must appear.
+  const shortTokens = shorter.split(/\s+/).filter(Boolean)
+  if (shortTokens.length >= 2 && shortTokens.every((token) => longer.includes(token))) {
+    return true
+  }
+
+  // Avoid loose includes on short single tokens (e.g. "bac").
+  return shorter.length >= 8 && longer.includes(shorter)
 }
 
 /** Max distance to attach a KMZ placemark to a DB pump (~120m). */
@@ -210,9 +217,9 @@ function findKmzMatchForPump(dbName: string, dbLat: number, dbLng: number, kmzPu
 }
 
 /**
- * Pump markers come from database (`PUMP_STATIONS`).
- * KMZ/KML only enriches description when a matching placemark exists.
- * Rain / level points still come from KMZ Point placemarks.
+ * Pump markers come from database (`PUMP_STATIONS`), enriched by KMZ Point placemarks.
+ * Unmatched KMZ pump placemarks are also shown so uploaded station KMZ still works.
+ * Rain / level points come from KMZ Point placemarks.
  */
 export function buildMapStations(
   layers: Array<{
@@ -225,16 +232,21 @@ export function buildMapStations(
   const fromKmz = extractStationsFromLayers(layers)
   const kmzPumps = fromKmz.filter((station) => station.type === 'pump')
   const sensors = fromKmz.filter((station) => station.type !== 'pump')
+  const matchedKmzKeys = new Set<string>()
 
   const pumpsFromDb: MapStation[] = PUMP_STATIONS.map((db) => {
     const match = findKmzMatchForPump(db.name, db.lat, db.lng, kmzPumps)
+    if (match) {
+      matchedKmzKeys.add(`${match.lat.toFixed(6)},${match.lng.toFixed(6)}`)
+    }
     const description = match?.description?.trim() ? match.description : undefined
 
     return {
       id: db.id,
-      name: db.name,
-      lat: db.lat,
-      lng: db.lng,
+      name: match?.name?.trim() || db.name,
+      // Prefer real KMZ coordinates when matched.
+      lat: match?.lat ?? db.lat,
+      lng: match?.lng ?? db.lng,
       type: 'pump' as const,
       color: STATION_TYPE_COLOR.pump,
       code: db.code,
@@ -246,5 +258,12 @@ export function buildMapStations(
     }
   })
 
-  return [...pumpsFromDb, ...sensors].sort((a, b) => a.name.localeCompare(b.name, 'vi'))
+  const orphanKmzPumps = kmzPumps.filter((station) => {
+    const key = `${station.lat.toFixed(6)},${station.lng.toFixed(6)}`
+    return !matchedKmzKeys.has(key)
+  })
+
+  return [...pumpsFromDb, ...orphanKmzPumps, ...sensors].sort((a, b) =>
+    a.name.localeCompare(b.name, 'vi'),
+  )
 }

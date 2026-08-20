@@ -1,19 +1,23 @@
 /**
  * Mock of server `uploads/map-layers/` using IndexedDB.
- * One active KMZ/KML + meta — same contract as the future API.
+ * Supports multiple KMZ/KML layers — upload adds, delete removes by id.
+ * Parsed GeoJSON is cached in IDB so reload does not re-unzip KMZ.
  */
-import type { ActiveMapLayerPackage, MapLayerMeta } from './types'
+import type { FeatureCollection } from 'geojson'
+import type { MapLayerMeta, MapLayerPackage } from './types'
 
 const DB_NAME = 'scadaweb-map-layers-mock'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const STORE_NAME = 'uploads'
-/** Mimics uploads/map-layers/active.* on the server. */
-const RECORD_KEY = 'map-layers/active'
+/** Legacy single-layer key from v1 — migrated on read. */
+const LEGACY_ACTIVE_KEY = 'map-layers/active'
 
 type PersistedRecord = {
-  key: typeof RECORD_KEY
+  key: string
   file: Blob
   meta: MapLayerMeta
+  /** Cached parse result — avoids KMZ unzip on every page reload */
+  geojson?: FeatureCollection
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -45,37 +49,75 @@ function idbTransactionDone(tx: IDBTransaction): Promise<void> {
   })
 }
 
-export async function mockGetActiveMapLayer(): Promise<ActiveMapLayerPackage | null> {
+function toPackage(record: PersistedRecord): MapLayerPackage {
+  const file = new File([record.file], record.meta.fileName || 'layer.kmz', {
+    type: record.file.type || 'application/octet-stream',
+  })
+  return { file, meta: record.meta, geojson: record.geojson }
+}
+
+function normalizeMeta(meta: MapLayerMeta, key: string): MapLayerMeta {
+  return {
+    ...meta,
+    id: meta.id || key,
+  }
+}
+
+export async function mockListMapLayers(): Promise<MapLayerPackage[]> {
   const db = await openDb()
   try {
-    const tx = db.transaction(STORE_NAME, 'readonly')
-    const existing = (await idbRequest(
-      tx.objectStore(STORE_NAME).get(RECORD_KEY),
-    )) as PersistedRecord | undefined
-    if (!existing?.file) return null
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    const store = tx.objectStore(STORE_NAME)
+    const all = (await idbRequest(store.getAll())) as PersistedRecord[]
+    const packages: MapLayerPackage[] = []
 
-    const file = new File([existing.file], existing.meta.fileName || 'active.kmz', {
-      type: existing.file.type || 'application/octet-stream',
-    })
-    return { file, meta: existing.meta }
+    for (const record of all) {
+      if (!record?.file) continue
+
+      // Migrate legacy single-active record to a unique layer id.
+      if (record.key === LEGACY_ACTIVE_KEY) {
+        const meta = normalizeMeta(record.meta, record.meta.id || `layer-migrated-${Date.now()}`)
+        const migrated: PersistedRecord = {
+          key: meta.id,
+          file: record.file,
+          meta,
+          geojson: record.geojson,
+        }
+        store.delete(LEGACY_ACTIVE_KEY)
+        store.put(migrated)
+        packages.push(toPackage(migrated))
+        continue
+      }
+
+      const meta = normalizeMeta(record.meta, record.key)
+      if (meta.id !== record.meta.id) {
+        record.meta = meta
+        store.put(record)
+      }
+      packages.push(toPackage(record))
+    }
+
+    await idbTransactionDone(tx)
+    return packages
   } finally {
     db.close()
   }
 }
 
-export async function mockUploadActiveMapLayer(
+export async function mockUploadMapLayer(
   file: File,
   meta: MapLayerMeta,
-): Promise<ActiveMapLayerPackage> {
+  geojson?: FeatureCollection,
+): Promise<MapLayerPackage> {
   const db = await openDb()
   try {
     const tx = db.transaction(STORE_NAME, 'readwrite')
     const store = tx.objectStore(STORE_NAME)
-    store.clear()
     const record: PersistedRecord = {
-      key: RECORD_KEY,
+      key: meta.id,
       file: file.slice(0, file.size, file.type || 'application/octet-stream'),
       meta,
+      geojson,
     }
     store.put(record)
     await idbTransactionDone(tx)
@@ -83,19 +125,38 @@ export async function mockUploadActiveMapLayer(
     db.close()
   }
 
-  return { file, meta }
+  return { file, meta, geojson }
 }
 
-export async function mockUpdateActiveMapLayerMeta(
+export async function mockSaveLayerGeojson(
+  id: string,
+  geojson: FeatureCollection,
+): Promise<void> {
+  const db = await openDb()
+  try {
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    const store = tx.objectStore(STORE_NAME)
+    const existing = (await idbRequest(store.get(id))) as PersistedRecord | undefined
+    if (!existing) return
+    existing.geojson = geojson
+    store.put(existing)
+    await idbTransactionDone(tx)
+  } finally {
+    db.close()
+  }
+}
+
+export async function mockUpdateMapLayerMeta(
+  id: string,
   patch: Partial<MapLayerMeta>,
 ): Promise<MapLayerMeta | null> {
   const db = await openDb()
   try {
     const tx = db.transaction(STORE_NAME, 'readwrite')
     const store = tx.objectStore(STORE_NAME)
-    const existing = (await idbRequest(store.get(RECORD_KEY))) as PersistedRecord | undefined
+    const existing = (await idbRequest(store.get(id))) as PersistedRecord | undefined
     if (!existing) return null
-    existing.meta = { ...existing.meta, ...patch }
+    existing.meta = { ...existing.meta, ...patch, id }
     store.put(existing)
     await idbTransactionDone(tx)
     return existing.meta
@@ -104,11 +165,11 @@ export async function mockUpdateActiveMapLayerMeta(
   }
 }
 
-export async function mockDeleteActiveMapLayer(): Promise<void> {
+export async function mockDeleteMapLayer(id: string): Promise<void> {
   const db = await openDb()
   try {
     const tx = db.transaction(STORE_NAME, 'readwrite')
-    tx.objectStore(STORE_NAME).clear()
+    tx.objectStore(STORE_NAME).delete(id)
     await idbTransactionDone(tx)
   } finally {
     db.close()

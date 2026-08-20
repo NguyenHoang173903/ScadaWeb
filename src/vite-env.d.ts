@@ -2,7 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string
-  /** `mock` (default) | `api` — map KMZ storage backend */
+  /** `files` (default) | `mock` | `api` — map KMZ storage backend */
   readonly VITE_MAP_LAYER_STORAGE?: string
 }
 
