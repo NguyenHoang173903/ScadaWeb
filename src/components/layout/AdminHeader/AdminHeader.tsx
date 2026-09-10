@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronDown, Clock3, LogOut, UserRound, Users } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { ROUTES } from '@/constants/routes'
+import { logoutCurrentUser } from '@/services/auditLog'
+import { getSessionUsername } from '@/settings/session'
 import styles from './AdminHeader.module.css'
 
 type AdminHeaderProps = {
@@ -16,10 +18,11 @@ function formatDateTime(date: Date) {
 }
 
 export function AdminHeader({
-  userName = 'Admin',
+  userName,
   userRole = 'Quản trị viên',
 }: AdminHeaderProps) {
   const navigate = useNavigate()
+  const resolvedName = userName ?? getSessionUsername() ?? 'Admin'
   const [now, setNow] = useState(() => formatDateTime(new Date()))
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -71,7 +74,7 @@ export function AdminHeader({
               <UserRound size={16} />
             </span>
             <span className={styles.userMeta}>
-              <strong>{userName}</strong>
+              <strong>{resolvedName}</strong>
               <small>{userRole}</small>
             </span>
             <ChevronDown size={16} className={menuOpen ? styles.chevronOpen : undefined} />
@@ -95,6 +98,7 @@ export function AdminHeader({
                 className={styles.dropdownItem}
                 onClick={() => {
                   setMenuOpen(false)
+                  logoutCurrentUser('logout')
                   navigate(ROUTES.login)
                 }}
               >

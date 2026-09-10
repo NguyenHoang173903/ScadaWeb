@@ -29,8 +29,11 @@ type Manifest = {
 }
 
 const API_PREFIX = '/__map-layers'
-/** Skip media extract for huge canal KMZs (images rarely needed; unzip is costly). */
+const STATIC_PREFIX = '/map-layers/'
+/** Skip eager unzip for huge canal KMZs; images are extracted on demand instead. */
 const MAX_KMZ_MEDIA_BYTES = 40 * 1024 * 1024
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|svg)$/i
+const zipByLayer = new Map<string, Promise<JSZip | null>>()
 
 function sendJson(res: ServerResponse, status: number, body: unknown) {
   res.statusCode = status
@@ -104,23 +107,145 @@ function layerMediaBaseUrl(layerId: string) {
   return `/map-layers/${layerId}/`
 }
 
+function isImageName(name: string) {
+  return IMAGE_EXT.test(name)
+}
+
+function mimeFromName(name: string) {
+  const ext = name.toLowerCase().split('.').pop()
+  switch (ext) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'png':
+      return 'image/png'
+    case 'gif':
+      return 'image/gif'
+    case 'webp':
+      return 'image/webp'
+    case 'svg':
+      return 'image/svg+xml'
+    case 'bmp':
+      return 'image/bmp'
+    default:
+      return 'application/octet-stream'
+  }
+}
+
+function kmlDirectory(entries: Array<{ name: string }>) {
+  const kmlEntry = entries.find((entry) => entry.name.toLowerCase().endsWith('.kml'))
+  if (!kmlEntry) return ''
+  const normalized = kmlEntry.name.replace(/\\/g, '/')
+  if (!normalized.includes('/')) return ''
+  return normalized.slice(0, normalized.lastIndexOf('/') + 1)
+}
+
+function safeResolve(root: string, relative: string) {
+  const resolved = path.resolve(root, relative)
+  const rootResolved = path.resolve(root)
+  if (resolved !== rootResolved && !resolved.startsWith(`${rootResolved}${path.sep}`)) {
+    return null
+  }
+  return resolved
+}
+
+async function fileExists(filePath: string) {
+  try {
+    const stat = await fs.stat(filePath)
+    return stat.isFile()
+  } catch {
+    return false
+  }
+}
+
+async function writeMediaFile(layerDir: string, relativePath: string, data: Buffer) {
+  const normalized = relativePath.replace(/\\/g, '/').replace(/^\/+/, '')
+  if (!normalized || normalized.split('/').includes('..')) return
+  const outPath = path.join(layerDir, ...normalized.split('/'))
+  await ensureDir(path.dirname(outPath))
+  await fs.writeFile(outPath, data)
+}
+
+async function findKmzPath(layerDir: string, fileName?: string) {
+  if (fileName) {
+    const candidate = path.join(layerDir, fileName)
+    if (await fileExists(candidate)) return candidate
+  }
+  try {
+    const names = await fs.readdir(layerDir)
+    const found = names.find((name) => name.toLowerCase().endsWith('.kmz'))
+    return found ? path.join(layerDir, found) : null
+  } catch {
+    return null
+  }
+}
+
+function loadLayerZip(layerId: string, layerDir: string, fileName?: string) {
+  let pending = zipByLayer.get(layerId)
+  if (!pending) {
+    pending = (async () => {
+      const kmzPath = await findKmzPath(layerDir, fileName)
+      if (!kmzPath) return null
+      const buffer = await fs.readFile(kmzPath)
+      return JSZip.loadAsync(buffer)
+    })()
+    zipByLayer.set(layerId, pending)
+  }
+  return pending
+}
+
 /** Unpack KMZ sidecar images (files/*.jpg, …) next to the KMZ for static serving. */
 async function extractKmzMediaToDisk(kmzBuffer: Buffer, layerDir: string) {
-  if (kmzBuffer.byteLength > MAX_KMZ_MEDIA_BYTES) return
-
   const zip = await JSZip.loadAsync(kmzBuffer)
   const entries = Object.values(zip.files).filter((entry) => !entry.dir)
+  const kmlDir = kmlDirectory(entries)
 
   for (const entry of entries) {
     const normalized = entry.name.replace(/\\/g, '/')
-    if (!normalized || normalized.includes('..')) continue
-    if (normalized.toLowerCase().endsWith('.kml')) continue
+    if (!normalized || normalized.split('/').includes('..')) continue
+    if (!isImageName(normalized)) continue
 
-    const outPath = path.join(layerDir, ...normalized.split('/'))
-    await ensureDir(path.dirname(outPath))
     const data = await entry.async('nodebuffer')
-    await fs.writeFile(outPath, data)
+    await writeMediaFile(layerDir, normalized, data)
+    if (kmlDir && normalized.toLowerCase().startsWith(kmlDir.toLowerCase())) {
+      const relativeToKml = normalized.slice(kmlDir.length)
+      if (relativeToKml) await writeMediaFile(layerDir, relativeToKml, data)
+    }
+    const baseName = normalized.split('/').pop()
+    if (baseName) await writeMediaFile(layerDir, `files/${baseName}`, data)
   }
+}
+
+async function extractRequestedMedia(
+  layersRoot: string,
+  layerId: string,
+  requestRel: string,
+  fileName?: string,
+) {
+  const layerDir = path.join(layersRoot, layerId)
+  const zip = await loadLayerZip(layerId, layerDir, fileName)
+  if (!zip) return null
+
+  const entries = Object.values(zip.files).filter((entry) => !entry.dir)
+  const kmlDir = kmlDirectory(entries)
+  const want = requestRel.replace(/\\/g, '/').replace(/^\/+/, '')
+  const wantLower = want.toLowerCase()
+  const wantBase = want.split('/').pop()?.toLowerCase()
+
+  const entry = entries.find((item) => {
+    const name = item.name.replace(/\\/g, '/')
+    const lower = name.toLowerCase()
+    if (lower === wantLower) return true
+    if (kmlDir && lower === `${kmlDir}${want}`.toLowerCase()) return true
+    return Boolean(wantBase && isImageName(name) && lower.split('/').pop() === wantBase)
+  })
+  if (!entry) return null
+
+  const data = Buffer.from(await entry.async('nodebuffer'))
+  await writeMediaFile(layerDir, want, data)
+  const zipName = entry.name.replace(/\\/g, '/')
+  if (zipName.toLowerCase() !== wantLower) await writeMediaFile(layerDir, zipName, data)
+  return { data, fileName: want.split('/').pop() || want }
 }
 
 async function ensureLayerMediaExtracted(layerDir: string, fileName: string) {
@@ -227,7 +352,11 @@ export function mapLayersFsPlugin(projectRoot: string): Plugin {
         await fs.writeFile(filePath, filePart.data)
 
         if (safeName.toLowerCase().endsWith('.kmz')) {
-          await extractKmzMediaToDisk(filePart.data, layerDir)
+          if (filePart.data.length <= MAX_KMZ_MEDIA_BYTES) {
+            await extractKmzMediaToDisk(filePart.data, layerDir)
+          } else {
+            void extractKmzMediaToDisk(filePart.data, layerDir)
+          }
         }
 
         let geojsonUrl: string | undefined
@@ -279,6 +408,7 @@ export function mapLayersFsPlugin(projectRoot: string): Plugin {
         const manifest = await readManifest(manifestPath)
         manifest.layers = manifest.layers.filter((item) => item.id !== id)
         await writeManifest(manifestPath, manifest)
+        zipByLayer.delete(id)
         await fs.rm(path.join(layersRoot, id), { recursive: true, force: true })
         res.statusCode = 204
         res.end()
@@ -293,13 +423,88 @@ export function mapLayersFsPlugin(projectRoot: string): Plugin {
     }
   }
 
+  const mediaFallbackHandler: Connect.NextHandleFunction = (req, res, next) => {
+    void (async () => {
+      try {
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+          next()
+          return
+        }
+
+        const url = new URL(req.url || '/', 'http://localhost')
+        if (!url.pathname.startsWith(STATIC_PREFIX)) {
+          next()
+          return
+        }
+
+        const rel = decodeURIComponent(url.pathname.slice(STATIC_PREFIX.length))
+        if (!rel || rel.endsWith('/')) {
+          next()
+          return
+        }
+
+        const abs = safeResolve(layersRoot, rel)
+        if (abs && (await fileExists(abs))) {
+          next()
+          return
+        }
+
+        const slash = rel.indexOf('/')
+        if (slash <= 0) {
+          res.statusCode = 404
+          res.end('Not found')
+          return
+        }
+
+        const layerId = rel.slice(0, slash)
+        const mediaRel = rel.slice(slash + 1)
+        const lower = mediaRel.toLowerCase()
+        if (lower.endsWith('.geojson') || lower.endsWith('.kmz') || lower.endsWith('.kml') || lower === 'manifest.json') {
+          res.statusCode = 404
+          res.end('Not found')
+          return
+        }
+
+        const manifest = await readManifest(manifestPath)
+        const layer = manifest.layers.find((item) => item.id === layerId)
+        const extracted = await extractRequestedMedia(
+          layersRoot,
+          layerId,
+          mediaRel,
+          layer?.fileName || layer?.meta.fileName,
+        )
+
+        if (!extracted) {
+          res.statusCode = 404
+          res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+          res.end('Not found')
+          return
+        }
+
+        res.statusCode = 200
+        res.setHeader('Content-Type', mimeFromName(extracted.fileName))
+        res.setHeader('Cache-Control', 'public, max-age=86400')
+        if (req.method === 'HEAD') {
+          res.end()
+          return
+        }
+        res.end(extracted.data)
+      } catch {
+        res.statusCode = 500
+        res.end('Map layer media error')
+      }
+    })()
+  }
+
   return {
     name: 'map-layers-fs',
     configureServer(server) {
       server.middlewares.use(handler)
+      server.middlewares.use(mediaFallbackHandler)
     },
     configurePreviewServer(server) {
       server.middlewares.use(handler)
+      server.middlewares.use(mediaFallbackHandler)
     },
   }
 }

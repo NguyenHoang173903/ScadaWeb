@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import L, { type PathOptions } from 'leaflet'
 import 'leaflet.markercluster'
-import type { Feature } from 'geojson'
-import { ARCGIS_API_KEY } from '@/constants/config'
+import type { Feature, Geometry } from 'geojson'
+import { getArcgisApiKey, subscribeRuntimeConfig } from '@/settings/runtimeConfig'
 import {
   buildMapStations,
+  overlayFeatureToMapStation,
   STATION_TYPE_COLOR,
   type MapStation,
 } from './extractStations'
@@ -25,8 +26,13 @@ const NORTH_VIETNAM_BOUNDS = L.latLngBounds(
 const MAP_MIN_ZOOM = 7
 const MAP_MAX_ZOOM = 18
 
-/** Esri World Imagery — ArcGIS Location Platform API key */
-const SATELLITE_TILE = `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${encodeURIComponent(ARCGIS_API_KEY)}`
+const OSM_TILE = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+
+function basemapTileUrl() {
+  const key = getArcgisApiKey()
+  if (!key) return OSM_TILE
+  return `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${encodeURIComponent(key)}`
+}
 
 const asColor = (value: unknown): string | undefined =>
   typeof value === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value)
@@ -35,9 +41,20 @@ const asColor = (value: unknown): string | undefined =>
       : value
     : undefined
 
+function isFillGeometry(geometry: Geometry | null | undefined): boolean {
+  if (!geometry) return false
+  if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') return true
+  if (geometry.type === 'GeometryCollection') {
+    return geometry.geometries.some(
+      (child) => child.type === 'Polygon' || child.type === 'MultiPolygon',
+    )
+  }
+  return false
+}
+
 /**
  * Prefer per-feature KML colors (`stroke` / `fill`) so lines stay multi-colored.
- * Layer panel opacity + weight still apply globally.
+ * Polygon fills stay visible but do not steal clicks from canals / stations.
  */
 const styleFromFeature =
   (layer: Pick<MapOverlayLayer, 'color' | 'opacity' | 'weight'>) =>
@@ -45,13 +62,16 @@ const styleFromFeature =
     const props = (feature?.properties ?? null) as Record<string, unknown> | null
     const stroke = asColor(props?.stroke) ?? layer.color
     const fill = asColor(props?.fill) ?? stroke
+    const polygon = isFillGeometry(feature?.geometry)
 
     return {
       color: stroke,
       weight: layer.weight,
       opacity: layer.opacity,
       fillColor: fill,
-      fillOpacity: layer.opacity * 0.12,
+      fillOpacity: polygon ? layer.opacity * 0.12 : 0,
+      fill: polygon,
+      interactive: !polygon,
     }
   }
 
@@ -77,6 +97,34 @@ function createClusterIcon(cluster: L.MarkerCluster) {
   })
 }
 
+function findFillFeatureAt(
+  latlng: L.LatLng,
+  map: L.Map,
+  layers: MapOverlayLayer[],
+  overlays: Map<string, L.GeoJSON>,
+) {
+  const point = map.latLngToLayerPoint(latlng)
+  let found: { feature: Feature; overlay: MapOverlayLayer } | null = null
+
+  for (const overlay of layers) {
+    if (!overlay.visible) continue
+    const instance = overlays.get(overlay.id)
+    if (!instance) continue
+
+    instance.eachLayer((layer) => {
+      const path = layer as L.Path & {
+        feature?: Feature
+        _containsPoint?: (p: L.Point) => boolean
+      }
+      if (!isFillGeometry(path.feature?.geometry)) return
+      if (!path._containsPoint?.(point) || !path.feature) return
+      found = { feature: path.feature, overlay }
+    })
+  }
+
+  return found
+}
+
 type Props = {
   layers: MapOverlayLayer[]
   onSelectStation?: (station: MapStation) => void
@@ -94,6 +142,8 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
   const overviewBoundsRef = useRef<L.LatLngBounds | null>(null)
   const onSelectRef = useRef(onSelectStation)
   const zoomLockedRef = useRef(zoomLocked)
+  const layersRef = useRef(layers)
+  const tileLayerRef = useRef<L.TileLayer | null>(null)
   const [mapReady, setMapReady] = useState(0)
 
   useEffect(() => {
@@ -103,6 +153,10 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
   useEffect(() => {
     zoomLockedRef.current = zoomLocked
   }, [zoomLocked])
+
+  useEffect(() => {
+    layersRef.current = layers
+  }, [layers])
 
   useEffect(() => {
     const el = containerRef.current
@@ -123,16 +177,19 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
       boxZoom: !zoomLocked,
       touchZoom: !zoomLocked,
       keyboard: !zoomLocked,
+      preferCanvas: true,
+      renderer: L.canvas({ tolerance: 12 }),
     })
 
     if (!zoomLocked) {
       L.control.zoom({ position: 'bottomleft' }).addTo(map)
     }
 
-    L.tileLayer(SATELLITE_TILE, {
-      attribution: 'Tiles &copy; Esri',
+    const tiles = L.tileLayer(basemapTileUrl(), {
+      attribution: 'Tiles &copy; Esri / OSM',
       maxZoom: MAP_MAX_ZOOM,
     }).addTo(map)
+    tileLayerRef.current = tiles
 
     const clusters = L.markerClusterGroup({
       showCoverageOnHover: false,
@@ -145,6 +202,18 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
 
     clusters.addTo(map)
     clusterRef.current = clusters
+
+    map.on('click', (event: L.LeafletMouseEvent) => {
+      if (zoomLockedRef.current) return
+      const overlayHit = findFillFeatureAt(
+        event.latlng,
+        map,
+        layersRef.current,
+        overlayRef.current,
+      )
+      if (!overlayHit) return
+      onSelectRef.current?.(overlayFeatureToMapStation(overlayHit.feature, overlayHit.overlay))
+    })
 
     mapRef.current = map
     setMapReady((value) => value + 1)
@@ -160,11 +229,18 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
       clusters.clearLayers()
       map.removeLayer(clusters)
       clusterRef.current = null
+      tileLayerRef.current = null
       map.remove()
       mapRef.current = null
       fittedRef.current = false
     }
   }, [zoomLocked])
+
+  useEffect(() => {
+    return subscribeRuntimeConfig(() => {
+      tileLayerRef.current?.setUrl(basemapTileUrl())
+    })
+  }, [])
 
   useEffect(() => {
     const map = mapRef.current
@@ -180,6 +256,10 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
     for (const id of removedIds) {
       const instance = overlayRef.current.get(id)
       if (!instance) continue
+      instance.eachLayer((layer) => {
+        instance.removeLayer(layer)
+        if (map.hasLayer(layer)) map.removeLayer(layer)
+      })
       if (map.hasLayer(instance)) {
         map.removeLayer(instance)
       }
@@ -192,6 +272,10 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
 
     if (layers.length === 0) {
       overlayRef.current.forEach((instance) => {
+        instance.eachLayer((layer) => {
+          instance.removeLayer(layer)
+          if (map.hasLayer(layer)) map.removeLayer(layer)
+        })
         if (map.hasLayer(instance)) map.removeLayer(instance)
         instance.clearLayers()
         instance.remove()
@@ -208,6 +292,7 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
       const boundGeojson = geojsonByIdRef.current.get(layerConfig.id)
 
       if (!instance) {
+        const overlayId = layerConfig.id
         instance = L.geoJSON(layerConfig.geojson, {
           style: featureStyle,
           // Points are rendered separately as clustered station markers.
@@ -217,13 +302,22 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
             if (name) {
               layer.bindTooltip(name, { sticky: true, direction: 'top', opacity: 0.95 })
             }
+
+            if (isFillGeometry(feature.geometry)) return
+
+            layer.on('click', (event) => {
+              L.DomEvent.stopPropagation(event)
+              if (zoomLockedRef.current) return
+              const overlay =
+                layersRef.current.find((item) => item.id === overlayId) ?? layerConfig
+              onSelectRef.current?.(overlayFeatureToMapStation(feature, overlay))
+            })
           },
         })
         overlayRef.current.set(layerConfig.id, instance)
         geojsonByIdRef.current.set(layerConfig.id, layerConfig.geojson)
         fittedRef.current = false
       } else if (boundGeojson !== layerConfig.geojson) {
-        // Same layer id but new KMZ/KML data — rebuild geometry.
         instance.clearLayers()
         instance.addData(layerConfig.geojson)
         instance.setStyle(featureStyle)
@@ -240,6 +334,23 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
       }
     })
 
+    overlayRef.current.forEach((instance) => {
+      instance.eachLayer((layer) => {
+        const feature = (layer as L.Layer & { feature?: Feature }).feature
+        if (isFillGeometry(feature?.geometry)) {
+          ;(layer as L.Path).bringToBack()
+        }
+      })
+    })
+    overlayRef.current.forEach((instance) => {
+      instance.eachLayer((layer) => {
+        const feature = (layer as L.Layer & { feature?: Feature }).feature
+        if (!isFillGeometry(feature?.geometry)) {
+          ;(layer as L.Path).bringToFront()
+        }
+      })
+    })
+
     if (!fittedRef.current && layers.length > 0) {
       const first = overlayRef.current.get(layers[0].id)
       const bounds = first?.getBounds()
@@ -251,7 +362,6 @@ export function DashboardMap({ layers, onSelectStation, zoomLocked = false }: Pr
           animate: false,
         })
         if (zoomLockedRef.current) {
-          // Nudge in one level for a tighter login framing.
           const nudged = Math.min(map.getZoom() + 1, 14)
           map.setView(map.getCenter(), nudged, { animate: false })
           map.setMinZoom(nudged)

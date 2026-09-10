@@ -1,7 +1,21 @@
+import { useState } from 'react'
 import { FileX2, X } from 'lucide-react'
 import type { MapStation } from './extractStations'
 import { parseDescriptionBlocks } from './parseDescription'
 import styles from './FeatureInfoPanel.module.css'
+
+function KmzImage({ url, alt }: { url: string; alt: string }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return <p className={styles.imageError}>Không tải được ảnh từ KMZ</p>
+  }
+
+  return (
+    <div className={styles.imageLink}>
+      <img src={url} alt={alt} loading="lazy" onError={() => setFailed(true)} />
+    </div>
+  )
+}
 
 type Props = {
   station: MapStation | null
@@ -64,16 +78,7 @@ export function FeatureInfoPanel({ station, onClose, onUpdateData }: Props) {
               return (
                 <div key={`img-${index}`} className={styles.images}>
                   {block.urls.map((url) => (
-                    <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.imageLink}>
-                      <img
-                        src={url}
-                        alt={station.name}
-                        loading="lazy"
-                        onError={(event) => {
-                          event.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    </a>
+                    <KmzImage key={url} url={url} alt={station.name} />
                   ))}
                 </div>
               )
@@ -89,7 +94,7 @@ export function FeatureInfoPanel({ station, onClose, onUpdateData }: Props) {
           <div className={styles.emptyState}>
             <FileX2 className={styles.emptyIcon} size={64} strokeWidth={1.35} />
             <p className={styles.emptyTitle}>Không có dữ liệu</p>
-            {station.type === 'pump' ? (
+            {station.type === 'pump' && station.infoKind !== 'overlay' ? (
               <button
                 type="button"
                 className={styles.emptyLink}

@@ -13,22 +13,39 @@ const decodeEntities = (value: string) =>
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
 
+const IMAGE_PATH = /\.(jpe?g|png|gif|webp|bmp|svg)(\?|#|$)/i
+
+function prepareDescriptionHtml(description: string): string {
+  let html = description
+  for (let i = 0; i < 2; i += 1) {
+    if (/<img\b/i.test(html) || /<a\b[^>]*href/i.test(html)) break
+    if (/&lt;img\b/i.test(html) || /&lt;a\b/i.test(html)) {
+      html = decodeEntities(html)
+    } else {
+      break
+    }
+  }
+  return html
+}
+
 export function resolveMediaUrl(
   src: string,
   mediaBaseUrl?: string,
   mediaUrls?: Record<string, string>,
 ): string {
-  if (/^(https?:|data:|blob:)/i.test(src)) return src
+  const trimmed = decodeEntities(src).trim()
+  if (!trimmed) return trimmed
+  if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed
 
-  const relative = src.replace(/^\.\//, '').replace(/^\//, '').replace(/\\/g, '/')
+  const relative = trimmed.replace(/^\.\//, '').replace(/^\//, '').replace(/\\/g, '/')
 
-  if (mediaUrls) {
-    const candidates = [
-      relative,
-      relative.toLowerCase(),
-      decodeURIComponent(relative),
-      decodeURIComponent(relative).toLowerCase(),
-    ]
+  if (mediaUrls && Object.keys(mediaUrls).length > 0) {
+    const candidates = [relative, relative.toLowerCase()]
+    try {
+      candidates.push(decodeURIComponent(relative), decodeURIComponent(relative).toLowerCase())
+    } catch {
+      // ignore malformed percent-encoding
+    }
 
     for (const key of candidates) {
       if (mediaUrls[key]) return mediaUrls[key]
@@ -43,22 +60,35 @@ export function resolveMediaUrl(
     }
   }
 
-  const base = (mediaBaseUrl ?? '/').replace(/\/?$/, '/')
+  const base = (mediaBaseUrl || '/map-layers/').replace(/\/?$/, '/')
   const encoded = relative
     .split('/')
+    .filter(Boolean)
     .map((segment) => encodeURIComponent(segment))
     .join('/')
   return `${base}${encoded}`
 }
 
-function extractImgSrcs(html: string): string[] {
+function collectAttr(html: string, tag: string, attr: string): string[] {
   const urls: string[] = []
-  const re = /<img\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1[^>]*>/gi
+  const re = new RegExp(
+    `<${tag}\\b[^>]*?\\b${attr}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`,
+    'gi',
+  )
   let match: RegExpExecArray | null
   while ((match = re.exec(html))) {
-    if (match[2]) urls.push(match[2])
+    const value = match[1] ?? match[2] ?? match[3]
+    if (value) urls.push(decodeEntities(value).trim())
   }
   return urls
+}
+
+function extractImgSrcs(html: string): string[] {
+  const fromImg = collectAttr(html, 'img', 'src')
+  const fromHref = collectAttr(html, 'a', 'href').filter(
+    (href) => IMAGE_PATH.test(href) || /(?:^|\/)files\//i.test(href),
+  )
+  return [...new Set([...fromImg, ...fromHref])]
 }
 
 export function normalizeDescription(description: unknown): string {
@@ -76,12 +106,13 @@ export function parseDescriptionBlocks(
   mediaBaseUrl?: string,
   mediaUrls?: Record<string, string>,
 ): DescriptionBlock[] {
-  const imageUrls = extractImgSrcs(description).map((src) =>
+  const html = prepareDescriptionHtml(description)
+  const imageUrls = extractImgSrcs(html).map((src) =>
     resolveMediaUrl(src, mediaBaseUrl, mediaUrls),
   )
 
   const text = decodeEntities(
-    description
+    html
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<img\b[^>]*>/gi, '\n')
       .replace(/<\/?table[^>]*>/gi, '\n')

@@ -12,10 +12,13 @@ import type { MapOverlayLayer } from '@/components/map/layerTypes'
 import { ROUTES, stationDataUpdatePath, stationDetailPath } from '@/constants/routes'
 import { APP_COMPANY } from '@/constants/config'
 import { ensureMapPumpStation } from '@/data/pumpStations'
+import { logoutCurrentUser } from '@/services/auditLog'
+import { getSessionUsername } from '@/settings/session'
 import {
   deleteMapLayer,
   peekCachedMapLayers,
   resolveMapLayers,
+  subscribeMapLayers,
   updateMapLayerMeta,
   uploadMapLayer,
 } from '@/services/mapLayers'
@@ -34,6 +37,7 @@ function formatNow(date: Date) {
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const userName = getSessionUsername() ?? 'Admin'
   const [menuOpen, setMenuOpen] = useState(false)
   const [listType, setListType] = useState<MapStationType | null>(null)
   const [layersOpen, setLayersOpen] = useState(false)
@@ -66,8 +70,27 @@ export function DashboardPage() {
       }
     })()
 
+    const unsubscribe = subscribeMapLayers(() => {
+      const cached = peekCachedMapLayers()
+      setLayers(cached)
+      setSelectedStation((current) => {
+        if (!current) return current
+        const overlay = cached.find((layer) => current.id.startsWith(`overlay-${layer.id}-`))
+        if (overlay) {
+          return {
+            ...current,
+            mediaBaseUrl: overlay.mediaBaseUrl,
+            mediaUrls: overlay.mediaUrls,
+          }
+        }
+        const match = buildMapStations(cached).find((station) => station.id === current.id)
+        return match ?? current
+      })
+    })
+
     return () => {
       cancelled = true
+      unsubscribe()
       // Do not revoke KMZ media here — owned by mapLayers memory cache.
     }
   }, [])
@@ -251,7 +274,7 @@ export function DashboardPage() {
               <span className={styles.avatar}>
                 <UserRound size={16} />
               </span>
-              <span>Administrator</span>
+              <span>{userName}</span>
               <ChevronDown size={16} className={menuOpen ? styles.chevronOpen : undefined} />
             </button>
 
@@ -274,6 +297,7 @@ export function DashboardPage() {
                   role="menuitem"
                   onClick={() => {
                     setMenuOpen(false)
+                    logoutCurrentUser('logout')
                     navigate(ROUTES.login)
                   }}
                 >

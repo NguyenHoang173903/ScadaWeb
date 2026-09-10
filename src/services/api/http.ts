@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/constants/config'
+import { getApiBaseUrl } from '@/settings/runtimeConfig'
 import type { ApiError } from '@/types'
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
@@ -27,7 +27,7 @@ export async function http<T>(
 ): Promise<T> {
   const { body, headers, ...rest } = options
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...rest,
     headers: {
       Accept: 'application/json',
@@ -55,7 +55,7 @@ export async function httpFormData<T>(
 ): Promise<T> {
   const { body, headers, ...rest } = options
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...rest,
     headers: {
       Accept: 'application/json',

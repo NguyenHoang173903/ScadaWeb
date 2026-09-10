@@ -1,3 +1,10 @@
+.wrap {
+  display: grid;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+}
+
 .bar {
   display: flex;
   flex-wrap: wrap;
@@ -66,6 +73,13 @@
 
 .actions .resetButton:hover:not(:disabled) {
   background: #e4eaee;
+}
+
+.error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {

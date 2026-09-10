@@ -23,6 +23,8 @@ export type MapStation = {
   code?: string
   /** True when KMZ/KML description was matched for this station */
   hasKmzInfo?: boolean
+  /** Overlay lines/polygons vs station markers */
+  infoKind?: 'station' | 'overlay'
 }
 
 export const STATION_TYPE_COLOR: Record<MapStationType, string> = {
@@ -95,6 +97,51 @@ function getFeatureDescription(feature: Feature): string {
   }
   const desc = (feature.properties as { desc?: unknown } | null)?.desc
   return typeof desc === 'string' ? desc : ''
+}
+
+function firstPosition(geometry: Geometry | null | undefined): Position | null {
+  if (!geometry) return null
+  if (geometry.type === 'Point') return geometry.coordinates
+  if (geometry.type === 'LineString') return geometry.coordinates[0] ?? null
+  if (geometry.type === 'MultiLineString') return geometry.coordinates[0]?.[0] ?? null
+  if (geometry.type === 'Polygon') return geometry.coordinates[0]?.[0] ?? null
+  if (geometry.type === 'MultiPolygon') return geometry.coordinates[0]?.[0]?.[0] ?? null
+  if (geometry.type === 'GeometryCollection') {
+    for (const child of geometry.geometries) {
+      const coord = firstPosition(child)
+      if (coord) return coord
+    }
+  }
+  return null
+}
+
+/** Build the same info payload used by FeatureInfoPanel, from a KMZ line/polygon. */
+export function overlayFeatureToMapStation(
+  feature: Feature,
+  overlay: {
+    id: string
+    mediaBaseUrl?: string
+    mediaUrls?: Record<string, string>
+  },
+): MapStation {
+  const coord = firstPosition(feature.geometry)
+  const lng = coord?.[0] ?? 0
+  const lat = coord?.[1] ?? 0
+  const name = getFeatureName(feature) || 'Công trình'
+  const description = getFeatureDescription(feature)
+
+  return {
+    id: `overlay-${overlay.id}-${slugId(name, lat, lng)}`,
+    name,
+    lat,
+    lng,
+    type: 'pump',
+    description,
+    mediaBaseUrl: overlay.mediaBaseUrl,
+    mediaUrls: overlay.mediaUrls,
+    hasKmzInfo: Boolean(description.trim()),
+    infoKind: 'overlay',
+  }
 }
 
 /**

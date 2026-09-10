@@ -12,7 +12,18 @@ import { APP_COPYRIGHT, APP_SUPPORT_EMAIL, APP_VERSION } from '@/constants/confi
 import { ROUTES } from '@/constants/routes'
 import { getLoginLayerVisible } from '@/settings/loginLayerSettings'
 import { peekCachedMapLayers, resolveMapLayers } from '@/services/mapLayers'
+import { reportAuthEvent } from '@/services/auditLog'
 import { LoginForm } from './LoginForm'
+import { ChangePasswordForm } from './ChangePasswordForm'
+import {
+  authenticateAccount,
+  completePasswordChange,
+  getLoginAttemptStatus,
+  unlockFailedLoginLock,
+  PASSWORD_CHALLENGE_COPY,
+  type PasswordChallengeReason,
+} from '@/settings/authAccounts'
+import { beginSession } from '@/settings/session'
 import styles from './LoginPage.module.css'
 
 type ServiceItem = {
@@ -37,6 +48,13 @@ export function LoginPage() {
   const [layers, setLayers] = useState<MapOverlayLayer[]>(() =>
     getLoginLayerVisible() ? peekCachedMapLayers() : [],
   )
+  const [loginError, setLoginError] = useState('')
+  const [loginWarning, setLoginWarning] = useState('')
+  const [blockedUntil, setBlockedUntil] = useState<number | null>(null)
+  const [challenge, setChallenge] = useState<{
+    username: string
+    reason: PasswordChallengeReason
+  } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -70,11 +88,85 @@ export function LoginPage() {
             <DashboardMap layers={layers} zoomLocked />
           </div>
 
-          <LoginForm
-            onSubmit={() => {
-              navigate(ROUTES.dashboard)
-            }}
-          />
+          {challenge ? (
+            <ChangePasswordForm
+              username={challenge.username}
+              message={PASSWORD_CHALLENGE_COPY[challenge.reason]}
+              onCancel={() => {
+                setChallenge(null)
+                setLoginError('')
+                setLoginWarning('')
+              }}
+              onSubmit={(password) => {
+                const account = completePasswordChange(challenge.username, password)
+                const username = account?.username ?? challenge.username
+                reportAuthEvent({
+                  eventType: 'password-changed',
+                  username,
+                })
+                reportAuthEvent({ eventType: 'login', username })
+                beginSession({
+                  username,
+                  displayName: account?.fullName,
+                  role: account?.role,
+                })
+                navigate(ROUTES.dashboard)
+              }}
+            />
+          ) : (
+            <LoginForm
+              error={loginError}
+              warning={loginWarning}
+              blockedUntil={blockedUntil}
+              onUsernameChange={(username) => {
+                const status = getLoginAttemptStatus(username)
+                setLoginError(status.message)
+                setLoginWarning(status.warning)
+                setBlockedUntil(status.blockedUntil)
+              }}
+              onForgotPassword={(username) => {
+                const result = unlockFailedLoginLock(username)
+                if (!result.ok) {
+                  setLoginError(result.message)
+                  setLoginWarning('')
+                  return
+                }
+                setLoginError('')
+                setLoginWarning(result.warning)
+                setBlockedUntil(null)
+              }}
+              onSubmit={({ username, password }) => {
+                const result = authenticateAccount(username, password)
+                if (!result.ok) {
+                  reportAuthEvent({
+                    eventType: 'login-failed',
+                    username,
+                    detail: result.message,
+                  })
+                  setLoginError(result.message)
+                  setLoginWarning(result.warning ?? '')
+                  setBlockedUntil(result.blockedUntil ?? null)
+                  return
+                }
+                setLoginError('')
+                setLoginWarning('')
+                setBlockedUntil(null)
+                if (result.challenge && result.account) {
+                  setChallenge({ username: result.account.username, reason: result.challenge })
+                  return
+                }
+                const account = result.account
+                const sessionUser = account?.username ?? username
+                reportAuthEvent({ eventType: 'login', username: sessionUser })
+                beginSession({
+                  username: sessionUser,
+                  displayName: account?.fullName,
+                  role: account?.role,
+                })
+                navigate(ROUTES.dashboard)
+              }}
+            />
+          )}
         </div>
 
         <nav className={styles.services} aria-label="Dịch vụ hệ thống">

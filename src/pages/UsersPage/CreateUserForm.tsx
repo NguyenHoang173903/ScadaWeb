@@ -4,7 +4,15 @@ import { FormField } from '@/components/common/FormField'
 import { SelectField } from '@/components/common/SelectField'
 import { TextAreaField } from '@/components/common/TextAreaField'
 import { TextField } from '@/components/common/TextField'
+import { PasswordRuleList } from '@/components/auth/PasswordRuleList'
 import { ToggleSwitch } from '@/components/common/ToggleSwitch'
+import { getAuthAccounts } from '@/settings/authAccounts'
+import { validatePassword } from '@/settings/passwordPolicy'
+import {
+  firstError,
+  validateOptionalInteger,
+  validateUsername,
+} from '@/validation'
 import styles from './CreateUserForm.module.css'
 
 export type CreateUserFormValues = {
@@ -18,6 +26,7 @@ export type CreateUserFormValues = {
   level: string
   active: boolean
   description: string
+  forceChangeOnFirstLogin: boolean
 }
 
 type CreateUserFormProps = {
@@ -41,6 +50,7 @@ const INITIAL_VALUES: CreateUserFormValues = {
   level: '',
   active: true,
   description: '',
+  forceChangeOnFirstLogin: true,
 }
 
 export function CreateUserForm({ onSubmit }: CreateUserFormProps) {
@@ -57,13 +67,26 @@ export function CreateUserForm({ onSubmit }: CreateUserFormProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    if (!values.username.trim() || !values.password || !values.confirmPassword) {
-      setError('Vui lòng nhập đầy đủ các trường bắt buộc.')
+    const passwordCheck = validatePassword(values.password)
+    const check = firstError(
+      validateUsername(values.username),
+      values.password !== values.confirmPassword
+        ? { ok: false, message: 'Mật khẩu xác nhận không khớp.' }
+        : { ok: true },
+      passwordCheck.ok ? { ok: true } : { ok: false, message: passwordCheck.message },
+      validateOptionalInteger(values.level, 'Cấp độ', 1, 100),
+    )
+    if (!check.ok) {
+      setError(check.message)
       return
     }
 
-    if (values.password !== values.confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp.')
+    const username = values.username.trim()
+    const duplicated = getAuthAccounts().some(
+      (account) => account.username.toLowerCase() === username.toLowerCase(),
+    )
+    if (duplicated) {
+      setError('Tên đăng nhập đã tồn tại.')
       return
     }
 
@@ -81,6 +104,7 @@ export function CreateUserForm({ onSubmit }: CreateUserFormProps) {
                 id="username"
                 name="username"
                 autoComplete="username"
+                maxLength={32}
                 value={values.username}
                 onChange={(event) => updateField('username', event.target.value)}
                 required
@@ -97,6 +121,7 @@ export function CreateUserForm({ onSubmit }: CreateUserFormProps) {
                 onChange={(event) => updateField('password', event.target.value)}
                 required
               />
+              <PasswordRuleList password={values.password} />
             </FormField>
 
             <FormField label="Xác nhận mật khẩu" htmlFor="confirmPassword" required>
@@ -171,6 +196,16 @@ export function CreateUserForm({ onSubmit }: CreateUserFormProps) {
                 aria-label="Trạng thái tài khoản"
                 checked={values.active}
                 onChange={(checked) => updateField('active', checked)}
+              />
+            </div>
+
+            <div className={styles.statusRow}>
+              <span className={styles.statusLabel}>Bắt buộc đổi mật khẩu lần đăng nhập đầu</span>
+              <ToggleSwitch
+                id="forceChangeOnFirstLogin"
+                aria-label="Bắt buộc đổi mật khẩu lần đăng nhập đầu"
+                checked={values.forceChangeOnFirstLogin}
+                onChange={(checked) => updateField('forceChangeOnFirstLogin', checked)}
               />
             </div>
 

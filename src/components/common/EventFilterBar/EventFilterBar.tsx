@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Button } from '@/components/common/Button'
 import { SelectField } from '@/components/common/SelectField'
 import { TextField } from '@/components/common/TextField'
+import { firstError, validateDateRange, validateKeyword } from '@/validation'
 import styles from './EventFilterBar.module.css'
 
 export type EventFilterValues = {
@@ -31,11 +33,27 @@ export function EventFilterBar({
   showKeyword = true,
   resetLabel = 'Làm mới',
 }: EventFilterBarProps) {
+  const [error, setError] = useState('')
+
   const patch = (partial: Partial<EventFilterValues>) => {
     onChange({ ...values, ...partial })
   }
 
+  const runIfValid = (action: () => void) => {
+    const check = firstError(
+      validateDateRange(values.fromDate, values.toDate),
+      validateKeyword(values.keyword),
+    )
+    if (!check.ok) {
+      setError(check.message)
+      return
+    }
+    setError('')
+    action()
+  }
+
   return (
+    <div className={styles.wrap}>
     <div className={styles.bar}>
       <SelectField
         className={styles.deviceSelect}
@@ -73,22 +91,36 @@ export function EventFilterBar({
           type="search"
           value={values.keyword}
           placeholder="Tìm kiếm từ khóa"
+          maxLength={120}
           onChange={(event) => patch({ keyword: event.target.value })}
           aria-label="Tìm kiếm từ khóa"
         />
       ) : null}
 
       <div className={styles.actions}>
-        <Button variant="primary" className={styles.filterButton} onClick={onFilter}>
+        <Button
+          variant="primary"
+          className={styles.filterButton}
+          onClick={() => runIfValid(onFilter)}
+        >
           Lọc
         </Button>
-        <Button variant="secondary" className={styles.resetButton} onClick={onReset}>
+        <Button
+          variant="secondary"
+          className={styles.resetButton}
+          onClick={() => {
+            setError('')
+            onReset()
+          }}
+        >
           {resetLabel}
         </Button>
-        <Button variant="primary" onClick={onExport}>
+        <Button variant="primary" onClick={() => runIfValid(onExport)}>
           Xuất Excel
         </Button>
       </div>
+    </div>
+      {error ? <p className={styles.error}>{error}</p> : null}
     </div>
   )
 }

@@ -19,10 +19,21 @@ export const EVENT_DEVICE_OPTIONS = [
   }),
 ]
 
+function isoDate(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function defaultHistoryRange() {
+  const to = new Date()
+  const from = new Date()
+  from.setDate(from.getDate() - 30)
+  return { fromDate: isoDate(from), toDate: isoDate(to) }
+}
+
 export const DEFAULT_EVENT_FILTER: EventFilterValues = {
   deviceId: 'all',
-  fromDate: '2026-01-06',
-  toDate: '2026-01-06',
+  ...defaultHistoryRange(),
   keyword: '',
 }
 
@@ -94,6 +105,7 @@ export type HistoryEventRow = {
   tag: string
   user: string
   endedAt: string
+  occurredAt?: string
 }
 
 const HISTORY_SEED: Omit<HistoryEventRow, 'id' | 'stt'>[] = [
@@ -226,50 +238,11 @@ function buildSystemRows(count: number): HistoryEventRow[] {
   })
 }
 
-const LOGIN_SEED: Omit<HistoryEventRow, 'id' | 'stt'>[] = [
-  {
-    time: '09:30:01 19/05/2026',
-    type: 'Security',
-    title: 'Login',
-    detail: 'User OP logged in',
-    deviceId: 'all',
-    device: '',
-    tag: '',
-    user: 'OP',
-    endedAt: '',
-  },
-  {
-    time: '09:30:01 19/05/2026',
-    type: 'Security',
-    title: 'Logout',
-    detail: 'User OP logged out',
-    deviceId: 'all',
-    device: '',
-    tag: '',
-    user: 'OP',
-    endedAt: '',
-  },
-]
-
-function buildLoginRows(count: number): HistoryEventRow[] {
-  return Array.from({ length: count }, (_, index) => {
-    const seed = LOGIN_SEED[index % LOGIN_SEED.length]
-    const isLogin = index % 2 === 0
-    return {
-      ...seed,
-      id: `history-login-${index + 1}`,
-      stt: index + 1,
-      title: isLogin ? 'Login' : 'Logout',
-      detail: isLogin ? 'User OP logged in' : 'User OP logged out',
-    }
-  })
-}
-
 export const HISTORY_ROWS_BY_TAB: Record<HistoryTabId, HistoryEventRow[]> = {
   status: buildHistoryRows(90),
   'value-change': buildValueChangeRows(90),
   system: buildSystemRows(90),
-  login: buildLoginRows(90),
+  login: [],
 }
 
 export function getHistoryBadgeTone(
@@ -280,4 +253,38 @@ export function getHistoryBadgeTone(
   if (type === 'PUMP' || type === 'Communication') return 'teal'
   if (type === 'Security') return 'blue'
   return 'blue'
+}
+
+function formatHistoryTime(iso: string) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`
+}
+
+export function auditLogToHistoryRow(
+  log: {
+    id: string
+    title: string
+    detail: string
+    username: string
+    occurredAt: string
+    endedAt?: string | null
+  },
+  index: number,
+): HistoryEventRow {
+  return {
+    id: log.id,
+    stt: index + 1,
+    time: formatHistoryTime(log.occurredAt),
+    type: 'Security',
+    title: log.title,
+    detail: log.detail,
+    deviceId: 'all',
+    device: '',
+    tag: '',
+    user: log.username,
+    endedAt: log.endedAt ? formatHistoryTime(log.endedAt) : '',
+    occurredAt: log.occurredAt,
+  }
 }

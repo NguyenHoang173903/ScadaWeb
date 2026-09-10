@@ -11,6 +11,8 @@ import {
 import { SchemaIcon } from '@/components/icons/SchemaIcon'
 import type { AppIcon } from '@/components/icons/types'
 import { ROUTES } from '@/constants/routes'
+import { logoutCurrentUser } from '@/services/auditLog'
+import { getSessionUsername } from '@/settings/session'
 import styles from './StationTopNav.module.css'
 
 type StationTopNavProps = {
@@ -33,10 +35,11 @@ export function StationTopNav({
   address,
   subtitle,
   subtitleIcon: SubtitleIcon = SchemaIcon,
-  userName = 'Admin',
+  userName,
   userRole = 'Quản trị viên',
 }: StationTopNavProps) {
   const navigate = useNavigate()
+  const resolvedName = userName ?? getSessionUsername() ?? 'Admin'
   const [now, setNow] = useState(() => formatDateTime(new Date()))
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -93,7 +96,7 @@ export function StationTopNav({
               <UserRound size={16} />
             </span>
             <span className={styles.userMeta}>
-              <strong>{userName}</strong>
+              <strong>{resolvedName}</strong>
               <small>{userRole}</small>
             </span>
             <ChevronDown size={16} className={menuOpen ? styles.chevronOpen : undefined} />
@@ -117,6 +120,7 @@ export function StationTopNav({
                 className={styles.dropdownItem}
                 onClick={() => {
                   setMenuOpen(false)
+                  logoutCurrentUser('logout')
                   navigate(ROUTES.login)
                 }}
               >

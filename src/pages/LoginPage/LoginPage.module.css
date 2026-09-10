@@ -207,6 +207,26 @@
   text-decoration: underline;
 }
 
+.formError,
+.policyNotice {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.formError {
+  color: #b42318;
+}
+
+.policyNotice {
+  margin: -0.4rem 0 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  border: 1px solid #bfdbfe;
+}
+
 .primaryButton {
   display: inline-flex;
   align-items: center;
@@ -228,6 +248,12 @@
 
 .primaryButton:hover {
   filter: brightness(1.05);
+}
+
+.primaryButton:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.2);
+  opacity: 0.72;
 }
 
 .services {

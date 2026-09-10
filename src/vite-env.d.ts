@@ -2,6 +2,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string
+  /** ArcGIS Location Platform token for satellite basemap — never commit the real key */
+  readonly VITE_ARCGIS_API_KEY?: string
   /** `files` (default) | `mock` | `api` — map KMZ storage backend */
   readonly VITE_MAP_LAYER_STORAGE?: string
 }

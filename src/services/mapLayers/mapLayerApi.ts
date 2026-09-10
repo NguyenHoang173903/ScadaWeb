@@ -8,7 +8,7 @@
  *   PATCH  /map-layers/:id          → JSON meta patch → MapLayerMeta
  *   DELETE /map-layers/:id          → 204
  */
-import { API_BASE_URL } from '@/constants/config'
+import { getApiBaseUrl } from '@/settings/runtimeConfig'
 import { apiClient } from '@/services/api/client'
 import { httpFormData } from '@/services/api/http'
 import type { MapLayerDto, MapLayerMeta, MapLayerPackage } from './types'
@@ -16,7 +16,7 @@ import type { MapLayerDto, MapLayerMeta, MapLayerPackage } from './types'
 function resolveFileUrl(fileUrl: string): string {
   if (/^https?:\/\//i.test(fileUrl)) return fileUrl
   const path = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`
-  return `${API_BASE_URL}${path}`
+  return `${getApiBaseUrl()}${path}`
 }
 
 async function downloadAsFile(fileUrl: string, fileName: string): Promise<File> {

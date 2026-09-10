@@ -6,7 +6,7 @@ export type UserAccount = {
   position: string
   role: 'Operator' | 'Administrator'
   level: number
-  status: 'Đang hoạt động' | 'Ngưng hoạt động'
+  status: 'Đang hoạt động' | 'Ngưng hoạt động' | 'Bị khóa (hết hạn mật khẩu)' | 'Bị khóa (đăng nhập sai)'
   lastLogin: string
 }
 

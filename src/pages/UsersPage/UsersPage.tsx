@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { Badge } from '@/components/common/Badge'
@@ -8,13 +8,20 @@ import { Pagination } from '@/components/common/Pagination'
 import { SearchToolbar } from '@/components/common/SearchToolbar'
 import { TabNav } from '@/components/common/TabNav'
 import { AdminHeader } from '@/components/layout/AdminHeader'
+import { addAuthAccount, getAuthAccounts, subscribeAuthAccounts } from '@/settings/authAccounts'
 import { CreateUserForm } from './CreateUserForm'
-import { MOCK_USERS, type UserAccount } from './usersData'
+import { PasswordPolicyForm } from './PasswordPolicyForm'
+import { SessionPolicyForm } from './SessionPolicyForm'
+import { SystemConfigForm } from './SystemConfigForm'
+import type { UserAccount } from './usersData'
 import styles from './UsersPage.module.css'
 
 const TABS = [
   { id: 'list', label: 'Danh sách người dùng' },
   { id: 'create', label: 'Thêm người dùng mới' },
+  { id: 'policy', label: 'Chính sách mật khẩu' },
+  { id: 'session', label: 'Phiên làm việc' },
+  { id: 'system', label: 'Cấu hình hệ thống' },
 ]
 
 const PAGE_SIZE = 10
@@ -26,6 +33,9 @@ export function UsersPage() {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [users, setUsers] = useState<UserAccount[]>(() => getAuthAccounts())
+
+  useEffect(() => subscribeAuthAccounts((accounts) => setUsers(accounts)), [])
 
   const handleBack = () => {
     navigate(-1)
@@ -33,15 +43,15 @@ export function UsersPage() {
 
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    if (!normalized) return MOCK_USERS
+    if (!normalized) return users
 
-    return MOCK_USERS.filter((user) =>
+    return users.filter((user) =>
       [user.username, user.fullName, user.role, user.status]
         .join(' ')
         .toLowerCase()
         .includes(normalized),
     )
-  }, [query])
+  }, [query, users])
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
@@ -104,7 +114,19 @@ export function UsersPage() {
       key: 'status',
       header: 'Trạng thái',
       width: 140,
-      render: (row) => row.status,
+      render: (row) => (
+        <Badge
+          tone={
+            row.status.startsWith('Bị khóa')
+              ? 'red'
+              : row.status === 'Đang hoạt động'
+                ? 'green'
+                : 'gray'
+          }
+        >
+          {row.status}
+        </Badge>
+      ),
     },
     {
       key: 'lastLogin',
@@ -198,13 +220,37 @@ export function UsersPage() {
               />
             </div>
           </>
-        ) : (
+        ) : activeTab === 'create' ? (
           <CreateUserForm
             onSubmit={(values) => {
-              console.log('Create user', values)
+              const id = `user-${Date.now()}`
+              addAuthAccount({
+                id,
+                username: values.username.trim(),
+                fullName: values.fullName.trim(),
+                department: values.department.trim(),
+                position: values.position.trim(),
+                role: values.role === 'Administrator' ? 'Administrator' : 'Operator',
+                level: Number(values.level) || 1,
+                status: values.active ? 'Đang hoạt động' : 'Ngưng hoạt động',
+                lastLogin: '—',
+                password: values.password,
+                usingDefaultPassword: values.forceChangeOnFirstLogin,
+                passwordChangedAt: values.forceChangeOnFirstLogin ? null : Date.now(),
+                locked: false,
+                lockReason: null,
+                failedLoginAt: [],
+                loginLockedUntil: null,
+              })
               setActiveTab('list')
             }}
           />
+        ) : activeTab === 'policy' ? (
+          <PasswordPolicyForm />
+        ) : activeTab === 'session' ? (
+          <SessionPolicyForm />
+        ) : (
+          <SystemConfigForm />
         )}
       </main>
     </div>

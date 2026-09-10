@@ -8,6 +8,13 @@ import { TextField } from '@/components/common/TextField'
 import { AdminHeader } from '@/components/layout/AdminHeader'
 import { ROUTES } from '@/constants/routes'
 import { getPumpStationById } from '@/data/pumpStations'
+import {
+  firstError,
+  IMAGE_UPLOAD,
+  validateRequired,
+  validateUploadFile,
+  validateYear,
+} from '@/validation'
 import styles from './StationDataUpdatePage.module.css'
 
 type FormValues = {
@@ -33,7 +40,7 @@ export function StationDataUpdatePage() {
     builtYear: '',
     pumpEquipment: '',
   })
-  const [imageName, setImageName] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [error, setError] = useState('')
 
   const title = useMemo(() => {
@@ -48,8 +55,14 @@ export function StationDataUpdatePage() {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    if (!values.projectName.trim() || !values.managementUnit.trim()) {
-      setError('Vui lòng nhập đầy đủ các trường bắt buộc.')
+    const check = firstError(
+      validateRequired(values.projectName, 'tên công trình'),
+      validateRequired(values.managementUnit, 'đơn vị quản lý'),
+      validateYear(values.builtYear),
+      imageFile ? validateUploadFile(imageFile, IMAGE_UPLOAD) : { ok: true },
+    )
+    if (!check.ok) {
+      setError(check.message)
       return
     }
 
@@ -153,8 +166,8 @@ export function StationDataUpdatePage() {
                     accept="image/*"
                     className={styles.hiddenInput}
                     onChange={(event) => {
-                      const file = event.target.files?.[0]
-                      setImageName(file?.name ?? '')
+                      const file = event.target.files?.[0] ?? null
+                      setImageFile(file)
                     }}
                   />
                   <button
@@ -165,7 +178,7 @@ export function StationDataUpdatePage() {
                     <Upload size={18} />
                     <span>Tải ảnh lên</span>
                   </button>
-                  {imageName ? <p className={styles.imageName}>{imageName}</p> : null}
+                  {imageFile ? <p className={styles.imageName}>{imageFile.name}</p> : null}
                 </FormField>
               </div>
             </div>

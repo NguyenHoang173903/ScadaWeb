@@ -127,6 +127,8 @@ async function hydrateLayerMedia(pack: MapLayerPackage): Promise<void> {
 }
 
 /** Snapshot of in-memory layers for sync React state init (SPA navigation). */
+export { subscribeMapLayers } from './mapLayerCache'
+
 export function peekCachedMapLayers(): MapOverlayLayer[] {
   return getCachedMapLayers()
 }

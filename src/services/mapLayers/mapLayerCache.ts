@@ -16,6 +16,18 @@ const cache = new Map<string, CachedEntry>()
 let cacheHydrated = false
 /** Bumps when file content changes (upload/delete), not on style-only edits. */
 let contentRevision = 0
+const listeners = new Set<() => void>()
+
+function notifyMapLayerListeners() {
+  listeners.forEach((listener) => listener())
+}
+
+export function subscribeMapLayers(listener: () => void) {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
 
 export function getMapLayerContentRevision(): number {
   return contentRevision
@@ -105,6 +117,7 @@ export function patchCachedMapLayerOverlay(
       ...patch,
     },
   })
+  notifyMapLayerListeners()
 }
 
 export function removeCachedMapLayer(id: string): void {
@@ -113,6 +126,7 @@ export function removeCachedMapLayer(id: string): void {
   disposeLayerMedia(entry.overlay)
   cache.delete(id)
   contentRevision += 1
+  notifyMapLayerListeners()
 }
 
 export function clearCachedMapLayers(): void {
