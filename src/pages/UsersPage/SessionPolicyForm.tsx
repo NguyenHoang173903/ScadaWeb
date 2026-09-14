@@ -2,6 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '@/components/common/Button'
 import { FormField } from '@/components/common/FormField'
 import { TextField } from '@/components/common/TextField'
+import { isApiError } from '@/services/api/http'
+import {
+  fetchSessionPolicy,
+  updateSessionPolicy,
+} from '@/services/sessionPolicy/sessionPolicyApi'
 import {
   getSessionPolicy,
   setSessionPolicy,
@@ -15,8 +20,28 @@ export function SessionPolicyForm() {
   const [values, setValues] = useState<SessionPolicy>(() => getSessionPolicy())
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => subscribeSessionPolicy(setValues), [])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const remote = await fetchSessionPolicy()
+        if (cancelled) return
+        setSessionPolicy({ idleTimeoutMinutes: remote.idleTimeoutMinutes })
+        setValues({ idleTimeoutMinutes: remote.idleTimeoutMinutes })
+      } catch {
+        // Keep local policy.
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -25,10 +50,26 @@ export function SessionPolicyForm() {
       setError(check.message)
       return
     }
-    setError('')
-    setSessionPolicy(values)
-    setValues(getSessionPolicy())
-    setSaved(true)
+
+    void (async () => {
+      try {
+        const remote = await updateSessionPolicy(values.idleTimeoutMinutes)
+        setSessionPolicy({ idleTimeoutMinutes: remote.idleTimeoutMinutes })
+        setValues({ idleTimeoutMinutes: remote.idleTimeoutMinutes })
+        setError('')
+        setSaved(true)
+      } catch (err) {
+        // Fallback local save if BE fails.
+        setSessionPolicy(values)
+        setValues(getSessionPolicy())
+        setError(
+          isApiError(err)
+            ? `${err.message} — đã lưu tạm trên máy.`
+            : 'Không lưu được lên server — đã lưu tạm trên máy.',
+        )
+        setSaved(true)
+      }
+    })()
   }
 
   return (
@@ -42,6 +83,7 @@ export function SessionPolicyForm() {
               name="idleTimeoutMinutes"
               inputMode="numeric"
               value={String(values.idleTimeoutMinutes)}
+              disabled={loading}
               onChange={(event) => {
                 const next = Number(event.target.value)
                 setValues({
@@ -55,7 +97,7 @@ export function SessionPolicyForm() {
         </div>
         <p className={styles.hint}>
           Nếu phần mềm không nhận thao tác từ người dùng trong khoảng thời gian này, phiên kết nối
-          sẽ bị đóng và yêu cầu đăng nhập lại.
+          sẽ bị đóng và yêu cầu đăng nhập lại. Giá trị đồng bộ với backend (`session-policy`).
         </p>
       </div>
 
@@ -65,7 +107,7 @@ export function SessionPolicyForm() {
         ) : (
           <span />
         )}
-        <Button type="submit" variant="success">
+        <Button type="submit" variant="success" disabled={loading}>
           Lưu cấu hình
         </Button>
       </div>

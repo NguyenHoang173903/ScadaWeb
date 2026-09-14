@@ -1,4 +1,9 @@
-export type DevicePumpStatus = 'running' | 'stopped' | 'error'
+export type DevicePumpStatus =
+  | 'running'
+  | 'stopped'
+  | 'error'
+  | 'maintenance'
+  | 'unknown'
 
 export const DEVICE_STATUS_META: Record<
   DevicePumpStatus,
@@ -7,6 +12,8 @@ export const DEVICE_STATUS_META: Record<
   running: { label: 'Bơm đang chạy', color: '#7CFC00' },
   stopped: { label: 'Bơm đang dừng', color: '#ef4444' },
   error: { label: 'Bơm đang lỗi', color: '#eab308' },
+  maintenance: { label: 'Bơm bảo trì', color: '#94a3b8' },
+  unknown: { label: 'Không xác định', color: '#a3a3a3' },
 }
 
 export type DevicePump = {

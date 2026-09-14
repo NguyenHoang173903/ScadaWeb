@@ -1,20 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import schematicDiagramSvg from '@/assets/images/sdnl_3.svg?raw'
+import { schematicPumpLeftPercent } from './schematicLayout'
 import {
   ELECTRICAL_PARAMS,
   PUMP_BRANCHES,
-  SCHEMATIC_WIDTH,
   applySchematicPumpColors,
   formatOne,
   formatTwo,
+  type ElectricalParams,
   type PumpBranch,
 } from './schematicMock'
 import styles from './StationPage.module.css'
-
-function leftPercent(x: number) {
-  /* lệch trái so với tâm cột SVG */
-  return `${(x / SCHEMATIC_WIDTH) * 100 - 2.5}%`
-}
 
 function prepareInlineSvg(raw: string) {
   return raw
@@ -28,10 +24,14 @@ function prepareInlineSvg(raw: string) {
 type SchematicDiagramProps = {
   /** Trạng thái runtime từng bơm — đổi màu KĐM + motor */
   pumps?: PumpBranch[]
+  electrical?: ElectricalParams
 }
 
-export function SchematicDiagram({ pumps = PUMP_BRANCHES }: SchematicDiagramProps) {
-  const e = ELECTRICAL_PARAMS
+export function SchematicDiagram({
+  pumps = PUMP_BRANCHES,
+  electrical = ELECTRICAL_PARAMS,
+}: SchematicDiagramProps) {
+  const e = electrical
   const svgHostRef = useRef<HTMLDivElement>(null)
   const [svgHtml] = useState(() => prepareInlineSvg(schematicDiagramSvg))
 
@@ -114,66 +114,74 @@ export function SchematicDiagram({ pumps = PUMP_BRANCHES }: SchematicDiagramProp
             </ul>
           </aside>
 
-          {pumps.map((pump) => (
-            <div
-              key={`m-${pump.id}`}
-              className={styles.measureBox}
-              style={{ left: leftPercent(pump.x) }}
-              aria-label={`Thông số ${pump.label}`}
-            >
-              <div>
-                <span>I1:</span>
-                <strong>{formatOne(pump.i1)}</strong>
+          {pumps.map((pump) => {
+            const left = schematicPumpLeftPercent(pump.id)
+            if (!left) return null
+            return (
+              <div
+                key={`m-${pump.id}`}
+                className={styles.measureBox}
+                style={{ left }}
+                aria-label={`Thông số ${pump.label}`}
+              >
+                <div>
+                  <span>I1:</span>
+                  <strong>{formatOne(pump.i1)}</strong>
+                </div>
+                <div>
+                  <span>I2:</span>
+                  <strong>{formatOne(pump.i2)}</strong>
+                </div>
+                <div>
+                  <span>I3:</span>
+                  <strong>{formatOne(pump.i3)}</strong>
+                </div>
+                <div>
+                  <span>V1:</span>
+                  <strong>{formatOne(pump.v1)}</strong>
+                </div>
+                <div>
+                  <span>V2:</span>
+                  <strong>{formatOne(pump.v2)}</strong>
+                </div>
+                <div>
+                  <span>V3:</span>
+                  <strong>{formatOne(pump.v3)}</strong>
+                </div>
               </div>
-              <div>
-                <span>I2:</span>
-                <strong>{formatOne(pump.i2)}</strong>
-              </div>
-              <div>
-                <span>I3:</span>
-                <strong>{formatOne(pump.i3)}</strong>
-              </div>
-              <div>
-                <span>V1:</span>
-                <strong>{formatOne(pump.v1)}</strong>
-              </div>
-              <div>
-                <span>V2:</span>
-                <strong>{formatOne(pump.v2)}</strong>
-              </div>
-              <div>
-                <span>V3:</span>
-                <strong>{formatOne(pump.v3)}</strong>
-              </div>
-            </div>
-          ))}
+            )
+          })}
 
-          {pumps.map((pump) => (
-            <article
-              key={`c-${pump.id}`}
-              className={`${styles.pumpCard} ${styles.schematicPumpCard}`}
-              style={{ left: leftPercent(pump.x) }}
-              data-status={pump.motorStatus}
-            >
-              <header className={styles.pumpCardHead}>
-                {pump.label} - {pump.powerKw}kW
-              </header>
-              <div className={styles.pumpCardBody}>
-                <div>
-                  <span>Dòng điện:</span>
-                  <strong>
-                    {formatOne(pump.currentA)} <em>(A)</em>
-                  </strong>
+          {pumps.map((pump) => {
+            const left = schematicPumpLeftPercent(pump.id)
+            if (!left) return null
+            return (
+              <article
+                key={`c-${pump.id}`}
+                className={`${styles.pumpCard} ${styles.schematicPumpCard}`}
+                style={{ left }}
+                data-status={pump.motorStatus}
+              >
+                <header className={styles.pumpCardHead}>
+                  {pump.label} - {pump.powerKw}kW
+                </header>
+                <div className={styles.pumpCardBody}>
+                  <div>
+                    <span>Dòng điện:</span>
+                    <strong>
+                      {formatOne(pump.currentA)} <em>(A)</em>
+                    </strong>
+                  </div>
+                  <div>
+                    <span>T.gian:</span>
+                    <strong>
+                      {pump.runtimeH} <em>(h)</em>
+                    </strong>
+                  </div>
                 </div>
-                <div>
-                  <span>T.gian:</span>
-                  <strong>
-                    {pump.runtimeH} <em>(h)</em>
-                  </strong>
-                </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            )
+          })}
         </div>
       </div>
 

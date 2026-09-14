@@ -1,6 +1,5 @@
-/** Full viewBox width of sdnl_3.svg — used for % left positions */
-export const SCHEMATIC_WIDTH = 1645
-export const SCHEMATIC_HEIGHT = 683
+/** Full viewBox — re-export layout cố định (không nằm trong data bơm). */
+export { SCHEMATIC_WIDTH, SCHEMATIC_HEIGHT } from './schematicLayout'
 
 /** Trạng thái khối M (+ thẻ / chú thích tổng) */
 export type MotorStatus =
@@ -19,10 +18,9 @@ export type LockStatus = 'closed' | 'open'
 /** @deprecated dùng MotorStatus — giữ alias cho chỗ còn gọi PumpStatus */
 export type PumpStatus = MotorStatus
 
+/** Data runtime / API — không chứa tọa độ SVG. */
 export type PumpBranch = {
   id: number
-  /** Center X in SVG coordinates */
-  x: number
   label: string
   powerKw: number
   /** Trạng thái khối M */
@@ -67,7 +65,7 @@ export function resolveKdmStatus(
 
 type PumpMeasures = Omit<
   PumpBranch,
-  'id' | 'x' | 'label' | 'powerKw' | 'motorStatus' | 'kdmStatus' | 'lockStatus'
+  'id' | 'label' | 'powerKw' | 'motorStatus' | 'kdmStatus' | 'lockStatus'
 >
 
 const DEFAULT_MEASURES: PumpMeasures = {
@@ -83,14 +81,12 @@ const DEFAULT_MEASURES: PumpMeasures = {
 
 function branch(
   id: number,
-  x: number,
   motorStatus: MotorStatus,
   kdmStatus: KdmStatus,
   lockStatus: LockStatus,
 ): PumpBranch {
   return {
     id,
-    x,
     label: `Bơm ${id}`,
     powerKw: 160,
     motorStatus,
@@ -101,20 +97,20 @@ function branch(
 }
 
 /**
- * Màu / trạng thái mock — KĐM, M, khoá độc lập.
+ * Seed / fallback data (không có tọa độ — layout xem schematicLayout.ts).
  * Bơm 10→6: khoá đóng; 5→1: khoá mở.
  */
 export const PUMP_BRANCHES: PumpBranch[] = [
-  branch(10, 133.26, 'stopped', 'stopped', 'open'),
-  branch(9, 297.26, 'error', 'error', 'closed'),
-  branch(8, 461.46, 'running', 'running', 'closed'),
-  branch(7, 626.26, 'stopped', 'stopped', 'closed'),
-  branch(6, 789.46, 'maintenance', 'stopped', 'closed'),
-  branch(5, 954.26, 'stopped', 'stopped', 'open'),
-  branch(4, 1118.26, 'error', 'error', 'open'),
-  branch(3, 1294.26, 'stopped', 'stopped', 'open'),
-  branch(2, 1448.26, 'unknown', 'stopped', 'open'),
-  branch(1, 1612.26, 'unknown', 'stopped', 'open'),
+  branch(10, 'stopped', 'stopped', 'open'),
+  branch(9, 'error', 'error', 'closed'),
+  branch(8, 'running', 'running', 'closed'),
+  branch(7, 'stopped', 'stopped', 'closed'),
+  branch(6, 'maintenance', 'stopped', 'closed'),
+  branch(5, 'stopped', 'stopped', 'open'),
+  branch(4, 'error', 'error', 'open'),
+  branch(3, 'stopped', 'stopped', 'open'),
+  branch(2, 'unknown', 'stopped', 'open'),
+  branch(1, 'unknown', 'stopped', 'open'),
 ]
 
 export const ELECTRICAL_PARAMS: ElectricalParams = {

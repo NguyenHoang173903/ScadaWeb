@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { getPumpStationById } from '@/data/pumpStations'
+import { getPumpStationById, resolvePumpStationRouteId } from '@/data/pumpStations'
 import { type MapStation, type MapStationType } from './extractStations'
 import styles from './StationListPanel.module.css'
 
@@ -20,7 +20,9 @@ type Props = {
 }
 
 function resolveCard(station: MapStation) {
-  const catalog = getPumpStationById(station.routeId ?? station.id)
+  const catalog = getPumpStationById(
+    resolvePumpStationRouteId(station) ?? station.routeId ?? station.id,
+  )
   const fallbackCode =
     station.id
       .replace(/[^a-z0-9]+/gi, '-')

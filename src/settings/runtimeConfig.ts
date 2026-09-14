@@ -14,7 +14,7 @@ export type RuntimeConfigSource = {
 
 const STORAGE_KEY = 'scadaweb.runtime-config'
 
-const DEFAULT_API_BASE_URL = 'http://localhost:5000/api'
+const DEFAULT_API_BASE_URL = 'http://localhost:5140/api/v1'
 
 type StoredConfig = Partial<RuntimeConfig>
 
@@ -75,6 +75,11 @@ export function getRuntimeConfigSource(): RuntimeConfigSource {
 
 export function getApiBaseUrl() {
   return getRuntimeConfig().apiBaseUrl.replace(/\/$/, '')
+}
+
+/** Origin for SignalR hubs (`/hubs/scada`), derived from API base. */
+export function getApiOrigin() {
+  return getApiBaseUrl().replace(/\/api\/v1$/i, '').replace(/\/api$/i, '')
 }
 
 export function getArcgisApiKey() {

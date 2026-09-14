@@ -1,7 +1,12 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { StationAlertBar } from '@/components/common/StationAlertBar'
+import { isApiError } from '@/services/api/http'
+import { useScadaRealtime } from '@/services/realtime'
+import { mapDeviceMonitorItem } from '@/services/stations/mappers'
+import { getDeviceMonitor } from '@/services/stations/stationsApi'
 import { DeviceCard } from './DeviceCard'
-import { getDevicesByGroup } from './devicesMock'
+import { getDevicesByGroup, type DevicePump } from './devicesMock'
 import styles from './DevicesPage.module.css'
 
 type DeviceGroup = '1-5' | '6-10'
@@ -10,37 +15,72 @@ function isDeviceGroup(value: string | undefined): value is DeviceGroup {
   return value === '1-5' || value === '6-10'
 }
 
+function filterGroup(pumps: DevicePump[], group: DeviceGroup) {
+  const sorted = [...pumps].sort((a, b) => a.id - b.id)
+  if (group === '1-5') return sorted.filter((p) => p.id >= 1 && p.id <= 5)
+  return sorted.filter((p) => p.id >= 6 && p.id <= 10)
+}
+
 export function StationDevicesPage() {
   const { stationId = '', group } = useParams()
+  const validGroup = isDeviceGroup(group) ? group : null
+  const numericStation = /^\d+$/.test(stationId)
+  const [pumps, setPumps] = useState<DevicePump[]>([])
+  const [error, setError] = useState('')
+  const [live, setLive] = useState(false)
+
+  const load = useCallback(async () => {
+    if (!numericStation) return
+    try {
+      const result = await getDeviceMonitor(Number(stationId))
+      setPumps((result.items ?? []).map(mapDeviceMonitorItem))
+      setError('')
+    } catch (err) {
+      setError(isApiError(err) ? err.message : 'Không tải được danh sách bơm.')
+    }
+  }, [stationId, numericStation])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  useScadaRealtime({
+    stationId,
+    screen: 'chi-tiet-bom',
+    enabled: numericStation,
+    onInvalidate: () => {
+      setLive(true)
+      void load()
+    },
+  })
+
+  const visible = useMemo(() => {
+    if (!validGroup) return []
+    if (numericStation) return filterGroup(pumps, validGroup)
+    return getDevicesByGroup(validGroup)
+  }, [numericStation, pumps, validGroup])
 
   if (!group) {
     return <Navigate to={`/stations/${stationId}/devices/1-5`} replace />
   }
 
-  if (!isDeviceGroup(group)) {
+  if (!validGroup) {
     return <Navigate to={`/stations/${stationId}/devices/1-5`} replace />
   }
 
-  const pumps = getDevicesByGroup(group)
-
   return (
     <div className={styles.page}>
+      {error ? <p style={{ color: '#b91c1c', margin: '0 0 12px' }}>{error}</p> : null}
+      {live ? (
+        <p style={{ margin: '0 0 8px', fontSize: 12, color: '#166534' }}>Realtime SignalR đang cập nhật</p>
+      ) : null}
       <div className={styles.grid}>
-        {pumps.map((pump) => (
+        {visible.map((pump) => (
           <DeviceCard key={pump.id} pump={pump} />
         ))}
       </div>
 
-      <StationAlertBar
-        count={2}
-        alerts={[
-          {
-            time: '10:28:32',
-            device: 'Bơm 2',
-            message: 'Quá dòng',
-          },
-        ]}
-      />
+      <StationAlertBar count={0} alerts={[]} />
     </div>
   )
 }

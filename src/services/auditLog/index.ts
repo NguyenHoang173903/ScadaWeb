@@ -1,4 +1,5 @@
 import { endSession, getSessionUsername } from '@/settings/session'
+import { logoutWithApi } from '@/services/auth/authApi'
 import { apiCreateAuditLog, apiListAuditLogs } from './auditLogApi'
 import { appendLocalAuditLog, listLocalAuditLogs } from './localAuditLogStore'
 import type {
@@ -141,5 +142,6 @@ export function logoutCurrentUser(reason: 'logout' | 'session-expired' = 'logout
   } else if (reason === 'logout') {
     reportAuthEvent({ eventType: 'logout', username: 'unknown' })
   }
+  void logoutWithApi()
   endSession()
 }

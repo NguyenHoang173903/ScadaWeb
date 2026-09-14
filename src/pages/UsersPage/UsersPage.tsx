@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { Badge } from '@/components/common/Badge'
@@ -8,7 +8,12 @@ import { Pagination } from '@/components/common/Pagination'
 import { SearchToolbar } from '@/components/common/SearchToolbar'
 import { TabNav } from '@/components/common/TabNav'
 import { AdminHeader } from '@/components/layout/AdminHeader'
-import { addAuthAccount, getAuthAccounts, subscribeAuthAccounts } from '@/settings/authAccounts'
+import { isApiError } from '@/services/api/http'
+import {
+  createScadaUser,
+  listScadaUsers,
+  type ScadaUserDto,
+} from '@/services/scadaUsers/scadaUsersApi'
 import { CreateUserForm } from './CreateUserForm'
 import { PasswordPolicyForm } from './PasswordPolicyForm'
 import { SessionPolicyForm } from './SessionPolicyForm'
@@ -26,6 +31,30 @@ const TABS = [
 
 const PAGE_SIZE = 10
 
+function formatLastLogin(iso?: string | null) {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`
+}
+
+function mapScadaUser(dto: ScadaUserDto): UserAccount {
+  const role =
+    dto.role === 'Administrator' || dto.role === 'Admin' ? 'Administrator' : 'Operator'
+  return {
+    id: String(dto.id),
+    username: dto.username,
+    fullName: dto.fullName || dto.displayName || dto.username,
+    department: dto.department ?? '',
+    position: dto.position ?? '',
+    role,
+    level: dto.level ?? 1,
+    status: (dto.status as UserAccount['status']) || (dto.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động'),
+    lastLogin: formatLastLogin(dto.lastLoginAt),
+  }
+}
+
 export function UsersPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('list')
@@ -33,183 +62,163 @@ export function UsersPage() {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [users, setUsers] = useState<UserAccount[]>(() => getAuthAccounts())
+  const [users, setUsers] = useState<UserAccount[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [listError, setListError] = useState('')
+  const [createError, setCreateError] = useState('')
 
-  useEffect(() => subscribeAuthAccounts((accounts) => setUsers(accounts)), [])
+  const loadUsers = useCallback(async (search: string, pageNumber: number) => {
+    setLoading(true)
+    setListError('')
+    try {
+      const result = await listScadaUsers({
+        keyword: search || undefined,
+        pageNumber,
+        pageSize: PAGE_SIZE,
+      })
+      setUsers((result.items ?? []).map(mapScadaUser))
+      setTotalCount(result.totalCount ?? result.items?.length ?? 0)
+    } catch (error) {
+      setUsers([])
+      setTotalCount(0)
+      setListError(isApiError(error) ? error.message : 'Không tải được danh sách người dùng.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab !== 'list') return
+    void loadUsers(query, page)
+  }, [activeTab, query, page, loadUsers])
 
   const handleBack = () => {
     navigate(-1)
   }
 
-  const filteredUsers = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    if (!normalized) return users
-
-    return users.filter((user) =>
-      [user.username, user.fullName, user.role, user.status]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalized),
-    )
-  }, [query, users])
-
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE) || 1)
   const currentPage = Math.min(page, totalPages)
-  const pageRows = filteredUsers.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
+
+  const columns: DataTableColumn<UserAccount>[] = useMemo(
+    () => [
+      {
+        key: 'stt',
+        header: 'STT',
+        width: 64,
+        align: 'center',
+        render: (_row, index) => (currentPage - 1) * PAGE_SIZE + index + 1,
+      },
+      {
+        key: 'username',
+        header: 'Tên đăng nhập',
+        width: 140,
+        render: (row) => row.username,
+      },
+      {
+        key: 'fullName',
+        header: 'Họ và tên',
+        width: 160,
+        render: (row) => row.fullName,
+      },
+      {
+        key: 'department',
+        header: 'Phòng ban',
+        width: 140,
+        render: (row) => row.department || '—',
+      },
+      {
+        key: 'position',
+        header: 'Chức vụ',
+        width: 140,
+        render: (row) => row.position || '—',
+      },
+      {
+        key: 'role',
+        header: 'Vai trò',
+        width: 130,
+        render: (row) => row.role,
+      },
+      {
+        key: 'level',
+        header: 'Cấp',
+        width: 70,
+        align: 'center',
+        render: (row) => row.level,
+      },
+      {
+        key: 'status',
+        header: 'Trạng thái',
+        width: 180,
+        render: (row) => (
+          <Badge tone={row.status === 'Đang hoạt động' ? 'green' : 'red'}>
+            {row.status}
+          </Badge>
+        ),
+      },
+      {
+        key: 'lastLogin',
+        header: 'Đăng nhập lần cuối',
+        width: 160,
+        render: (row) => row.lastLogin,
+      },
+    ],
+    [currentPage],
   )
-
-  const columns: DataTableColumn<UserAccount>[] = [
-    {
-      key: 'stt',
-      header: 'STT',
-      width: 64,
-      align: 'center',
-      render: (_row, index) => (currentPage - 1) * PAGE_SIZE + index + 1,
-    },
-    {
-      key: 'username',
-      header: 'Tên đăng nhập',
-      width: 140,
-      render: (row) => row.username,
-    },
-    {
-      key: 'fullName',
-      header: 'Họ và tên',
-      width: 160,
-      render: (row) => row.fullName,
-    },
-    {
-      key: 'department',
-      header: 'Phòng ban',
-      width: 140,
-      render: (row) => row.department || '',
-    },
-    {
-      key: 'position',
-      header: 'Chức vụ',
-      width: 140,
-      render: (row) => row.position || '',
-    },
-    {
-      key: 'role',
-      header: 'Vai trò',
-      width: 140,
-      align: 'center',
-      render: (row) => (
-        <Badge tone={row.role === 'Administrator' ? 'blue' : 'yellow'}>
-          {row.role}
-        </Badge>
-      ),
-    },
-    {
-      key: 'level',
-      header: 'Cấp độ',
-      width: 90,
-      align: 'center',
-      render: (row) => row.level,
-    },
-    {
-      key: 'status',
-      header: 'Trạng thái',
-      width: 140,
-      render: (row) => (
-        <Badge
-          tone={
-            row.status.startsWith('Bị khóa')
-              ? 'red'
-              : row.status === 'Đang hoạt động'
-                ? 'green'
-                : 'gray'
-          }
-        >
-          {row.status}
-        </Badge>
-      ),
-    },
-    {
-      key: 'lastLogin',
-      header: 'Đăng nhập lần cuối',
-      width: 180,
-      render: (row) => row.lastLogin,
-    },
-  ]
-
-  const handleSearch = () => {
-    setQuery(keyword)
-    setPage(1)
-    setSelectedId(null)
-  }
-
-  const handleRefresh = () => {
-    setKeyword('')
-    setQuery('')
-    setPage(1)
-    setSelectedId(null)
-  }
 
   return (
     <div className={styles.page}>
       <AdminHeader />
-      <TabNav
-        items={TABS}
-        activeId={activeTab}
-        onChange={setActiveTab}
-        trailing={
-          <button
-            type="button"
-            className={styles.backButton}
-            aria-label="Quay lại trang trước"
-            onClick={handleBack}
-          >
-            <ChevronRight size={18} />
-          </button>
-        }
-      />
 
       <main className={styles.main}>
+        <button type="button" className={styles.backButton} onClick={handleBack} aria-label="Quay lại">
+          <ChevronRight size={18} style={{ transform: 'rotate(180deg)' }} />
+        </button>
+
+        <TabNav
+          items={TABS}
+          activeId={activeTab}
+          onChange={(id) => {
+            setActiveTab(id)
+            setCreateError('')
+          }}
+        />
+
         {activeTab === 'list' ? (
           <>
             <SearchToolbar
               value={keyword}
               onChange={setKeyword}
-              onSearch={handleSearch}
-              onRefresh={handleRefresh}
+              onSearch={() => {
+                setPage(1)
+                setQuery(keyword)
+              }}
+              placeholder="Tìm theo tên đăng nhập, họ tên..."
               actions={
                 <>
-                  <Button
-                    variant="secondary"
-                    disabled={!selectedId}
-                    onClick={() => {
-                      console.log('Edit user', selectedId)
-                    }}
-                  >
+                  <Button variant="secondary" disabled={!selectedId}>
                     Sửa
                   </Button>
-                  <Button
-                    variant="danger"
-                    disabled={!selectedId}
-                    onClick={() => {
-                      console.log('Delete user', selectedId)
-                    }}
-                  >
+                  <Button variant="danger" disabled={!selectedId}>
                     Xóa
                   </Button>
                 </>
               }
             />
 
+            {listError ? <p className={styles.error}>{listError}</p> : null}
+
             <div className={styles.tableWrap}>
               <DataTable
                 columns={columns}
-                data={pageRows}
+                data={users}
                 rowKey={(row) => row.id}
                 minRows={8}
                 selectedKey={selectedId}
                 onRowClick={(row) => setSelectedId(row.id)}
-                totalCount={filteredUsers.length}
+                totalCount={totalCount}
                 totalUnit="tài khoản"
+                emptyText={loading ? 'Đang tải...' : 'Không có người dùng'}
                 footer={
                   <Pagination
                     page={currentPage}
@@ -221,30 +230,40 @@ export function UsersPage() {
             </div>
           </>
         ) : activeTab === 'create' ? (
-          <CreateUserForm
-            onSubmit={(values) => {
-              const id = `user-${Date.now()}`
-              addAuthAccount({
-                id,
-                username: values.username.trim(),
-                fullName: values.fullName.trim(),
-                department: values.department.trim(),
-                position: values.position.trim(),
-                role: values.role === 'Administrator' ? 'Administrator' : 'Operator',
-                level: Number(values.level) || 1,
-                status: values.active ? 'Đang hoạt động' : 'Ngưng hoạt động',
-                lastLogin: '—',
-                password: values.password,
-                usingDefaultPassword: values.forceChangeOnFirstLogin,
-                passwordChangedAt: values.forceChangeOnFirstLogin ? null : Date.now(),
-                locked: false,
-                lockReason: null,
-                failedLoginAt: [],
-                loginLockedUntil: null,
-              })
-              setActiveTab('list')
-            }}
-          />
+          <>
+            {createError ? <p className={styles.error}>{createError}</p> : null}
+            <CreateUserForm
+              onSubmit={(values) => {
+                void (async () => {
+                  setCreateError('')
+                  try {
+                    await createScadaUser({
+                      username: values.username.trim(),
+                      password: values.password,
+                      confirmPassword: values.confirmPassword,
+                      fullName: values.fullName.trim(),
+                      department: values.department.trim() || undefined,
+                      position: values.position.trim() || undefined,
+                      description: values.description.trim() || undefined,
+                      role: values.role,
+                      level: values.level ? Number(values.level) : null,
+                      isActive: values.active,
+                      mustChangePassword: values.forceChangeOnFirstLogin,
+                    })
+                    setActiveTab('list')
+                    setPage(1)
+                    setQuery('')
+                    setKeyword('')
+                    await loadUsers('', 1)
+                  } catch (error) {
+                    setCreateError(
+                      isApiError(error) ? error.message : 'Không tạo được người dùng.',
+                    )
+                  }
+                })()
+              }}
+            />
+          </>
         ) : activeTab === 'policy' ? (
           <PasswordPolicyForm />
         ) : activeTab === 'session' ? (

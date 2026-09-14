@@ -1,18 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import processDiagramSvg from '@/assets/images/sdcn_1.svg?raw'
+import { processPumpLeftPercent } from './processLayout'
 import {
   PROCESS_PUMPS,
-  PROCESS_WIDTH,
   applyProcessPumpColors,
   formatOne,
   type ProcessPumpCard,
   type ProcessPumpStatus,
 } from './processMock'
 import styles from './StationPage.module.css'
-
-function leftPercent(x: number) {
-  return `${(x / PROCESS_WIDTH) * 100}%`
-}
 
 function prepareInlineSvg(raw: string) {
   return raw
@@ -58,28 +54,32 @@ export function ProcessDiagram({ pumps = PROCESS_PUMPS }: ProcessDiagramProps) {
         </div>
       </div>
 
-      {pumps.map((pump) => (
-        <article
-          key={pump.id}
-          className={`${styles.pumpCard} ${styles.processPumpCard}`}
-          style={{ left: leftPercent(pump.x) }}
-          data-status={pump.status}
-        >
-          <header className={styles.pumpCardHead}>
-            {pump.label} - {pump.powerKw}kW
-          </header>
-          <div className={styles.pumpCardBody}>
-            <div>
-              <span>Dòng điện:</span>
-              <strong>{formatOne(pump.currentA)}A</strong>
+      {pumps.map((pump) => {
+        const left = processPumpLeftPercent(pump.id)
+        if (!left) return null
+        return (
+          <article
+            key={pump.id}
+            className={`${styles.pumpCard} ${styles.processPumpCard}`}
+            style={{ left }}
+            data-status={pump.status}
+          >
+            <header className={styles.pumpCardHead}>
+              {pump.label} - {pump.powerKw}kW
+            </header>
+            <div className={styles.pumpCardBody}>
+              <div>
+                <span>Dòng điện:</span>
+                <strong>{formatOne(pump.currentA)}A</strong>
+              </div>
+              <div>
+                <span>T.Gian:</span>
+                <strong>{pump.runtimeH}h</strong>
+              </div>
             </div>
-            <div>
-              <span>T.Gian:</span>
-              <strong>{pump.runtimeH}h</strong>
-            </div>
-          </div>
-        </article>
-      ))}
+          </article>
+        )
+      })}
     </div>
   )
 }

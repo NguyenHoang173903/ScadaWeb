@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { Badge } from '@/components/common/Badge'
 import { DataTable, type DataTableColumn } from '@/components/common/DataTable'
 import {
@@ -8,6 +9,7 @@ import {
 import { Pagination } from '@/components/common/Pagination'
 import { TabNav } from '@/components/common/TabNav'
 import { fetchLoginHistory } from '@/services/auditLog'
+import { getEventDevices, getEventHistory } from '@/services/stations/stationsApi'
 import {
   DEFAULT_EVENT_FILTER,
   EVENT_DEVICE_OPTIONS,
@@ -115,12 +117,88 @@ function filterHistoryRows(rows: HistoryEventRow[], filter: EventFilterValues) {
 }
 
 export function EventHistoryPage() {
+  const { stationId = '' } = useParams()
+  const numericStation = /^\d+$/.test(stationId)
   const [activeTab, setActiveTab] = useState<HistoryTabId>('status')
   const [draft, setDraft] = useState<EventFilterValues>(DEFAULT_EVENT_FILTER)
   const [applied, setApplied] = useState<EventFilterValues>(DEFAULT_EVENT_FILTER)
   const [page, setPage] = useState(1)
+  const [apiRows, setApiRows] = useState<HistoryEventRow[]>([])
   const [loginRows, setLoginRows] = useState<HistoryEventRow[]>([])
   const [loginLoading, setLoginLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [deviceOptions, setDeviceOptions] = useState(EVENT_DEVICE_OPTIONS)
+
+  useEffect(() => {
+    if (!numericStation) return
+    void getEventDevices(Number(stationId))
+      .then((devices) => {
+        setDeviceOptions([
+          { value: 'all', label: 'Thiết bị' },
+          ...devices.map((d) => ({ value: `device-${d.id}`, label: d.name })),
+        ])
+      })
+      .catch(() => {
+        // Keep mock options.
+      })
+  }, [stationId, numericStation])
+
+  useEffect(() => {
+    if (activeTab === 'login') return
+    if (!numericStation) {
+      setApiRows(HISTORY_ROWS_BY_TAB[activeTab])
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    void (async () => {
+      try {
+        const deviceId =
+          applied.deviceId.startsWith('device-')
+            ? Number(applied.deviceId.replace('device-', ''))
+            : undefined
+        const result = await getEventHistory(Number(stationId), {
+          category: activeTab,
+          deviceId: Number.isFinite(deviceId) ? deviceId : undefined,
+          fromDate: applied.fromDate || undefined,
+          toDate: applied.toDate || undefined,
+          keyword: applied.keyword.trim() || undefined,
+          pageNumber: 1,
+          pageSize: 500,
+        })
+        if (cancelled) return
+        setApiRows(
+          (result.items ?? []).map((row, index) => ({
+            id: String(row.id),
+            stt: index + 1,
+            time: new Date(row.startTime).toLocaleString('vi-VN'),
+            type: (['ERROR', 'INFO', 'WARNING', 'PUMP', 'Communication', 'Security'].includes(
+              row.type,
+            )
+              ? row.type
+              : 'INFO') as HistoryEventRow['type'],
+            title: row.title,
+            detail: row.description || '',
+            device: row.deviceName || '',
+            deviceId: row.deviceId != null ? `device-${row.deviceId}` : 'all',
+            tag: row.tagName || '',
+            user: row.username || '',
+            endedAt: row.endTime ? new Date(row.endTime).toLocaleString('vi-VN') : '',
+            occurredAt: row.startTime,
+          })),
+        )
+      } catch {
+        if (!cancelled) setApiRows([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, applied, stationId, numericStation])
 
   useEffect(() => {
     if (activeTab !== 'login') return
@@ -144,7 +222,7 @@ export function EventHistoryPage() {
     }
   }, [activeTab, applied])
 
-  const sourceRows = activeTab === 'login' ? loginRows : HISTORY_ROWS_BY_TAB[activeTab]
+  const sourceRows = activeTab === 'login' ? loginRows : apiRows
 
   const filteredRows = useMemo(
     () => filterHistoryRows(sourceRows, applied),
@@ -166,7 +244,9 @@ export function EventHistoryPage() {
       ? loginLoading
         ? 'Đang tải nhật ký đăng nhập...'
         : 'Chưa có sự kiện đăng nhập'
-      : 'Không có dữ liệu'
+      : loading
+        ? 'Đang tải...'
+        : 'Không có dữ liệu'
 
   return (
     <div className={styles.page}>
@@ -183,7 +263,7 @@ export function EventHistoryPage() {
 
       <EventFilterBar
         values={draft}
-        deviceOptions={EVENT_DEVICE_OPTIONS}
+        deviceOptions={deviceOptions}
         onChange={setDraft}
         onFilter={() => {
           setApplied(draft)
@@ -210,7 +290,7 @@ export function EventHistoryPage() {
           emptyText={emptyText}
           updateHint={
             activeTab === 'login'
-              ? 'Nhật ký đăng nhập được ghi khi đăng nhập / đăng xuất'
+              ? 'Nhật ký đăng nhập đồng bộ từ system-audit-logs'
               : 'Dữ liệu cập nhật 30 phút 1 lần'
           }
           footer={

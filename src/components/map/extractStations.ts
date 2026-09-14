@@ -1,5 +1,5 @@
 import type { Feature, FeatureCollection, Geometry, Position } from 'geojson'
-import { PUMP_STATIONS } from '@/data/pumpStations'
+import { getAllPumpStations, PUMP_STATIONS } from '@/data/pumpStations'
 
 export type MapStationType = 'pump' | 'rain' | 'level'
 
@@ -72,11 +72,28 @@ function matchRouteId(stationName: string): string | undefined {
   const key = normalizeStationKey(stationName)
   if (!key) return undefined
 
-  const found = PUMP_STATIONS.find((station) => {
-    const stationKey = normalizeStationKey(station.name)
-    return stationKey === key || stationKey.includes(key) || key.includes(stationKey)
-  })
-  return found?.id
+  const catalog = getAllPumpStations()
+  const found =
+    catalog.find((station) => {
+      const stationKey = normalizeStationKey(station.name)
+      return stationKey === key || stationKey.includes(key) || key.includes(stationKey)
+    }) ??
+    PUMP_STATIONS.find((station) => {
+      const stationKey = normalizeStationKey(station.name)
+      return stationKey === key || stationKey.includes(key) || key.includes(stationKey)
+    })
+
+  // Prefer BE numeric id when available (same code).
+  if (found) {
+    if (/^\d+$/.test(found.id)) return found.id
+    const be = catalog.find(
+      (s) =>
+        /^\d+$/.test(s.id) &&
+        s.code.trim().toUpperCase() === found.code.trim().toUpperCase(),
+    )
+    return be?.id ?? found.id
+  }
+  return undefined
 }
 
 function slugId(name: string, lat: number, lng: number) {
@@ -281,7 +298,7 @@ export function buildMapStations(
   const sensors = fromKmz.filter((station) => station.type !== 'pump')
   const matchedKmzKeys = new Set<string>()
 
-  const pumpsFromDb: MapStation[] = PUMP_STATIONS.map((db) => {
+  const pumpsFromDb: MapStation[] = getAllPumpStations().map((db) => {
     const match = findKmzMatchForPump(db.name, db.lat, db.lng, kmzPumps)
     if (match) {
       matchedKmzKeys.add(`${match.lat.toFixed(6)},${match.lng.toFixed(6)}`)

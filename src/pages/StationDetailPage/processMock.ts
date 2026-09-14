@@ -1,6 +1,5 @@
-/** Full viewBox of sdcn_1.svg */
-export const PROCESS_WIDTH = 1644
-export const PROCESS_HEIGHT = 728
+/** ViewBox — re-export layout cố định (không nằm trong data bơm). */
+export { PROCESS_WIDTH, PROCESS_HEIGHT } from './processLayout'
 
 export type ProcessPumpStatus = 'running' | 'error' | 'stopped' | 'unknown'
 
@@ -12,10 +11,9 @@ export const PROCESS_PUMP_COLORS: Record<ProcessPumpStatus, string> = {
   unknown: '#FFFF13',
 }
 
+/** Data runtime / API — không chứa tọa độ SVG. */
 export type ProcessPumpCard = {
   id: number
-  /** Center X in SVG coordinates */
-  x: number
   label: string
   powerKw: number
   currentA: number
@@ -23,18 +21,18 @@ export type ProcessPumpCard = {
   status: ProcessPumpStatus
 }
 
-/** Yellow pump icon centers from sdcn_1.svg (id 10 left → 1 right) */
+/** Seed / fallback (layout xem processLayout.ts). */
 export const PROCESS_PUMPS: ProcessPumpCard[] = [
-  { id: 10, x: 103, label: 'Bơm 10', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
-  { id: 9, x: 235, label: 'Bơm 9', powerKw: 160, currentA: 0, runtimeH: 130, status: 'error' },
-  { id: 8, x: 373, label: 'Bơm 8', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
-  { id: 7, x: 527, label: 'Bơm 7', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
-  { id: 6, x: 665, label: 'Bơm 6', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
-  { id: 5, x: 806, label: 'Bơm 5', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
-  { id: 4, x: 942, label: 'Bơm 4', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
-  { id: 3, x: 1080, label: 'Bơm 3', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
-  { id: 2, x: 1234, label: 'Bơm 2', powerKw: 160, currentA: 0, runtimeH: 130, status: 'unknown' },
-  { id: 1, x: 1371, label: 'Bơm 1', powerKw: 160, currentA: 0, runtimeH: 130, status: 'unknown' },
+  { id: 10, label: 'Bơm 10', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
+  { id: 9, label: 'Bơm 9', powerKw: 160, currentA: 0, runtimeH: 130, status: 'error' },
+  { id: 8, label: 'Bơm 8', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
+  { id: 7, label: 'Bơm 7', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
+  { id: 6, label: 'Bơm 6', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
+  { id: 5, label: 'Bơm 5', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
+  { id: 4, label: 'Bơm 4', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
+  { id: 3, label: 'Bơm 3', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
+  { id: 2, label: 'Bơm 2', powerKw: 160, currentA: 0, runtimeH: 130, status: 'unknown' },
+  { id: 1, label: 'Bơm 1', powerKw: 160, currentA: 0, runtimeH: 130, status: 'unknown' },
 ]
 
 export function formatOne(n: number) {

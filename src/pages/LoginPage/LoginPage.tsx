@@ -13,17 +13,23 @@ import { ROUTES } from '@/constants/routes'
 import { getLoginLayerVisible } from '@/settings/loginLayerSettings'
 import { peekCachedMapLayers, resolveMapLayers } from '@/services/mapLayers'
 import { reportAuthEvent } from '@/services/auditLog'
+import {
+  changePasswordWithApi,
+  forgotPasswordWithApi,
+  loginWithApi,
+  type AuthTokenResponse,
+} from '@/services/auth/authApi'
+import { isApiError } from '@/services/api/http'
 import { LoginForm } from './LoginForm'
 import { ChangePasswordForm } from './ChangePasswordForm'
 import {
   authenticateAccount,
-  completePasswordChange,
-  getLoginAttemptStatus,
-  unlockFailedLoginLock,
   PASSWORD_CHALLENGE_COPY,
   type PasswordChallengeReason,
 } from '@/settings/authAccounts'
 import { beginSession } from '@/settings/session'
+import { fetchSessionPolicy } from '@/services/sessionPolicy/sessionPolicyApi'
+import { setSessionPolicy } from '@/settings/sessionPolicy'
 import styles from './LoginPage.module.css'
 
 type ServiceItem = {
@@ -43,6 +49,25 @@ const SERVICE_ITEMS: ServiceItem[] = [
   { id: 'alert', lines: ['CẢNH BÁO', 'SỰ KIỆN'], Icon: Bell },
 ]
 
+function challengeFromAuth(data: AuthTokenResponse): PasswordChallengeReason | null {
+  if (data.mustChangePassword) return 'default'
+  if (data.passwordExpiringSoon) return 'interval'
+  return null
+}
+
+function enterApp(data: Pick<AuthTokenResponse, 'username' | 'fullName' | 'displayName' | 'role'>) {
+  beginSession({
+    username: data.username,
+    displayName: data.fullName || data.displayName,
+    role: data.role,
+  })
+  void fetchSessionPolicy()
+    .then((policy) => setSessionPolicy({ idleTimeoutMinutes: policy.idleTimeoutMinutes }))
+    .catch(() => {
+      // Keep local session policy if BE unreachable.
+    })
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
   const [layers, setLayers] = useState<MapOverlayLayer[]>(() =>
@@ -51,9 +76,11 @@ export function LoginPage() {
   const [loginError, setLoginError] = useState('')
   const [loginWarning, setLoginWarning] = useState('')
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null)
+  const [busy, setBusy] = useState(false)
   const [challenge, setChallenge] = useState<{
     username: string
     reason: PasswordChallengeReason
+    currentPassword: string
   } | null>(null)
 
   useEffect(() => {
@@ -76,7 +103,6 @@ export function LoginPage() {
 
     return () => {
       cancelled = true
-      // Do not revoke KMZ media here — owned by mapLayers memory cache.
     }
   }, [])
 
@@ -97,20 +123,29 @@ export function LoginPage() {
                 setLoginError('')
                 setLoginWarning('')
               }}
-              onSubmit={(password) => {
-                const account = completePasswordChange(challenge.username, password)
-                const username = account?.username ?? challenge.username
-                reportAuthEvent({
-                  eventType: 'password-changed',
-                  username,
-                })
-                reportAuthEvent({ eventType: 'login', username })
-                beginSession({
-                  username,
-                  displayName: account?.fullName,
-                  role: account?.role,
-                })
-                navigate(ROUTES.dashboard)
+              onSubmit={async (password) => {
+                setBusy(true)
+                try {
+                  await changePasswordWithApi(challenge.currentPassword, password)
+                  reportAuthEvent({
+                    eventType: 'password-changed',
+                    username: challenge.username,
+                  })
+                  reportAuthEvent({ eventType: 'login', username: challenge.username })
+                  enterApp({
+                    username: challenge.username,
+                    fullName: challenge.username,
+                    displayName: challenge.username,
+                    role: '',
+                  })
+                  navigate(ROUTES.dashboard)
+                } catch (error) {
+                  setLoginError(
+                    isApiError(error) ? error.message : 'Không đổi được mật khẩu. Thử lại.',
+                  )
+                } finally {
+                  setBusy(false)
+                }
               }}
             />
           ) : (
@@ -118,52 +153,108 @@ export function LoginPage() {
               error={loginError}
               warning={loginWarning}
               blockedUntil={blockedUntil}
-              onUsernameChange={(username) => {
-                const status = getLoginAttemptStatus(username)
-                setLoginError(status.message)
-                setLoginWarning(status.warning)
-                setBlockedUntil(status.blockedUntil)
-              }}
-              onForgotPassword={(username) => {
-                const result = unlockFailedLoginLock(username)
-                if (!result.ok) {
-                  setLoginError(result.message)
-                  setLoginWarning('')
-                  return
-                }
-                setLoginError('')
-                setLoginWarning(result.warning)
-                setBlockedUntil(null)
-              }}
-              onSubmit={({ username, password }) => {
-                const result = authenticateAccount(username, password)
-                if (!result.ok) {
-                  reportAuthEvent({
-                    eventType: 'login-failed',
-                    username,
-                    detail: result.message,
-                  })
-                  setLoginError(result.message)
-                  setLoginWarning(result.warning ?? '')
-                  setBlockedUntil(result.blockedUntil ?? null)
-                  return
-                }
+              onUsernameChange={() => {
                 setLoginError('')
                 setLoginWarning('')
                 setBlockedUntil(null)
-                if (result.challenge && result.account) {
-                  setChallenge({ username: result.account.username, reason: result.challenge })
-                  return
-                }
-                const account = result.account
-                const sessionUser = account?.username ?? username
-                reportAuthEvent({ eventType: 'login', username: sessionUser })
-                beginSession({
-                  username: sessionUser,
-                  displayName: account?.fullName,
-                  role: account?.role,
-                })
-                navigate(ROUTES.dashboard)
+              }}
+              onForgotPassword={(username) => {
+                void (async () => {
+                  if (!username.trim()) {
+                    setLoginError('Nhập tên đăng nhập rồi chọn Quên mật khẩu?')
+                    return
+                  }
+                  try {
+                    const result = await forgotPasswordWithApi(username.trim())
+                    setLoginError('')
+                    setLoginWarning(
+                      result.developmentResetToken
+                        ? `${result.message} (Dev token: ${result.developmentResetToken})`
+                        : result.message || 'Nếu tài khoản tồn tại, hướng dẫn đã được gửi.',
+                    )
+                    setBlockedUntil(null)
+                  } catch (error) {
+                    setLoginError(
+                      isApiError(error)
+                        ? error.message
+                        : 'Không gửi được yêu cầu quên mật khẩu.',
+                    )
+                  }
+                })()
+              }}
+              onSubmit={({ username, password }) => {
+                void (async () => {
+                  if (busy) return
+                  setBusy(true)
+                  setLoginError('')
+                  setLoginWarning('')
+
+                  const apiResult = await loginWithApi(username, password)
+
+                  if (apiResult.ok) {
+                    const reason = challengeFromAuth(apiResult.data)
+                    if (reason) {
+                      setChallenge({
+                        username: apiResult.data.username,
+                        reason,
+                        currentPassword: password,
+                      })
+                      setBusy(false)
+                      return
+                    }
+                    reportAuthEvent({ eventType: 'login', username: apiResult.data.username })
+                    enterApp(apiResult.data)
+                    navigate(ROUTES.dashboard)
+                    setBusy(false)
+                    return
+                  }
+
+                  // Fallback local demo khi BE không kết nối được.
+                  if (!apiResult.status) {
+                    const local = authenticateAccount(username, password)
+                    if (local.ok) {
+                      if (local.challenge && local.account) {
+                        setChallenge({
+                          username: local.account.username,
+                          reason: local.challenge,
+                          currentPassword: password,
+                        })
+                        setBusy(false)
+                        return
+                      }
+                      const account = local.account
+                      const sessionUser = account?.username ?? username
+                      reportAuthEvent({ eventType: 'login', username: sessionUser })
+                      beginSession({
+                        username: sessionUser,
+                        displayName: account?.fullName,
+                        role: account?.role,
+                      })
+                      navigate(ROUTES.dashboard)
+                      setBusy(false)
+                      return
+                    }
+                    reportAuthEvent({
+                      eventType: 'login-failed',
+                      username,
+                      detail: local.message,
+                    })
+                    setLoginError(local.message)
+                    setLoginWarning(local.warning ?? '')
+                    setBlockedUntil(local.blockedUntil ?? null)
+                    setBusy(false)
+                    return
+                  }
+
+                  reportAuthEvent({
+                    eventType: 'login-failed',
+                    username,
+                    detail: apiResult.message,
+                  })
+                  setLoginError(apiResult.message)
+                  setBlockedUntil(apiResult.blockedUntil ?? null)
+                  setBusy(false)
+                })()
               }}
             />
           )}

@@ -7,7 +7,7 @@ import styles from './LoginPage.module.css'
 type Props = {
   username: string
   message: string
-  onSubmit: (password: string) => void
+  onSubmit: (password: string) => void | Promise<void>
   onCancel: () => void
 }
 
@@ -32,7 +32,9 @@ export function ChangePasswordForm({ username, message, onSubmit, onCancel }: Pr
       return
     }
     setError('')
-    onSubmit(password)
+    void Promise.resolve(onSubmit(password)).catch((err: unknown) => {
+      setError(err instanceof Error ? err.message : 'Không cập nhật được mật khẩu.')
+    })
   }
 
   return (

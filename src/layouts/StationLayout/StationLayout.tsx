@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Activity, Users } from 'lucide-react'
 import { Button } from '@/components/common/Button'
@@ -10,20 +11,75 @@ import { AppFooter } from '@/components/layout/AppFooter'
 import { StationSideNav } from '@/components/layout/StationSideNav'
 import { StationTopNav } from '@/components/layout/StationTopNav'
 import { ROUTES } from '@/constants/routes'
-import { getPumpStationById } from '@/data/pumpStations'
+import { getPumpStationById, registerPumpStation, type PumpStation } from '@/data/pumpStations'
+import { isApiError } from '@/services/api/http'
+import { stationDetailToPumpStation } from '@/services/stations/mappers'
+import { getStation } from '@/services/stations/stationsApi'
 import styles from './StationLayout.module.css'
 
 export function StationLayout() {
   const { stationId = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const station = getPumpStationById(stationId)
+  const [station, setStation] = useState<PumpStation | undefined>(() =>
+    getPumpStationById(stationId),
+  )
+  const [loading, setLoading] = useState(!getPumpStationById(stationId))
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const local = getPumpStationById(stationId)
+    if (local) {
+      setStation(local)
+      setLoading(false)
+      setError('')
+      return
+    }
+
+    if (!/^\d+$/.test(stationId)) {
+      setStation(undefined)
+      setLoading(false)
+      setError('Mã trạm không tồn tại hoặc đã bị xóa.')
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    void (async () => {
+      try {
+        const detail = await getStation(Number(stationId))
+        if (cancelled) return
+        const mapped = stationDetailToPumpStation(detail)
+        registerPumpStation(mapped)
+        setStation(mapped)
+        setError('')
+      } catch (err) {
+        if (cancelled) return
+        setStation(undefined)
+        setError(isApiError(err) ? err.message : 'Không tải được thông tin trạm.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [stationId])
+
+  if (loading) {
+    return (
+      <div className={styles.notFound}>
+        <h1>Đang tải trạm bơm…</h1>
+      </div>
+    )
+  }
 
   if (!station) {
     return (
       <div className={styles.notFound}>
         <h1>Không tìm thấy trạm bơm</h1>
-        <p>Mã trạm không tồn tại hoặc đã bị xóa.</p>
+        <p>{error || 'Mã trạm không tồn tại hoặc đã bị xóa.'}</p>
         <Button variant="primary" onClick={() => navigate(ROUTES.dashboard)}>
           Quay lại Dashboard
         </Button>

@@ -4,10 +4,11 @@ export type SessionPolicy = {
 }
 
 export const DEFAULT_SESSION_POLICY: SessionPolicy = {
-  idleTimeoutMinutes: 15,
+  /** Tạm 3 phút; admin sẽ cấu hình sau qua giao diện. */
+  idleTimeoutMinutes: 3,
 }
 
-const STORAGE_KEY = 'scadaweb.session-policy'
+const STORAGE_KEY = 'scadaweb.session-policy.v2'
 
 let policy: SessionPolicy = { ...DEFAULT_SESSION_POLICY }
 

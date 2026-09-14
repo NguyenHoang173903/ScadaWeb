@@ -11,8 +11,9 @@ import {
 import type { MapOverlayLayer } from '@/components/map/layerTypes'
 import { ROUTES, stationDataUpdatePath, stationDetailPath } from '@/constants/routes'
 import { APP_COMPANY } from '@/constants/config'
-import { ensureMapPumpStation } from '@/data/pumpStations'
+import { ensureMapPumpStation, registerPumpStation, resolvePumpStationRouteId } from '@/data/pumpStations'
 import { logoutCurrentUser } from '@/services/auditLog'
+import { getStation, listStations as fetchStationsApi } from '@/services/stations/stationsApi'
 import { getSessionUsername } from '@/settings/session'
 import {
   deleteMapLayer,
@@ -47,6 +48,7 @@ export function DashboardPage() {
   )
   const [selectedStation, setSelectedStation] = useState<MapStation | null>(null)
   const [now, setNow] = useState(() => formatNow(new Date()))
+  const [stationCatalogVersion, setStationCatalogVersion] = useState(0)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -54,6 +56,54 @@ export function DashboardPage() {
       setNow(formatNow(new Date()))
     }, 1000)
     return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const result = await fetchStationsApi({ isActive: true })
+        if (cancelled) return
+        for (const item of result.items ?? []) {
+          registerPumpStation({
+            id: String(item.id),
+            name: item.name,
+            code: item.code,
+            address: '—',
+            status: item.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động',
+            pumps: 0,
+            capacity: '—',
+            lat: 0,
+            lng: 0,
+          })
+          void getStation(item.id)
+            .then((detail) => {
+              if (cancelled) return
+              registerPumpStation({
+                id: String(detail.id),
+                name: detail.name,
+                code: detail.code,
+                address: detail.address?.trim() || '—',
+                status: detail.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động',
+                pumps: 0,
+                capacity: '—',
+                lat: detail.latitude ?? 0,
+                lng: detail.longitude ?? 0,
+              })
+              setStationCatalogVersion((v) => v + 1)
+            })
+            .catch(() => {
+              // Keep list row without coords.
+            })
+        }
+        setStationCatalogVersion((v) => v + 1)
+      } catch {
+        // Keep mock PUMP_STATIONS.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -160,7 +210,10 @@ export function DashboardPage() {
     })
   }
 
-  const mapStations = useMemo(() => buildMapStations(layers), [layers])
+  const mapStations = useMemo(
+    () => buildMapStations(layers),
+    [layers, stationCatalogVersion],
+  )
   const pumpStations = useMemo(
     () => mapStations.filter((station) => station.type === 'pump'),
     [mapStations],
@@ -181,8 +234,13 @@ export function DashboardPage() {
   }, [listType, pumpStations, rainStations, levelStations])
 
   useEffect(() => {
+    // Prefetch catalog only — navigation uses resolvePumpStationRouteId (BE id).
     for (const station of pumpStations) {
-      ensureMapPumpStation(station)
+      const beId = resolvePumpStationRouteId(station)
+      if (!beId && station.type === 'pump') {
+        // Keep offline slug only when BE chưa có id khớp.
+        ensureMapPumpStation(station)
+      }
     }
   }, [pumpStations])
 
@@ -334,7 +392,13 @@ export function DashboardPage() {
             setListType(null)
             setLayersOpen(false)
             if (station.type === 'pump') {
-              const routeId = ensureMapPumpStation(station)
+              const routeId = resolvePumpStationRouteId(station)
+              if (!routeId) {
+                window.alert(
+                  'Trạm này chưa có trong hệ thống (scada.station). Đồng bộ danh sách trạm từ backend rồi thử lại.',
+                )
+                return
+              }
               navigate(stationDetailPath(routeId))
               return
             }
@@ -347,7 +411,13 @@ export function DashboardPage() {
         station={selectedStation}
         onClose={() => setSelectedStation(null)}
         onUpdateData={(station) => {
-          const routeId = station.routeId ?? ensureMapPumpStation(station)
+          const routeId = resolvePumpStationRouteId(station)
+          if (!routeId) {
+            window.alert(
+              'Trạm này chưa có trong hệ thống (scada.station). Không mở được cập nhật dữ liệu.',
+            )
+            return
+          }
           setSelectedStation(null)
           navigate(stationDataUpdatePath(routeId))
         }}
