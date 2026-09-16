@@ -4,7 +4,6 @@ using Backend.Application.Realtime;
 using Backend.Application.Scada;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Persistence.Context;
-using Backend.Infrastructure.Realtime;
 using Backend.Shared.Constants;
 using Backend.Shared.Pagination;
 using Backend.Shared.Results;
@@ -52,22 +51,10 @@ public class ScreenRealtimeQueryService(
         foreach (var row in rows)
         {
             values.TryGetValue(row.TagId, out var live);
+            // Missing Redis value → Unavailable (Uncertain + null). Never invent fake numbers.
             var value = live?.Value;
             var ts = live?.Timestamp ?? now;
-            var quality = live?.Quality ?? TagQualityNames.Good;
-            if (live is null && ScadaScreenMapping.IsRealtime(screen))
-            {
-                value = RealtimeValueGenerator.Generate(row.DataType, row.TagId);
-                ts = now;
-                quality = TagQualityNames.Good;
-                await store.SetAsync(row.TagId, new RealtimeValue
-                {
-                    TagId = row.TagId,
-                    Value = value,
-                    Timestamp = ts,
-                    Quality = quality
-                }, cancellationToken);
-            }
+            var quality = live?.Quality ?? TagQualityNames.Uncertain;
 
             tags.Add(new RealtimeTagDto
             {

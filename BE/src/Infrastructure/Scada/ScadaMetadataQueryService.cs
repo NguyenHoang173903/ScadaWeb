@@ -32,6 +32,7 @@ public class ScadaMetadataQueryService(
     ISystemAuditService systemAudit,
     IImportExportService importExport,
     IOptions<PasswordPolicyOptions> passwordOptions,
+    IOptions<RealtimeOptions> realtimeOptions,
     ILogger<ScadaMetadataQueryService> logger) :
     IStationQueryService,
     IPlcQueryService,
@@ -1735,8 +1736,9 @@ public class ScadaMetadataQueryService(
                     "Chart time range must not exceed 24 hours.");
 
             var interval = NormalizeChartInterval(query.Interval);
-            // Chart luôn lấy history_1s rồi gộp 1 điểm / 15 phút (tránh dày).
-            const int bucketMinutes = 15;
+            // Short live windows keep dense samples; long ranges bucket to keep payload small.
+            var bucket = ResolveChartBucket(span, interval);
+            interval = bucket.Label;
 
             // Pump tags + related meter tags (I1/I2/I3 often live on MeterN).
             var pumpCode = await db.Devices.AsNoTracking()
@@ -1799,45 +1801,89 @@ public class ScadaMetadataQueryService(
                 .Distinct()
                 .ToList();
 
+            // Measured: chỉ history DB (1s / 30m), lọc theo device (tag đã match) + from/to.
+            // Threshold (nhiệt/dòng cho phép): Redis như màn Devices — không invent.
             var samplesByTag = new Dictionary<long, List<(DateTimeOffset Time, double Value)>>();
             if (measuredTagIds.Count > 0)
             {
-                var rows = await db.History1s.AsNoTracking()
-                    .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
-                    .OrderBy(h => h.Time)
-                    .Select(h => new { h.TagId, h.Time, h.Value })
-                    .ToListAsync(cancellationToken);
+                // Cửa sổ dài → ưu tiên 30m; cửa sổ ngắn → ưu tiên 1s. Cả hai đều lọc from/to.
+                var prefer30m = span > TimeSpan.FromHours(2);
 
-                // Fallback 1s → 30s when empty.
-                if (rows.Count == 0)
+                async Task<List<(long TagId, DateTimeOffset Time, double Value)>> Load1sAsync()
                 {
-                    rows = await db.History30s.AsNoTracking()
+                    var rows = await db.History1s.AsNoTracking()
                         .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
                         .OrderBy(h => h.Time)
                         .Select(h => new { h.TagId, h.Time, h.Value })
                         .ToListAsync(cancellationToken);
+                    return rows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
                 }
 
-                var bucketTicks = TimeSpan.FromMinutes(bucketMinutes).Ticks;
-                foreach (var group in rows.GroupBy(x => x.TagId))
+                async Task<List<(long TagId, DateTimeOffset Time, double Value)>> Load30mAsync()
                 {
-                    // 1 điểm / 15 phút: lấy mẫu đầu tiên trong mỗi bucket UTC.
-                    var points = group
-                        .GroupBy(x => x.Time.UtcTicks / bucketTicks)
-                        .Select(g =>
-                        {
-                            var first = g.OrderBy(p => p.Time).First();
-                            var bucketStart = new DateTimeOffset(g.Key * bucketTicks, TimeSpan.Zero);
-                            return (Time: bucketStart, Value: first.Value);
-                        })
-                        .OrderBy(p => p.Time)
-                        .ToList();
-                    samplesByTag[group.Key] = points;
+                    var rows = await db.History30m.AsNoTracking()
+                        .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
+                        .OrderBy(h => h.Time)
+                        .Select(h => new { h.TagId, h.Time, h.Value })
+                        .ToListAsync(cancellationToken);
+                    return rows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
                 }
 
-                interval = "15m";
+                var primary = prefer30m ? await Load30mAsync() : await Load1sAsync();
+                var used30m = prefer30m && primary.Count > 0;
+                if (primary.Count == 0)
+                {
+                    primary = prefer30m ? await Load1sAsync() : await Load30mAsync();
+                    used30m = !prefer30m && primary.Count > 0;
+                }
+
+                if (primary.Count > 0)
+                {
+                    if (used30m)
+                    {
+                        interval = "30m";
+                        foreach (var group in primary.GroupBy(x => x.TagId))
+                        {
+                            samplesByTag[group.Key] = group
+                                .Select(p => (Time: p.Time, Value: p.Value))
+                                .OrderBy(p => p.Time)
+                                .ToList();
+                        }
+                    }
+                    else
+                    {
+                        var bucketTicks = bucket.Size.Ticks;
+                        foreach (var group in primary.GroupBy(x => x.TagId))
+                        {
+                            List<(DateTimeOffset Time, double Value)> points;
+                            if (bucketTicks <= TimeSpan.FromSeconds(1).Ticks)
+                            {
+                                points = group
+                                    .Select(p => (Time: p.Time, Value: p.Value))
+                                    .OrderBy(p => p.Time)
+                                    .ToList();
+                            }
+                            else
+                            {
+                                points = group
+                                    .GroupBy(x => x.Time.UtcTicks / bucketTicks)
+                                    .Select(g =>
+                                    {
+                                        var first = g.OrderBy(p => p.Time).First();
+                                        var bucketStart = new DateTimeOffset(g.Key * bucketTicks, TimeSpan.Zero);
+                                        return (Time: bucketStart, Value: first.Value);
+                                    })
+                                    .OrderBy(p => p.Time)
+                                    .ToList();
+                            }
+
+                            samplesByTag[group.Key] = points;
+                        }
+                    }
+                }
             }
 
+            // Redis chỉ cho ngưỡng cho phép, scoped theo device (tag match) + vẽ trên [from, to].
             var thresholdTagIds = seriesDefs
                 .Where(d => d.Role == "threshold" && matched.ContainsKey(d.Key))
                 .Select(d => matched[d.Key].TagId)
@@ -1860,19 +1906,18 @@ public class ScadaMetadataQueryService(
 
                 if (def.Role == "threshold")
                 {
-                    double? value = null;
                     if (tagMeta.TagId != 0 && thresholdValues.TryGetValue(tagMeta.TagId, out var live))
-                        value = live.Value;
-                    else if (chart.Equals(StationChartCatalog.Temperature, StringComparison.OrdinalIgnoreCase))
-                        value = 36.0 + Math.Abs(def.Key.GetHashCode() % 5) * 0.5;
+                    {
+                        dto.Points =
+                        [
+                            new StationChartPointDto { Timestamp = from, Value = live.Value },
+                            new StationChartPointDto { Timestamp = to, Value = live.Value }
+                        ];
+                    }
                     else
-                        value = 36.0 + Math.Abs(def.Key.GetHashCode() % 4);
-
-                    dto.Points =
-                    [
-                        new StationChartPointDto { Timestamp = from, Value = value.Value },
-                        new StationChartPointDto { Timestamp = to, Value = value.Value }
-                    ];
+                    {
+                        dto.Points = [];
+                    }
                 }
                 else if (tagMeta.TagId != 0 && samplesByTag.TryGetValue(tagMeta.TagId, out var pts))
                 {
@@ -1901,14 +1946,38 @@ public class ScadaMetadataQueryService(
         });
 
     private static string NormalizeChartInterval(string? interval) =>
-        (interval ?? "15m").Trim().ToLowerInvariant() switch
+        (interval ?? "auto").Trim().ToLowerInvariant() switch
         {
             "15m" or "15min" => "15m",
             "30s" or "30sec" => "30s",
             "1m" or "1min" or "60s" => "1m",
             "1s" => "1s",
-            _ => "15m"
+            "auto" or "" => "auto",
+            _ => "auto"
         };
+
+    private static (string Label, TimeSpan Size) ResolveChartBucket(TimeSpan span, string interval)
+    {
+        if (interval is not ("auto" or ""))
+        {
+            return interval switch
+            {
+                "1s" => ("1s", TimeSpan.FromSeconds(1)),
+                "30s" => ("30s", TimeSpan.FromSeconds(30)),
+                "1m" => ("1m", TimeSpan.FromMinutes(1)),
+                _ => ("15m", TimeSpan.FromMinutes(15)),
+            };
+        }
+
+        // Live cửa sổ ngắn: giữ mật độ gần Redis/history_1s.
+        if (span <= TimeSpan.FromMinutes(15))
+            return ("1s", TimeSpan.FromSeconds(1));
+        if (span <= TimeSpan.FromHours(2))
+            return ("30s", TimeSpan.FromSeconds(30));
+        if (span <= TimeSpan.FromHours(6))
+            return ("1m", TimeSpan.FromMinutes(1));
+        return ("15m", TimeSpan.FromMinutes(15));
+    }
 
     private static bool TryResolveReportDayRange(
         DateOnly? reportDate,
@@ -2011,13 +2080,16 @@ public class ScadaMetadataQueryService(
         if (tagIds.Count == 0)
             return latestByTagId;
 
-        // Prefer Fake/Redis current-state store (simulator writes here).
+        // Prefer live Redis / store. Do not invent values.
         var live = await realtimeStore.GetManyAsync(tagIds, cancellationToken);
         foreach (var (tagId, rt) in live)
         {
             if (TryToDouble(rt.Value, out var number))
                 latestByTagId[tagId] = (number, rt.Timestamp);
         }
+
+        if (!realtimeOptions.Value.FallbackToHistoryOnMiss)
+            return latestByTagId;
 
         var missing = tagIds.Where(id => !latestByTagId.ContainsKey(id)).ToList();
         if (missing.Count == 0)

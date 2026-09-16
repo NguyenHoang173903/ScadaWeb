@@ -203,13 +203,46 @@ public static class DependencyInjection
         services.Configure<RealtimeOptions>(configuration.GetSection(RealtimeOptions.SectionName));
 
         var provider = configuration.GetSection(RealtimeOptions.SectionName)["Provider"] ?? "Fake";
-        if (string.Equals(provider, "Redis", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(provider, "StationSnapshot", StringComparison.OrdinalIgnoreCase))
+        {
+            // Optional dedicated SCADA Redis (PLC snapshots). Falls back to ConnectionStrings:Redis.
+            var realtimeCs = configuration.GetConnectionString("RealtimeRedis");
+            if (!string.IsNullOrWhiteSpace(realtimeCs))
+            {
+                services.AddSingleton<IStationRealtimeMultiplexer>(_ =>
+                {
+                    var opts = ConfigurationOptions.Parse(realtimeCs);
+                    opts.AbortOnConnectFail = false;
+                    return new StationRealtimeMultiplexer(ConnectionMultiplexer.Connect(opts));
+                });
+            }
+            else
+            {
+                services.AddSingleton<IStationRealtimeMultiplexer>(sp =>
+                    new StationRealtimeMultiplexer(sp.GetRequiredService<IConnectionMultiplexer>()));
+            }
+
+            services.AddSingleton<ITagStationCodeLookup, TagStationCodeLookup>();
+            services.AddSingleton<IRealtimeDataStore>(sp =>
+                new StationSnapshotRealtimeDataStore(
+                    sp.GetRequiredService<IStationRealtimeMultiplexer>().Connection,
+                    sp.GetRequiredService<ITagStationCodeLookup>(),
+                    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RealtimeOptions>>(),
+                    sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<StationSnapshotRealtimeDataStore>>()));
+        }
+        else if (string.Equals(provider, "Redis", StringComparison.OrdinalIgnoreCase))
+        {
             services.AddSingleton<IRealtimeDataStore, RedisRealtimeDataStore>();
+        }
         else
+        {
             services.AddSingleton<IRealtimeDataStore, FakeRealtimeDataStore>();
+        }
 
         services.AddSingleton<PumpSimulationStateStore>();
         services.AddSingleton<IScadaRealtimeBroadcaster, NoopScadaRealtimeBroadcaster>();
+        // Only starts when Realtime:SimulateChanges=true (must stay off for StationSnapshot production).
         services.AddHostedService<FakeRealtimeSimulatorHostedService>();
     }
 }
+
