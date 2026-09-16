@@ -8,21 +8,34 @@
  *   PATCH  /map-layers/:id          → JSON meta patch → MapLayerMeta
  *   DELETE /map-layers/:id          → 204
  */
-import { getApiBaseUrl } from '@/settings/runtimeConfig'
+import { getAccessToken } from '@/settings/authToken'
+import { getApiBaseUrl, getApiOrigin } from '@/settings/runtimeConfig'
 import { apiClient } from '@/services/api/client'
 import { httpFormData } from '@/services/api/http'
 import type { MapLayerDto, MapLayerMeta, MapLayerPackage } from './types'
 
+/**
+ * Resolve file URL without doubling `/api/v1`.
+ * Prefer relative API path `/map-layers/{id}/file` against `getApiBaseUrl()`.
+ * Absolute `/api/v1/...` paths from BE use origin only.
+ */
 function resolveFileUrl(fileUrl: string): string {
   if (/^https?:\/\//i.test(fileUrl)) return fileUrl
   const path = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`
+  if (/^\/api(\/v1)?\//i.test(path)) {
+    return `${getApiOrigin()}${path}`
+  }
   return `${getApiBaseUrl()}${path}`
 }
 
 async function downloadAsFile(fileUrl: string, fileName: string): Promise<File> {
-  const response = await fetch(resolveFileUrl(fileUrl), {
-    headers: { Accept: 'application/octet-stream,application/vnd.google-earth.kmz,*/*' },
-  })
+  const headers: Record<string, string> = {
+    Accept: 'application/octet-stream,application/vnd.google-earth.kmz,*/*',
+  }
+  const token = getAccessToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const response = await fetch(resolveFileUrl(fileUrl), { headers })
   if (!response.ok) {
     throw new Error(`Không tải được file lớp bản đồ (${response.status})`)
   }
@@ -37,13 +50,13 @@ export async function apiListMapLayers(): Promise<MapLayerPackage[]> {
     const list = await apiClient.get<MapLayerDto[]>('/map-layers')
     const packages: MapLayerPackage[] = []
     for (const dto of list) {
-      const file = await downloadAsFile(
-        dto.fileUrl || `/map-layers/${dto.id}/file`,
-        dto.meta.fileName,
-      )
+      // Always download via API-relative path to avoid `/api/v1` doubling.
+      const relativePath = `/map-layers/${dto.id}/file`
+      const file = await downloadAsFile(relativePath, dto.meta.fileName)
       packages.push({
         meta: { ...dto.meta, id: dto.id || dto.meta.id },
         file,
+        fileUrl: relativePath,
       })
     }
     return packages
@@ -77,6 +90,7 @@ export async function apiUploadMapLayer(
   return {
     meta: { ...dto.meta, id: dto.id || dto.meta.id || meta.id },
     file,
+    fileUrl: `/map-layers/${dto.id || meta.id}/file`,
   }
 }
 

@@ -9,7 +9,13 @@ import {
 import { Pagination } from '@/components/common/Pagination'
 import { TabNav } from '@/components/common/TabNav'
 import { fetchLoginHistory } from '@/services/auditLog'
-import { getEventDevices, getEventHistory } from '@/services/stations/stationsApi'
+import { isApiError } from '@/services/api/http'
+import { canSessionExportExcel, isSessionAdmin } from '@/settings/session'
+import {
+  exportEventHistoryExcel,
+  getEventDevices,
+  getEventHistory,
+} from '@/services/stations/stationsApi'
 import {
   DEFAULT_EVENT_FILTER,
   EVENT_DEVICE_OPTIONS,
@@ -127,7 +133,16 @@ export function EventHistoryPage() {
   const [loginRows, setLoginRows] = useState<HistoryEventRow[]>([])
   const [loginLoading, setLoginLoading] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [exportError, setExportError] = useState('')
+  const [exportBusy, setExportBusy] = useState(false)
   const [deviceOptions, setDeviceOptions] = useState(EVENT_DEVICE_OPTIONS)
+  const canExport = canSessionExportExcel()
+  const showLoginTab = isSessionAdmin()
+
+  const historyTabs = useMemo(
+    () => (showLoginTab ? [...HISTORY_TABS] : HISTORY_TABS.filter((t) => t.id !== 'login')),
+    [showLoginTab],
+  )
 
   useEffect(() => {
     if (!numericStation) return
@@ -202,25 +217,43 @@ export function EventHistoryPage() {
 
   useEffect(() => {
     if (activeTab !== 'login') return
+    if (!showLoginTab) {
+      setActiveTab('status')
+      return
+    }
 
     let cancelled = false
     setLoginLoading(true)
 
     void (async () => {
-      const result = await fetchLoginHistory({
-        from: applied.fromDate || undefined,
-        to: applied.toDate || undefined,
-        keyword: applied.keyword.trim() || undefined,
-      })
-      if (cancelled) return
-      setLoginRows(result.items.map((item, index) => auditLogToHistoryRow(item, index)))
-      setLoginLoading(false)
+      try {
+        const result = await fetchLoginHistory({
+          from: applied.fromDate || undefined,
+          to: applied.toDate || undefined,
+          keyword: applied.keyword.trim() || undefined,
+        })
+        if (cancelled) return
+        setLoginRows(result.items.map((item, index) => auditLogToHistoryRow(item, index)))
+      } catch (err) {
+        if (!cancelled) {
+          setLoginRows([])
+          setExportError(
+            isApiError(err) && err.status === 403
+              ? 'Chỉ Admin được xem nhật ký đăng nhập.'
+              : isApiError(err)
+                ? err.message
+                : 'Không tải được nhật ký đăng nhập.',
+          )
+        }
+      } finally {
+        if (!cancelled) setLoginLoading(false)
+      }
     })()
 
     return () => {
       cancelled = true
     }
-  }, [activeTab, applied])
+  }, [activeTab, applied, showLoginTab])
 
   const sourceRows = activeTab === 'login' ? loginRows : apiRows
 
@@ -252,11 +285,12 @@ export function EventHistoryPage() {
     <div className={styles.page}>
       <div className={styles.tabsWrap}>
         <TabNav
-          items={[...HISTORY_TABS]}
+          items={historyTabs}
           activeId={activeTab}
           onChange={(id) => {
             setActiveTab(id as HistoryTabId)
             setPage(1)
+            setExportError('')
           }}
         />
       </div>
@@ -274,10 +308,42 @@ export function EventHistoryPage() {
           setApplied(DEFAULT_EVENT_FILTER)
           setPage(1)
         }}
+        exportDisabled={!canExport || exportBusy || activeTab === 'login'}
         onExport={() => {
-          console.log('Xuất Excel lịch sử', { tab: activeTab, filter: applied })
+          if (activeTab === 'login') {
+            setExportError('Xuất Excel tab Đăng nhập chưa có API riêng.')
+            return
+          }
+          if (!canExport) {
+            setExportError('Viewer không được xuất Excel (cần Operator/Admin).')
+            return
+          }
+          if (!numericStation || exportBusy) return
+          void (async () => {
+            setExportBusy(true)
+            setExportError('')
+            try {
+              const deviceId =
+                applied.deviceId.startsWith('device-')
+                  ? Number(applied.deviceId.replace('device-', ''))
+                  : undefined
+              await exportEventHistoryExcel(Number(stationId), {
+                category: activeTab,
+                deviceId: Number.isFinite(deviceId) ? deviceId : undefined,
+                fromDate: applied.fromDate || undefined,
+                toDate: applied.toDate || undefined,
+                keyword: applied.keyword.trim() || undefined,
+              })
+            } catch (err) {
+              setExportError(isApiError(err) ? err.message : 'Không xuất được Excel.')
+            } finally {
+              setExportBusy(false)
+            }
+          })()
         }}
       />
+
+      {exportError ? <p style={{ color: '#b91c1c' }}>{exportError}</p> : null}
 
       <div className={styles.tablePanel}>
         <DataTable

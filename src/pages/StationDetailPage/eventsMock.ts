@@ -8,7 +8,9 @@ export type ExistingErrorRow = {
   description: string
   type: string
   startedAt: string
-  endedAt: string
+  /** Alarm đang mở → luôn "Đang mở"; không dùng EndTime. */
+  status: string
+  acknowledged: string
 }
 
 export const EVENT_DEVICE_OPTIONS = [
@@ -76,11 +78,18 @@ export const EXISTING_ERROR_COLUMNS: DataTableColumn<ExistingErrorRow>[] = [
     render: (row) => row.startedAt,
   },
   {
-    key: 'endedAt',
-    header: 'Kết thúc',
-    width: 180,
+    key: 'status',
+    header: 'Trạng thái',
+    width: 120,
     align: 'center',
-    render: (row) => row.endedAt,
+    render: (row) => row.status,
+  },
+  {
+    key: 'acknowledged',
+    header: 'Xác nhận',
+    width: 110,
+    align: 'center',
+    render: (row) => row.acknowledged,
   },
 ]
 

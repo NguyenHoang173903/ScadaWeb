@@ -75,6 +75,34 @@ export function getSessionProfile(): SessionProfile | null {
   }
 }
 
+function normalizeRole(role?: string | null) {
+  return (role ?? '').trim().toLowerCase()
+}
+
+/** Admin / Administrator / SuperAdmin */
+export function isAdminRole(role?: string | null) {
+  const r = normalizeRole(role)
+  return r === 'admin' || r === 'administrator' || r === 'superadmin'
+}
+
+/** Operator hoặc Admin — được export Excel theo BE */
+export function canExportExcel(role?: string | null) {
+  const r = normalizeRole(role)
+  return isAdminRole(role) || r === 'operator'
+}
+
+export function getSessionRole() {
+  return getSessionProfile()?.role
+}
+
+export function isSessionAdmin() {
+  return isAdminRole(getSessionRole())
+}
+
+export function canSessionExportExcel() {
+  return canExportExcel(getSessionRole())
+}
+
 export function isSessionExpired(now = Date.now()) {
   const current = readSession()
   if (!current) return false

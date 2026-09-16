@@ -59,6 +59,23 @@ function asProcessStatus(status: string): ProcessPumpStatus {
   return 'unknown'
 }
 
+/** Parse chỉ số bơm 1..10 từ tên/code (Pump3, Bơm 3, …). */
+export function parsePumpIndex(name?: string | null, code?: string | null): number | null {
+  const hay = `${name ?? ''} ${code ?? ''}`.trim()
+  if (!hay) return null
+  const patterns = [
+    /(?:pump|bơm|bom)\s*[#:_-]?\s*(\d{1,2})/i,
+    /^(\d{1,2})\b/,
+  ]
+  for (const re of patterns) {
+    const m = hay.match(re)
+    if (!m) continue
+    const n = Number(m[1])
+    if (Number.isInteger(n) && n >= 1 && n <= 10) return n
+  }
+  return null
+}
+
 export function stationDetailToPumpStation(dto: StationDetailDto): PumpStation {
   return {
     id: String(dto.id),
@@ -75,8 +92,17 @@ export function stationDetailToPumpStation(dto: StationDetailDto): PumpStation {
 
 export function mapDeviceMonitorItem(item: DeviceMonitorItemDto): DevicePump {
   const e = item.electrical
+  const fromApi =
+    typeof item.pumpIndex === 'number' &&
+    Number.isInteger(item.pumpIndex) &&
+    item.pumpIndex >= 1 &&
+    item.pumpIndex <= 10
+      ? item.pumpIndex
+      : null
+  const pumpIndex = fromApi ?? parsePumpIndex(item.name, item.code) ?? 0
   return {
     id: item.deviceId,
+    pumpIndex,
     label: item.name,
     powerKw: num(item.ratedPowerKw, 0),
     status: asDeviceStatus(item.status),

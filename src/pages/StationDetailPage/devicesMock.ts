@@ -17,7 +17,13 @@ export const DEVICE_STATUS_META: Record<
 }
 
 export type DevicePump = {
+  /** Device PK từ BE — dùng làm React key. */
   id: number
+  /**
+   * Chỉ số bơm 1..10 để lọc nhóm UI.
+   * Ưu tiên `pumpIndex` từ BE khi có; fallback parse từ tên/code.
+   */
+  pumpIndex: number
   label: string
   powerKw: number
   status: DevicePumpStatus
@@ -42,6 +48,7 @@ export type DevicePump = {
 function basePump(id: number, status: DevicePumpStatus): DevicePump {
   return {
     id,
+    pumpIndex: id,
     label: `Bơm ${id}`,
     powerKw: 160,
     status,

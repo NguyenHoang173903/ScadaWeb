@@ -1,16 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { DataTable } from '@/components/common/DataTable'
+import { DataTable, type DataTableColumn } from '@/components/common/DataTable'
 import { Pagination } from '@/components/common/Pagination'
 import {
   ReportFilterBar,
   type ReportFilterValues,
 } from '@/components/common/ReportFilterBar'
 import { isApiError } from '@/services/api/http'
+import { canSessionExportExcel } from '@/settings/session'
+import { parsePumpIndex } from '@/services/stations/mappers'
 import {
+  exportReportTableExcel,
   getPumpTemperatureReport,
   getReportDevices,
+  getReportTable,
   getWaterLevelReport,
+  type StationReportColumnDto,
+  type WaterLevelReportRowDto,
 } from '@/services/stations/stationsApi'
 import {
   DEFAULT_REPORT_FILTER,
@@ -33,6 +39,57 @@ function fmt(value: number | null | undefined) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1)
 }
 
+function classifyDevice(name: string, code?: string) {
+  const hay = `${name} ${code ?? ''}`.toLowerCase()
+  if (
+    hay.includes('level') ||
+    hay.includes('mức') ||
+    hay.includes('muc') ||
+    hay.includes('sensor')
+  ) {
+    return 'level'
+  }
+  if (parsePumpIndex(name, code) != null || /pump\d*/i.test(hay) || hay.includes('bơm') || hay.includes('bom')) {
+    return 'pump'
+  }
+  if (
+    hay.includes('meter') ||
+    hay.includes('metter') ||
+    hay.includes('đồng hồ') ||
+    hay.includes('dong ho') ||
+    hay.includes('powermeter')
+  ) {
+    return 'meter'
+  }
+  return 'other'
+}
+
+function mapWaterLevelRow(row: WaterLevelReportRowDto, index: number): ReportRow {
+  const values: ReportRow = {
+    id: `${row.time}-${index}`,
+    time: formatTime(row.time),
+    riverLevel: fmt(row.riverLevel),
+  }
+  for (let n = 1; n <= 10; n += 1) {
+    const key = `discharge${n}` as keyof WaterLevelReportRowDto
+    values[`discharge${n}`] = fmt(row[key] as number | null | undefined)
+  }
+  return values
+}
+
+function columnsFromApi(apiColumns: StationReportColumnDto[]): DataTableColumn<ReportRow>[] {
+  return [
+    { key: 'time', header: 'Thời gian', width: 120, render: (row) => row.time ?? '' },
+    ...apiColumns.map((col) => ({
+      key: col.key,
+      header: col.header,
+      width: 130,
+      align: 'center' as const,
+      render: (row: ReportRow) => row[col.key] ?? '',
+    })),
+  ]
+}
+
 export function StationReportsPage() {
   const { stationId = '' } = useParams()
   const numericStation = /^\d+$/.test(stationId)
@@ -42,28 +99,63 @@ export function StationReportsPage() {
   const [rows, setRows] = useState<ReportRow[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [deviceOptions, setDeviceOptions] = useState(REPORT_DEVICE_OPTIONS)
+  const [deviceMeta, setDeviceMeta] = useState<
+    Array<{ id: number; name: string; kind: ReturnType<typeof classifyDevice> }>
+  >([])
+  const [dynamicColumns, setDynamicColumns] = useState<DataTableColumn<ReportRow>[] | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [exportBusy, setExportBusy] = useState(false)
+  const canExport = canSessionExportExcel()
 
   useEffect(() => {
     if (!numericStation) return
     void getReportDevices(Number(stationId))
       .then((devices) => {
-        setDeviceOptions([
-          { value: 'water-level', label: 'Mức nước' },
-          ...devices.map((d) => ({ value: `pump-${d.id}`, label: d.name })),
-          { value: 'input-meter', label: 'Đồng hồ điện đầu vào' },
-        ])
+        const meta = devices.map((d) => ({
+          id: d.id,
+          name: d.name,
+          kind: classifyDevice(d.name),
+        }))
+        setDeviceMeta(meta)
+        setDeviceOptions(
+          meta.map((d) => ({
+            value: `device-${d.id}`,
+            label: d.name,
+          })),
+        )
+        if (meta.length > 0) {
+          const preferred =
+            meta.find((d) => d.kind === 'level') ??
+            meta.find((d) => d.kind === 'pump') ??
+            meta[0]
+          const nextId = `device-${preferred.id}`
+          setDraft((prev) => ({ ...prev, deviceId: nextId }))
+          setApplied((prev) => ({ ...prev, deviceId: nextId }))
+        }
       })
       .catch(() => {
         // Keep mock options.
       })
   }, [stationId, numericStation])
 
+  const selectedDeviceId = useMemo(() => {
+    if (applied.deviceId.startsWith('device-')) {
+      return Number(applied.deviceId.replace('device-', ''))
+    }
+    return null
+  }, [applied.deviceId])
+
+  const selectedKind = useMemo(() => {
+    if (selectedDeviceId == null) return null
+    return deviceMeta.find((d) => d.id === selectedDeviceId)?.kind ?? 'other'
+  }, [deviceMeta, selectedDeviceId])
+
   useEffect(() => {
-    if (!numericStation) {
+    if (!numericStation || selectedDeviceId == null) {
       setRows([])
       setTotalCount(0)
+      setDynamicColumns(null)
       return
     }
 
@@ -79,25 +171,19 @@ export function StationReportsPage() {
           pageSize: REPORT_PAGE_SIZE,
         }
 
-        if (applied.deviceId === 'water-level') {
+        if (selectedKind === 'level') {
           const result = await getWaterLevelReport(Number(stationId), common)
           if (cancelled) return
-          setRows(
-            (result.items ?? []).map((row, index) => ({
-              id: `${row.time}-${index}`,
-              time: formatTime(row.time),
-              riverLevel: fmt(row.riverLevel),
-              dischargeTankLevel: fmt(row.discharge1),
-            })),
-          )
+          setDynamicColumns(null)
+          setRows((result.items ?? []).map(mapWaterLevelRow))
           setTotalCount(result.totalCount ?? result.items?.length ?? 0)
-        } else if (applied.deviceId.startsWith('pump-')) {
-          const deviceId = Number(applied.deviceId.replace('pump-', ''))
+        } else if (selectedKind === 'pump') {
           const result = await getPumpTemperatureReport(Number(stationId), {
             ...common,
-            deviceId: Number.isFinite(deviceId) ? deviceId : undefined,
+            deviceId: selectedDeviceId,
           })
           if (cancelled) return
+          setDynamicColumns(null)
           setRows(
             (result.items ?? []).map((row, index) => ({
               id: `${row.time}-${row.deviceId}-${index}`,
@@ -112,15 +198,32 @@ export function StationReportsPage() {
           )
           setTotalCount(result.totalCount ?? result.items?.length ?? 0)
         } else {
+          const result = await getReportTable(Number(stationId), {
+            ...common,
+            deviceId: selectedDeviceId,
+          })
           if (cancelled) return
-          setRows([])
-          setTotalCount(0)
+          setDynamicColumns(columnsFromApi(result.columns ?? []))
+          setRows(
+            (result.items ?? []).map((row, index) => {
+              const values: ReportRow = {
+                id: `${row.time}-${index}`,
+                time: formatTime(row.time),
+              }
+              for (const [key, value] of Object.entries(row.values ?? {})) {
+                values[key] = fmt(value)
+              }
+              return values
+            }),
+          )
+          setTotalCount(result.totalCount ?? result.items?.length ?? 0)
         }
         setError('')
       } catch (err) {
         if (cancelled) return
         setRows([])
         setTotalCount(0)
+        setDynamicColumns(null)
         setError(isApiError(err) ? err.message : 'Không tải được báo cáo.')
       } finally {
         if (!cancelled) setLoading(false)
@@ -130,17 +233,39 @@ export function StationReportsPage() {
     return () => {
       cancelled = true
     }
-  }, [stationId, numericStation, applied, page])
+  }, [stationId, numericStation, applied, page, selectedDeviceId, selectedKind])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / REPORT_PAGE_SIZE) || 1)
   const currentPage = Math.min(page, totalPages)
-  const columns = useMemo(
-    () =>
-      getReportColumns(
-        applied.deviceId.startsWith('pump-') ? 'pump-temp-1' : applied.deviceId,
-      ),
-    [applied.deviceId],
-  )
+  const columns = useMemo(() => {
+    if (dynamicColumns) return dynamicColumns
+    if (selectedKind === 'pump') return getReportColumns('pump-temp-1')
+    if (selectedKind === 'meter') return getReportColumns('input-meter')
+    return getReportColumns('water-level')
+  }, [dynamicColumns, selectedKind])
+
+  const handleExport = async () => {
+    if (!canExport) {
+      setError('Viewer không được xuất Excel (cần Operator/Admin).')
+      return
+    }
+    if (!numericStation || selectedDeviceId == null || exportBusy) return
+    setExportBusy(true)
+    setError('')
+    try {
+      // BE chỉ có /reports/table/export — dùng deviceId đang chọn.
+      await exportReportTableExcel(Number(stationId), {
+        deviceId: selectedDeviceId,
+        reportDate: applied.reportDate,
+        startTime: applied.startTime,
+        endTime: applied.endTime,
+      })
+    } catch (err) {
+      setError(isApiError(err) ? err.message : 'Không xuất được Excel.')
+    } finally {
+      setExportBusy(false)
+    }
+  }
 
   return (
     <div className={styles.page}>
@@ -159,13 +284,14 @@ export function StationReportsPage() {
           setPage(1)
         }}
         onReset={() => {
-          setDraft(DEFAULT_REPORT_FILTER)
-          setApplied(DEFAULT_REPORT_FILTER)
+          const fallback = deviceOptions[0]?.value ?? 'water-level'
+          const reset = { ...DEFAULT_REPORT_FILTER, deviceId: fallback }
+          setDraft(reset)
+          setApplied(reset)
           setPage(1)
         }}
-        onExport={() => {
-          console.log('Xuất Excel báo cáo', applied)
-        }}
+        onExport={() => void handleExport()}
+        exportDisabled={!canExport || exportBusy || selectedDeviceId == null}
       />
 
       {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}

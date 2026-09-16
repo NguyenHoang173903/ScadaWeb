@@ -186,3 +186,40 @@ export function isApiError(value: unknown): value is ApiError {
 export function isNetworkError(error: unknown) {
   return error instanceof TypeError || (isApiError(error) && error.status == null)
 }
+
+/** Download binary (Excel export) — không unwrap `ApiResponse`. */
+export async function downloadBinary(path: string, fallbackFilename: string): Promise<void> {
+  const accessToken = getAccessToken()
+  const response = await fetch(resolveUrl(path), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,*/*',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+  })
+
+  if (response.status === 401 && getRefreshToken()) {
+    const refreshed = await tryRefreshAccessToken()
+    if (refreshed) {
+      return downloadBinary(path, fallbackFilename)
+    }
+  }
+
+  if (!response.ok) {
+    throw await parseError(response)
+  }
+
+  const blob = await response.blob()
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const match = /filename\*?=(?:UTF-8''|")?([^\";]+)/i.exec(disposition)
+  const filename = match ? decodeURIComponent(match[1].replace(/"/g, '')) : fallbackFilename
+
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}

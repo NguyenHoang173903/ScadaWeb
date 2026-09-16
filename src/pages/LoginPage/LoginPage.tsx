@@ -15,8 +15,10 @@ import { peekCachedMapLayers, resolveMapLayers } from '@/services/mapLayers'
 import { reportAuthEvent } from '@/services/auditLog'
 import {
   changePasswordWithApi,
+  fetchCurrentUser,
   forgotPasswordWithApi,
   loginWithApi,
+  resetPasswordWithApi,
   type AuthTokenResponse,
 } from '@/services/auth/authApi'
 import { isApiError } from '@/services/api/http'
@@ -82,6 +84,10 @@ export function LoginPage() {
     reason: PasswordChallengeReason
     currentPassword: string
   } | null>(null)
+  const [resetToken, setResetToken] = useState<{
+    username: string
+    token: string
+  } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -114,7 +120,32 @@ export function LoginPage() {
             <DashboardMap layers={layers} zoomLocked />
           </div>
 
-          {challenge ? (
+          {resetToken ? (
+            <ChangePasswordForm
+              username={resetToken.username}
+              message="Nhập mật khẩu mới để hoàn tất đặt lại (dev token từ forgot-password)."
+              onCancel={() => {
+                setResetToken(null)
+                setLoginError('')
+                setLoginWarning('')
+              }}
+              onSubmit={async (password) => {
+                setBusy(true)
+                try {
+                  await resetPasswordWithApi(resetToken.token, password)
+                  setResetToken(null)
+                  setLoginWarning('Đã đặt lại mật khẩu. Đăng nhập bằng mật khẩu mới.')
+                  setLoginError('')
+                } catch (error) {
+                  setLoginError(
+                    isApiError(error) ? error.message : 'Không đặt lại được mật khẩu.',
+                  )
+                } finally {
+                  setBusy(false)
+                }
+              }}
+            />
+          ) : challenge ? (
             <ChangePasswordForm
               username={challenge.username}
               message={PASSWORD_CHALLENGE_COPY[challenge.reason]}
@@ -132,12 +163,22 @@ export function LoginPage() {
                     username: challenge.username,
                   })
                   reportAuthEvent({ eventType: 'login', username: challenge.username })
-                  enterApp({
-                    username: challenge.username,
-                    fullName: challenge.username,
-                    displayName: challenge.username,
-                    role: '',
-                  })
+                  try {
+                    const me = await fetchCurrentUser()
+                    enterApp({
+                      username: me.username,
+                      fullName: me.fullName,
+                      displayName: me.displayName,
+                      role: me.role,
+                    })
+                  } catch {
+                    enterApp({
+                      username: challenge.username,
+                      fullName: challenge.username,
+                      displayName: challenge.username,
+                      role: '',
+                    })
+                  }
                   navigate(ROUTES.dashboard)
                 } catch (error) {
                   setLoginError(
@@ -167,11 +208,17 @@ export function LoginPage() {
                   try {
                     const result = await forgotPasswordWithApi(username.trim())
                     setLoginError('')
-                    setLoginWarning(
-                      result.developmentResetToken
-                        ? `${result.message} (Dev token: ${result.developmentResetToken})`
-                        : result.message || 'Nếu tài khoản tồn tại, hướng dẫn đã được gửi.',
-                    )
+                    if (result.developmentResetToken) {
+                      setResetToken({
+                        username: username.trim(),
+                        token: result.developmentResetToken,
+                      })
+                      setLoginWarning(result.message || 'Nhập mật khẩu mới để đặt lại.')
+                    } else {
+                      setLoginWarning(
+                        result.message || 'Nếu tài khoản tồn tại, hướng dẫn đã được gửi.',
+                      )
+                    }
                     setBlockedUntil(null)
                   } catch (error) {
                     setLoginError(

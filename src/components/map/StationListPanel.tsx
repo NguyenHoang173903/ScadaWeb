@@ -36,7 +36,8 @@ function resolveCard(station: MapStation) {
   const statusColor = online ? ONLINE_COLOR : OFFLINE_COLOR
 
   return {
-    name: station.name || catalog?.name || '—',
+    // Ưu tiên tên catalog BE khi đã resolve được id số.
+    name: catalog?.name || station.name || '—',
     code,
     online,
     statusLabel,

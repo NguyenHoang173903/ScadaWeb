@@ -35,6 +35,19 @@ export type CreateScadaUserPayload = {
   mustChangePassword: boolean
 }
 
+export type UpdateScadaUserPayload = {
+  fullName?: string
+  email?: string
+  department?: string
+  position?: string
+  unit?: string
+  description?: string
+  role?: string
+  level?: number | null
+  isActive?: boolean
+  mustChangePassword?: boolean
+}
+
 export async function listScadaUsers(params?: {
   keyword?: string
   role?: string
@@ -54,6 +67,19 @@ export async function listScadaUsers(params?: {
   )
 }
 
+export async function getScadaUser(id: number) {
+  return apiClient.get<ScadaUserDto>(`/scada-users/${id}`)
+}
+
 export async function createScadaUser(payload: CreateScadaUserPayload) {
   return apiClient.post<ScadaUserDto>('/scada-users', payload)
+}
+
+export async function updateScadaUser(id: number, payload: UpdateScadaUserPayload) {
+  return apiClient.put<ScadaUserDto>(`/scada-users/${id}`, payload)
+}
+
+/** Soft-deactivate (`IsActive = false`). */
+export async function deleteScadaUser(id: number) {
+  return apiClient.delete<void>(`/scada-users/${id}`)
 }

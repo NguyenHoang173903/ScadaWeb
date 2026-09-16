@@ -63,6 +63,11 @@ export function PasswordPolicyForm() {
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.panel}>
+        <p className={styles.hint}>
+          Lưu ý: thay đổi tại đây chỉ lưu trên trình duyệt (localStorage) để kiểm tra UI. Backend
+          đang dùng password policy / login security từ appsettings — chưa có REST đồng bộ. Rule
+          validate khi tạo user / đổi MK trên server không đổi theo form này.
+        </p>
         <h3 className={styles.heading}>Độ phức tạp mật khẩu</h3>
         <div className={styles.grid}>
           <FormField label="Số ký tự tối thiểu" htmlFor="minLength" required>

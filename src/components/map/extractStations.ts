@@ -1,5 +1,5 @@
 import type { Feature, FeatureCollection, Geometry, Position } from 'geojson'
-import { getAllPumpStations, PUMP_STATIONS } from '@/data/pumpStations'
+import { getAllPumpStations, PUMP_STATIONS, stationNamesMatch } from '@/data/pumpStations'
 
 export type MapStationType = 'pump' | 'rain' | 'level'
 
@@ -69,27 +69,19 @@ function normalizeStationKey(name: string) {
 }
 
 function matchRouteId(stationName: string): string | undefined {
-  const key = normalizeStationKey(stationName)
-  if (!key) return undefined
-
   const catalog = getAllPumpStations()
   const found =
-    catalog.find((station) => {
-      const stationKey = normalizeStationKey(station.name)
-      return stationKey === key || stationKey.includes(key) || key.includes(stationKey)
-    }) ??
-    PUMP_STATIONS.find((station) => {
-      const stationKey = normalizeStationKey(station.name)
-      return stationKey === key || stationKey.includes(key) || key.includes(stationKey)
-    })
+    catalog.find((station) => stationNamesMatch(station.name, stationName)) ??
+    PUMP_STATIONS.find((station) => stationNamesMatch(station.name, stationName))
 
-  // Prefer BE numeric id when available (same code).
+  // Prefer BE numeric id when available (same code / name).
   if (found) {
     if (/^\d+$/.test(found.id)) return found.id
     const be = catalog.find(
       (s) =>
         /^\d+$/.test(s.id) &&
-        s.code.trim().toUpperCase() === found.code.trim().toUpperCase(),
+        (stationNamesMatch(s.name, found.name) ||
+          s.code.trim().toUpperCase() === found.code.trim().toUpperCase()),
     )
     return be?.id ?? found.id
   }
@@ -307,7 +299,8 @@ export function buildMapStations(
 
     return {
       id: db.id,
-      name: match?.name?.trim() || db.name,
+      // Luôn hiển thị tên từ BE / catalog — KMZ chỉ bổ sung tọa độ + mô tả.
+      name: db.name,
       // Prefer real KMZ coordinates when matched.
       lat: match?.lat ?? db.lat,
       lng: match?.lng ?? db.lng,

@@ -123,3 +123,11 @@ export async function forgotPasswordWithApi(username: string) {
     anonymous: true,
   })
 }
+
+export async function resetPasswordWithApi(token: string, newPassword: string) {
+  await http('/auth/reset-password', {
+    method: 'POST',
+    body: { token, newPassword },
+    anonymous: true,
+  })
+}

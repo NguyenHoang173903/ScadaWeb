@@ -14,9 +14,10 @@ import { APP_COMPANY } from '@/constants/config'
 import { ensureMapPumpStation, registerPumpStation, resolvePumpStationRouteId } from '@/data/pumpStations'
 import { logoutCurrentUser } from '@/services/auditLog'
 import { getStation, listStations as fetchStationsApi } from '@/services/stations/stationsApi'
-import { getSessionUsername } from '@/settings/session'
+import { getSessionUsername, isSessionAdmin } from '@/settings/session'
 import {
   deleteMapLayer,
+  getMapLayerStorageMode,
   peekCachedMapLayers,
   resolveMapLayers,
   subscribeMapLayers,
@@ -39,6 +40,7 @@ function formatNow(date: Date) {
 export function DashboardPage() {
   const navigate = useNavigate()
   const userName = getSessionUsername() ?? 'Admin'
+  const canUpdateStation = isSessionAdmin()
   const [menuOpen, setMenuOpen] = useState(false)
   const [listType, setListType] = useState<MapStationType | null>(null)
   const [layersOpen, setLayersOpen] = useState(false)
@@ -164,6 +166,10 @@ export function DashboardPage() {
   }
 
   const handleUpload = async (file: File) => {
+    if (getMapLayerStorageMode() === 'api' && !isSessionAdmin()) {
+      window.alert('Chỉ Admin được upload lớp bản đồ lên server.')
+      return
+    }
     try {
       const next = await uploadMapLayer(file)
       setLayers((prev) => [...prev, next])
@@ -409,8 +415,13 @@ export function DashboardPage() {
 
       <FeatureInfoPanel
         station={selectedStation}
+        canUpdateData={canUpdateStation}
         onClose={() => setSelectedStation(null)}
         onUpdateData={(station) => {
+          if (!isSessionAdmin()) {
+            window.alert('Chỉ Admin được cập nhật thông tin trạm.')
+            return
+          }
           const routeId = resolvePumpStationRouteId(station)
           if (!routeId) {
             window.alert(

@@ -11,14 +11,18 @@ import { AdminHeader } from '@/components/layout/AdminHeader'
 import { isApiError } from '@/services/api/http'
 import {
   createScadaUser,
+  deleteScadaUser,
+  getScadaUser,
   listScadaUsers,
+  updateScadaUser,
   type ScadaUserDto,
 } from '@/services/scadaUsers/scadaUsersApi'
-import { CreateUserForm } from './CreateUserForm'
+import { CreateUserForm, type CreateUserFormValues } from './CreateUserForm'
 import { PasswordPolicyForm } from './PasswordPolicyForm'
 import { SessionPolicyForm } from './SessionPolicyForm'
 import { SystemConfigForm } from './SystemConfigForm'
 import type { UserAccount } from './usersData'
+import { isSessionAdmin } from '@/settings/session'
 import styles from './UsersPage.module.css'
 
 const TABS = [
@@ -39,24 +43,53 @@ function formatLastLogin(iso?: string | null) {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`
 }
 
+function mapRoleLabel(role: string): UserAccount['role'] {
+  if (role === 'Administrator' || role === 'Admin') return 'Administrator'
+  if (role === 'viewer' || role === 'Viewer') return 'Viewer'
+  return 'Operator'
+}
+
+function mapRoleForApi(role: string): string {
+  if (role === 'Administrator' || role === 'Admin') return 'Administrator'
+  if (role === 'viewer' || role === 'Viewer') return 'viewer'
+  return 'Operator'
+}
+
 function mapScadaUser(dto: ScadaUserDto): UserAccount {
-  const role =
-    dto.role === 'Administrator' || dto.role === 'Admin' ? 'Administrator' : 'Operator'
   return {
     id: String(dto.id),
     username: dto.username,
     fullName: dto.fullName || dto.displayName || dto.username,
     department: dto.department ?? '',
     position: dto.position ?? '',
-    role,
+    role: mapRoleLabel(dto.role),
     level: dto.level ?? 1,
-    status: (dto.status as UserAccount['status']) || (dto.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động'),
+    status:
+      (dto.status as UserAccount['status']) ||
+      (dto.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động'),
     lastLogin: formatLastLogin(dto.lastLoginAt),
+  }
+}
+
+function dtoToFormValues(dto: ScadaUserDto): CreateUserFormValues {
+  return {
+    username: dto.username,
+    password: '',
+    confirmPassword: '',
+    fullName: dto.fullName || dto.displayName || '',
+    department: dto.department ?? '',
+    position: dto.position ?? '',
+    role: mapRoleForApi(dto.role),
+    level: dto.level != null ? String(dto.level) : '',
+    active: dto.isActive,
+    description: '',
+    forceChangeOnFirstLogin: dto.mustChangePassword,
   }
 }
 
 export function UsersPage() {
   const navigate = useNavigate()
+  const isAdmin = isSessionAdmin()
   const [activeTab, setActiveTab] = useState('list')
   const [keyword, setKeyword] = useState('')
   const [query, setQuery] = useState('')
@@ -67,6 +100,9 @@ export function UsersPage() {
   const [loading, setLoading] = useState(false)
   const [listError, setListError] = useState('')
   const [createError, setCreateError] = useState('')
+  const [editUser, setEditUser] = useState<ScadaUserDto | null>(null)
+  const [editLoading, setEditLoading] = useState(false)
+  const [actionBusy, setActionBusy] = useState(false)
 
   const loadUsers = useCallback(async (search: string, pageNumber: number) => {
     setLoading(true)
@@ -95,6 +131,44 @@ export function UsersPage() {
 
   const handleBack = () => {
     navigate(-1)
+  }
+
+  const handleEdit = async () => {
+    if (!selectedId || actionBusy) return
+    setActionBusy(true)
+    setEditLoading(true)
+    setListError('')
+    try {
+      const dto = await getScadaUser(Number(selectedId))
+      setEditUser(dto)
+      setActiveTab('edit')
+    } catch (error) {
+      setListError(isApiError(error) ? error.message : 'Không tải được hồ sơ người dùng.')
+    } finally {
+      setEditLoading(false)
+      setActionBusy(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!selectedId || actionBusy) return
+    const selected = users.find((u) => u.id === selectedId)
+    const ok = window.confirm(
+      `Vô hiệu hóa tài khoản "${selected?.username ?? selectedId}"?\n(Soft-delete: IsActive = false)`,
+    )
+    if (!ok) return
+
+    setActionBusy(true)
+    setListError('')
+    try {
+      await deleteScadaUser(Number(selectedId))
+      setSelectedId(null)
+      await loadUsers(query, page)
+    } catch (error) {
+      setListError(isApiError(error) ? error.message : 'Không vô hiệu hóa được tài khoản.')
+    } finally {
+      setActionBusy(false)
+    }
   }
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE) || 1)
@@ -166,6 +240,13 @@ export function UsersPage() {
     [currentPage],
   )
 
+  const tabItems = useMemo(() => {
+    if (activeTab === 'edit') {
+      return [...TABS, { id: 'edit', label: 'Sửa người dùng' }]
+    }
+    return TABS
+  }, [activeTab])
+
   return (
     <div className={styles.page}>
       <AdminHeader />
@@ -176,13 +257,22 @@ export function UsersPage() {
         </button>
 
         <TabNav
-          items={TABS}
+          items={tabItems}
           activeId={activeTab}
           onChange={(id) => {
+            if (id === 'edit') return
             setActiveTab(id)
             setCreateError('')
+            setEditUser(null)
           }}
         />
+
+        {!isAdmin ? (
+          <p className={styles.error}>
+            Chỉ Admin được quản lý người dùng / chính sách. Role hiện tại không đủ quyền gọi API
+            scada-users.
+          </p>
+        ) : null}
 
         {activeTab === 'list' ? (
           <>
@@ -196,10 +286,18 @@ export function UsersPage() {
               placeholder="Tìm theo tên đăng nhập, họ tên..."
               actions={
                 <>
-                  <Button variant="secondary" disabled={!selectedId}>
+                  <Button
+                    variant="secondary"
+                    disabled={!selectedId || actionBusy || editLoading || !isAdmin}
+                    onClick={() => void handleEdit()}
+                  >
                     Sửa
                   </Button>
-                  <Button variant="danger" disabled={!selectedId}>
+                  <Button
+                    variant="danger"
+                    disabled={!selectedId || actionBusy || !isAdmin}
+                    onClick={() => void handleDelete()}
+                  >
                     Xóa
                   </Button>
                 </>
@@ -258,6 +356,45 @@ export function UsersPage() {
                   } catch (error) {
                     setCreateError(
                       isApiError(error) ? error.message : 'Không tạo được người dùng.',
+                    )
+                  }
+                })()
+              }}
+            />
+          </>
+        ) : activeTab === 'edit' && editUser ? (
+          <>
+            {createError ? <p className={styles.error}>{createError}</p> : null}
+            <CreateUserForm
+              mode="edit"
+              initialValues={dtoToFormValues(editUser)}
+              onCancel={() => {
+                setEditUser(null)
+                setCreateError('')
+                setActiveTab('list')
+              }}
+              onSubmit={(values) => {
+                void (async () => {
+                  setCreateError('')
+                  try {
+                    await updateScadaUser(editUser.id, {
+                      fullName: values.fullName.trim() || undefined,
+                      department: values.department.trim() || undefined,
+                      position: values.position.trim() || undefined,
+                      ...(values.description.trim()
+                        ? { description: values.description.trim() }
+                        : {}),
+                      role: values.role,
+                      level: values.level ? Number(values.level) : null,
+                      isActive: values.active,
+                      mustChangePassword: values.forceChangeOnFirstLogin,
+                    })
+                    setEditUser(null)
+                    setActiveTab('list')
+                    await loadUsers(query, page)
+                  } catch (error) {
+                    setCreateError(
+                      isApiError(error) ? error.message : 'Không cập nhật được người dùng.',
                     )
                   }
                 })()

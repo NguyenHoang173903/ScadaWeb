@@ -10,12 +10,12 @@ export type PumpStation = {
   lng: number
 }
 
-/** Offline fallback khi chưa load được BE. Khi có station BE cùng code → bị ẩn. */
+/** Offline fallback khi chưa load được BE. Ẩn khi đã có BE khớp code/tên. */
 export const PUMP_STATIONS: PumpStation[] = [
   {
     id: 'ap-bac',
-    name: 'Trạm Bơm Dã Chiến Ấp Bắc',
-    code: 'TB-AB',
+    name: 'Trạm Bơm Ấp Bắc',
+    code: 'TBAB',
     address: 'Thôn Võng La, xã Võng La, thành phố Hà Nội',
     status: 'Đang hoạt động',
     pumps: 10,
@@ -26,6 +26,13 @@ export const PUMP_STATIONS: PumpStation[] = [
 ]
 
 const DYNAMIC_STORAGE_KEY = 'scadaweb.dynamic-pump-stations'
+
+/** Mã cùng một trạm trên FE mock / Excel / DB. */
+const STATION_CODE_ALIASES: Record<string, string> = {
+  TBAB: 'TBAB',
+  'TB-AB': 'TBAB',
+  TB01: 'TBAB',
+}
 
 type MapStationLike = {
   id: string
@@ -55,34 +62,13 @@ function writeDynamicStations(stations: Record<string, PumpStation>) {
   }
 }
 
-export function getPumpStationById(id: string) {
-  if (!id) return undefined
-  return readDynamicStations()[id] ?? PUMP_STATIONS.find((station) => station.id === id)
+export function normalizeStationCode(code: string | undefined | null): string {
+  const raw = (code ?? '').trim().toUpperCase()
+  if (!raw) return ''
+  return STATION_CODE_ALIASES[raw] ?? raw
 }
 
-/** Static mock + stations from API. BE numeric id wins over slug mock (same code). */
-export function getAllPumpStations(): PumpStation[] {
-  const dynamic = Object.values(readDynamicStations())
-  const byId = new Map<string, PumpStation>()
-  const numericByCode = new Map<string, string>()
-
-  for (const station of dynamic) {
-    byId.set(station.id, station)
-    if (/^\d+$/.test(station.id) && station.code) {
-      numericByCode.set(station.code.trim().toUpperCase(), station.id)
-    }
-  }
-
-  for (const station of PUMP_STATIONS) {
-    const beId = numericByCode.get(station.code.trim().toUpperCase())
-    if (beId) continue
-    if (!byId.has(station.id)) byId.set(station.id, station)
-  }
-
-  return [...byId.values()]
-}
-
-function normalizeNameKey(name: string) {
+export function normalizeNameKey(name: string) {
   return name
     .toLowerCase()
     .normalize('NFD')
@@ -93,9 +79,74 @@ function normalizeNameKey(name: string) {
     .trim()
 }
 
+/** Khớp tên lỏng: "ap bac" ↔ "da chien ap bac" / "tram bom ap bac". */
+export function stationNamesMatch(a: string, b: string): boolean {
+  const left = normalizeNameKey(a)
+  const right = normalizeNameKey(b)
+  if (!left || !right) return false
+  if (left === right) return true
+
+  const [shorter, longer] = left.length <= right.length ? [left, right] : [right, left]
+  const shortTokens = shorter.split(/\s+/).filter(Boolean)
+  if (shortTokens.length >= 2 && shortTokens.every((token) => longer.includes(token))) {
+    return true
+  }
+  return shorter.length >= 8 && longer.includes(shorter)
+}
+
+function hasCoords(station: PumpStation) {
+  return Number.isFinite(station.lat) && Number.isFinite(station.lng) && (station.lat !== 0 || station.lng !== 0)
+}
+
+export function getPumpStationById(id: string) {
+  if (!id) return undefined
+  return readDynamicStations()[id] ?? PUMP_STATIONS.find((station) => station.id === id)
+}
+
+/**
+ * Catalog hiển thị: BE (id số) thắng mock.
+ * Tên / mã lấy từ BE; tọa độ mock chỉ bổ sung khi BE chưa có lat/lng.
+ */
+export function getAllPumpStations(): PumpStation[] {
+  const dynamic = Object.values(readDynamicStations())
+  const byId = new Map<string, PumpStation>()
+  const beStations: PumpStation[] = []
+
+  for (const station of dynamic) {
+    byId.set(station.id, station)
+    if (/^\d+$/.test(station.id)) beStations.push(station)
+  }
+
+  const findBeMatch = (station: PumpStation) => {
+    const codeKey = normalizeStationCode(station.code)
+    const byCode = codeKey
+      ? beStations.find((s) => normalizeStationCode(s.code) === codeKey)
+      : undefined
+    if (byCode) return byCode
+    return beStations.find((s) => stationNamesMatch(s.name, station.name))
+  }
+
+  for (const station of PUMP_STATIONS) {
+    const be = findBeMatch(station)
+    if (be) {
+      // Giữ tên/code BE; mượn tọa độ mock nếu BE chưa có.
+      if (!hasCoords(be) && hasCoords(station)) {
+        const enriched = { ...be, lat: station.lat, lng: station.lng }
+        byId.set(be.id, enriched)
+        const idx = beStations.findIndex((s) => s.id === be.id)
+        if (idx >= 0) beStations[idx] = enriched
+      }
+      continue
+    }
+    if (!byId.has(station.id)) byId.set(station.id, station)
+  }
+
+  return [...byId.values()]
+}
+
 /**
  * Resolve map/list station → BE `scada.station.id` (chuỗi số).
- * Null nếu chưa khớp backend — không tạo slug route giả.
+ * Ưu tiên khớp theo tên BE, rồi code (có alias).
  */
 export function resolvePumpStationRouteId(station: {
   id?: string
@@ -111,19 +162,16 @@ export function resolvePumpStationRouteId(station: {
   }
 
   const all = getAllPumpStations().filter((s) => /^\d+$/.test(s.id))
-  const code = station.code?.trim().toUpperCase()
-  if (code) {
-    const byCode = all.find((s) => s.code.trim().toUpperCase() === code)
-    if (byCode) return byCode.id
+
+  if (station.name?.trim()) {
+    const byName = all.find((s) => stationNamesMatch(s.name, station.name!))
+    if (byName) return byName.id
   }
 
-  const nameKey = station.name ? normalizeNameKey(station.name) : ''
-  if (nameKey) {
-    const byName = all.find((s) => {
-      const key = normalizeNameKey(s.name)
-      return key === nameKey || key.includes(nameKey) || nameKey.includes(key)
-    })
-    if (byName) return byName.id
+  const codeKey = normalizeStationCode(station.code)
+  if (codeKey) {
+    const byCode = all.find((s) => normalizeStationCode(s.code) === codeKey)
+    if (byCode) return byCode.id
   }
 
   return null

@@ -21,9 +21,16 @@ type Props = {
   station: MapStation | null
   onClose: () => void
   onUpdateData?: (station: MapStation) => void
+  /** Ẩn nút cập nhật khi user không đủ quyền (Admin). */
+  canUpdateData?: boolean
 }
 
-export function FeatureInfoPanel({ station, onClose, onUpdateData }: Props) {
+export function FeatureInfoPanel({
+  station,
+  onClose,
+  onUpdateData,
+  canUpdateData = true,
+}: Props) {
   if (!station) return null
 
   const hasKmzInfo =
@@ -94,7 +101,7 @@ export function FeatureInfoPanel({ station, onClose, onUpdateData }: Props) {
           <div className={styles.emptyState}>
             <FileX2 className={styles.emptyIcon} size={64} strokeWidth={1.35} />
             <p className={styles.emptyTitle}>Không có dữ liệu</p>
-            {station.type === 'pump' && station.infoKind !== 'overlay' ? (
+            {station.type === 'pump' && station.infoKind !== 'overlay' && canUpdateData ? (
               <button
                 type="button"
                 className={styles.emptyLink}
@@ -103,7 +110,11 @@ export function FeatureInfoPanel({ station, onClose, onUpdateData }: Props) {
                 Bấm vào đây để cập nhật dữ liệu
               </button>
             ) : (
-              <p className={styles.emptyHint}>Chưa có mô tả trong KMZ/KML</p>
+              <p className={styles.emptyHint}>
+                {station.type === 'pump' && !canUpdateData
+                  ? 'Chỉ Admin được cập nhật thông tin trạm'
+                  : 'Chưa có mô tả trong KMZ/KML'}
+              </p>
             )}
           </div>
         )}

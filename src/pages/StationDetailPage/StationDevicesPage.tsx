@@ -16,9 +16,9 @@ function isDeviceGroup(value: string | undefined): value is DeviceGroup {
 }
 
 function filterGroup(pumps: DevicePump[], group: DeviceGroup) {
-  const sorted = [...pumps].sort((a, b) => a.id - b.id)
-  if (group === '1-5') return sorted.filter((p) => p.id >= 1 && p.id <= 5)
-  return sorted.filter((p) => p.id >= 6 && p.id <= 10)
+  const sorted = [...pumps].sort((a, b) => a.pumpIndex - b.pumpIndex || a.id - b.id)
+  if (group === '1-5') return sorted.filter((p) => p.pumpIndex >= 1 && p.pumpIndex <= 5)
+  return sorted.filter((p) => p.pumpIndex >= 6 && p.pumpIndex <= 10)
 }
 
 export function StationDevicesPage() {

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '@/components/common/Button'
 import { FormField } from '@/components/common/FormField'
 import { SelectField } from '@/components/common/SelectField'
@@ -6,7 +6,6 @@ import { TextAreaField } from '@/components/common/TextAreaField'
 import { TextField } from '@/components/common/TextField'
 import { PasswordRuleList } from '@/components/auth/PasswordRuleList'
 import { ToggleSwitch } from '@/components/common/ToggleSwitch'
-import { getAuthAccounts } from '@/settings/authAccounts'
 import { validatePassword } from '@/settings/passwordPolicy'
 import {
   firstError,
@@ -30,11 +29,15 @@ export type CreateUserFormValues = {
 }
 
 type CreateUserFormProps = {
+  mode?: 'create' | 'edit'
+  initialValues?: Partial<CreateUserFormValues>
+  submitLabel?: string
   onSubmit?: (values: CreateUserFormValues) => void
+  onCancel?: () => void
 }
 
 const ROLE_OPTIONS = [
-  { value: 'viewer', label: 'viewer' },
+  { value: 'viewer', label: 'Viewer' },
   { value: 'Operator', label: 'Operator' },
   { value: 'Administrator', label: 'Administrator' },
 ]
@@ -53,9 +56,23 @@ const INITIAL_VALUES: CreateUserFormValues = {
   forceChangeOnFirstLogin: true,
 }
 
-export function CreateUserForm({ onSubmit }: CreateUserFormProps) {
-  const [values, setValues] = useState<CreateUserFormValues>(INITIAL_VALUES)
+export function CreateUserForm({
+  mode = 'create',
+  initialValues,
+  submitLabel,
+  onSubmit,
+  onCancel,
+}: CreateUserFormProps) {
+  const [values, setValues] = useState<CreateUserFormValues>({
+    ...INITIAL_VALUES,
+    ...initialValues,
+  })
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!initialValues) return
+    setValues((current) => ({ ...current, ...initialValues }))
+  }, [initialValues])
 
   const updateField = <K extends keyof CreateUserFormValues>(
     key: K,
@@ -67,27 +84,26 @@ export function CreateUserForm({ onSubmit }: CreateUserFormProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    const passwordCheck = validatePassword(values.password)
-    const check = firstError(
-      validateUsername(values.username),
-      values.password !== values.confirmPassword
-        ? { ok: false, message: 'Mật khẩu xác nhận không khớp.' }
-        : { ok: true },
-      passwordCheck.ok ? { ok: true } : { ok: false, message: passwordCheck.message },
-      validateOptionalInteger(values.level, 'Cấp độ', 1, 100),
-    )
-    if (!check.ok) {
-      setError(check.message)
-      return
-    }
-
-    const username = values.username.trim()
-    const duplicated = getAuthAccounts().some(
-      (account) => account.username.toLowerCase() === username.toLowerCase(),
-    )
-    if (duplicated) {
-      setError('Tên đăng nhập đã tồn tại.')
-      return
+    if (mode === 'create') {
+      const passwordCheck = validatePassword(values.password)
+      const check = firstError(
+        validateUsername(values.username),
+        values.password !== values.confirmPassword
+          ? { ok: false, message: 'Mật khẩu xác nhận không khớp.' }
+          : { ok: true },
+        passwordCheck.ok ? { ok: true } : { ok: false, message: passwordCheck.message },
+        validateOptionalInteger(values.level, 'Cấp độ', 1, 100),
+      )
+      if (!check.ok) {
+        setError(check.message)
+        return
+      }
+    } else {
+      const check = validateOptionalInteger(values.level, 'Cấp độ', 1, 100)
+      if (!check.ok) {
+        setError(check.message)
+        return
+      }
     }
 
     setError('')
@@ -99,7 +115,7 @@ export function CreateUserForm({ onSubmit }: CreateUserFormProps) {
       <div className={styles.panel}>
         <div className={styles.grid}>
           <div className={styles.column}>
-            <FormField label="Tên đăng nhập" htmlFor="username" required>
+            <FormField label="Tên đăng nhập" htmlFor="username" required={mode === 'create'}>
               <TextField
                 id="username"
                 name="username"
@@ -107,36 +123,41 @@ export function CreateUserForm({ onSubmit }: CreateUserFormProps) {
                 maxLength={32}
                 value={values.username}
                 onChange={(event) => updateField('username', event.target.value)}
-                required
+                required={mode === 'create'}
+                disabled={mode === 'edit'}
               />
             </FormField>
 
-            <FormField label="Mật khẩu" htmlFor="password" required>
-              <TextField
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                value={values.password}
-                onChange={(event) => updateField('password', event.target.value)}
-                required
-              />
-              <PasswordRuleList password={values.password} />
-            </FormField>
+            {mode === 'create' ? (
+              <>
+                <FormField label="Mật khẩu" htmlFor="password" required>
+                  <TextField
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={values.password}
+                    onChange={(event) => updateField('password', event.target.value)}
+                    required
+                  />
+                  <PasswordRuleList password={values.password} />
+                </FormField>
 
-            <FormField label="Xác nhận mật khẩu" htmlFor="confirmPassword" required>
-              <TextField
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                value={values.confirmPassword}
-                onChange={(event) =>
-                  updateField('confirmPassword', event.target.value)
-                }
-                required
-              />
-            </FormField>
+                <FormField label="Xác nhận mật khẩu" htmlFor="confirmPassword" required>
+                  <TextField
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    value={values.confirmPassword}
+                    onChange={(event) =>
+                      updateField('confirmPassword', event.target.value)
+                    }
+                    required
+                  />
+                </FormField>
+              </>
+            ) : null}
           </div>
 
           <div className={styles.column}>
@@ -224,9 +245,16 @@ export function CreateUserForm({ onSubmit }: CreateUserFormProps) {
 
       <div className={styles.actions}>
         {error ? <p className={styles.error}>{error}</p> : <span />}
-        <Button type="submit" variant="success">
-          Xác nhận
-        </Button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          {onCancel ? (
+            <Button type="button" variant="secondary" onClick={onCancel}>
+              Hủy
+            </Button>
+          ) : null}
+          <Button type="submit" variant="success">
+            {submitLabel ?? (mode === 'edit' ? 'Cập nhật' : 'Xác nhận')}
+          </Button>
+        </div>
       </div>
     </form>
   )

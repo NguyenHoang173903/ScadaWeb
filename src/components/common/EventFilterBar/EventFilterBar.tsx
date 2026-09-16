@@ -21,6 +21,7 @@ type EventFilterBarProps = {
   onExport: () => void
   showKeyword?: boolean
   resetLabel?: string
+  exportDisabled?: boolean
 }
 
 export function EventFilterBar({
@@ -32,6 +33,7 @@ export function EventFilterBar({
   onExport,
   showKeyword = true,
   resetLabel = 'Làm mới',
+  exportDisabled = false,
 }: EventFilterBarProps) {
   const [error, setError] = useState('')
 
@@ -115,7 +117,7 @@ export function EventFilterBar({
         >
           {resetLabel}
         </Button>
-        <Button variant="primary" onClick={() => runIfValid(onExport)}>
+        <Button variant="primary" onClick={() => runIfValid(onExport)} disabled={exportDisabled}>
           Xuất Excel
         </Button>
       </div>

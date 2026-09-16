@@ -18,6 +18,7 @@ type ReportFilterBarProps = {
   onFilter: () => void
   onReset: () => void
   onExport: () => void
+  exportDisabled?: boolean
 }
 
 export function ReportFilterBar({
@@ -27,6 +28,7 @@ export function ReportFilterBar({
   onFilter,
   onReset,
   onExport,
+  exportDisabled = false,
 }: ReportFilterBarProps) {
   const patch = (partial: Partial<ReportFilterValues>) => {
     onChange({ ...values, ...partial })
@@ -79,7 +81,7 @@ export function ReportFilterBar({
         <Button variant="secondary" className={styles.resetButton} onClick={onReset}>
           Làm mới
         </Button>
-        <Button variant="primary" onClick={onExport}>
+        <Button variant="primary" onClick={onExport} disabled={exportDisabled}>
           Xuất Excel
         </Button>
       </div>

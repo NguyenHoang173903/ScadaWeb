@@ -8,7 +8,12 @@ import {
 import { Pagination } from '@/components/common/Pagination'
 import { isApiError } from '@/services/api/http'
 import { useScadaRealtime } from '@/services/realtime'
-import { getEventDevices, getEventHistory } from '@/services/stations/stationsApi'
+import { canSessionExportExcel } from '@/settings/session'
+import {
+  exportActiveAlarmsExcel,
+  getActiveAlarms,
+  getEventDevices,
+} from '@/services/stations/stationsApi'
 import {
   DEFAULT_EVENT_FILTER,
   EVENT_DEVICE_OPTIONS,
@@ -37,7 +42,9 @@ export function ExistingErrorsPage() {
   const [deviceOptions, setDeviceOptions] = useState(EVENT_DEVICE_OPTIONS)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [exportBusy, setExportBusy] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
+  const canExport = canSessionExportExcel()
 
   useScadaRealtime({
     stationId,
@@ -75,11 +82,8 @@ export function ExistingErrorsPage() {
           applied.deviceId !== 'all' && /^\d+$/.test(applied.deviceId)
             ? Number(applied.deviceId)
             : undefined
-        const result = await getEventHistory(Number(stationId), {
-          category: 'status',
+        const result = await getActiveAlarms(Number(stationId), {
           deviceId,
-          fromDate: applied.fromDate || undefined,
-          toDate: applied.toDate || undefined,
           keyword: applied.keyword.trim() || undefined,
           pageNumber: page,
           pageSize: EVENT_PAGE_SIZE,
@@ -93,7 +97,8 @@ export function ExistingErrorsPage() {
             description: row.description || row.title,
             type: row.type,
             startedAt: formatDateTime(row.startTime),
-            endedAt: formatDateTime(row.endTime),
+            status: 'Đang mở',
+            acknowledged: row.isAcknowledged ? 'Đã xác nhận' : 'Chưa',
           })),
         )
         setTotalCount(result.totalCount ?? result.items?.length ?? 0)
@@ -141,8 +146,31 @@ export function ExistingErrorsPage() {
           setPage(1)
         }}
         onExport={() => {
-          console.log('Xuất Excel lỗi hiện hữu', applied)
+          if (!canExport) {
+            setError('Viewer không được xuất Excel (cần Operator/Admin).')
+            return
+          }
+          if (!numericStation || exportBusy) return
+          void (async () => {
+            setExportBusy(true)
+            setError('')
+            try {
+              const deviceId =
+                applied.deviceId !== 'all' && /^\d+$/.test(applied.deviceId)
+                  ? Number(applied.deviceId)
+                  : undefined
+              await exportActiveAlarmsExcel(Number(stationId), {
+                deviceId,
+                keyword: applied.keyword.trim() || undefined,
+              })
+            } catch (err) {
+              setError(isApiError(err) ? err.message : 'Không xuất được Excel.')
+            } finally {
+              setExportBusy(false)
+            }
+          })()
         }}
+        exportDisabled={!canExport || exportBusy}
       />
 
       {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}

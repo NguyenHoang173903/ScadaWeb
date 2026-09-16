@@ -1,10 +1,15 @@
 import { apiClient } from '@/services/api/client'
+import { downloadBinary } from '@/services/api/http'
 import type { PaginationResult } from '@/types'
 
 export type StationDto = {
   id: number
   code: string
   name: string
+  address?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  description?: string | null
   isActive: boolean
 }
 
@@ -19,9 +24,58 @@ export type StationDetailDto = {
   isActive: boolean
 }
 
+export type UpdateStationPayload = {
+  name?: string
+  address?: string
+  latitude?: number | null
+  longitude?: number | null
+  description?: string
+  isActive?: boolean
+}
+
+export type StationReportColumnDto = {
+  key: string
+  header: string
+  tagId?: number | null
+  tagCode?: string | null
+}
+
+export type StationReportTableDto = {
+  stationId: number
+  deviceId: number
+  deviceName: string
+  deviceCode: string
+  interval: string
+  from: string
+  to: string
+  columns: StationReportColumnDto[]
+  items: Array<{ time: string; values: Record<string, number | null> }>
+  totalCount: number
+  pageNumber: number
+  pageSize: number
+}
+
+export type ActiveAlarmRowDto = {
+  id: number
+  startTime: string
+  endTime?: string | null
+  type: string
+  title: string
+  description?: string | null
+  deviceId?: number | null
+  deviceName?: string | null
+  tagId?: number | null
+  tagName?: string | null
+  isAcknowledged: boolean
+  stationId?: number | null
+}
+
 export type DeviceMonitorItemDto = {
   deviceId: number
+  /** Chỉ số bơm 1..10 khi BE expose (ưu tiên). */
+  pumpIndex?: number | null
   name: string
+  code?: string | null
   ratedPowerKw?: number | null
   status: string
   windingTempActual: { a?: number | null; b?: number | null; c?: number | null }
@@ -158,6 +212,10 @@ export async function getStation(id: number) {
   return apiClient.get<StationDetailDto>(`/stations/${id}`)
 }
 
+export async function updateStation(id: number, payload: UpdateStationPayload) {
+  return apiClient.put<StationDetailDto>(`/stations/${id}`, payload)
+}
+
 export async function getDeviceMonitor(stationId: number) {
   return apiClient.get<{ items: DeviceMonitorItemDto[] }>(
     `/stations/${stationId}/device-monitor?pageSize=100`,
@@ -267,4 +325,112 @@ export async function getPumpTemperatureReport(
 
 export async function getReportDevices(stationId: number) {
   return apiClient.get<StationChartDeviceOptionDto[]>(`/stations/${stationId}/reports/devices`)
+}
+
+export async function getReportTable(
+  stationId: number,
+  query: {
+    deviceId: number
+    reportDate?: string
+    startTime?: string
+    endTime?: string
+    pageNumber?: number
+    pageSize?: number
+  },
+) {
+  const search = new URLSearchParams()
+  search.set('deviceId', String(query.deviceId))
+  if (query.reportDate) search.set('reportDate', query.reportDate)
+  if (query.startTime) search.set('startTime', query.startTime)
+  if (query.endTime) search.set('endTime', query.endTime)
+  if (query.pageNumber != null) search.set('pageNumber', String(query.pageNumber))
+  if (query.pageSize != null) search.set('pageSize', String(query.pageSize))
+  return apiClient.get<StationReportTableDto>(
+    `/stations/${stationId}/reports/table?${search}`,
+  )
+}
+
+export async function exportReportTableExcel(
+  stationId: number,
+  query: {
+    deviceId: number
+    reportDate?: string
+    startTime?: string
+    endTime?: string
+  },
+) {
+  const search = new URLSearchParams()
+  search.set('deviceId', String(query.deviceId))
+  if (query.reportDate) search.set('reportDate', query.reportDate)
+  if (query.startTime) search.set('startTime', query.startTime)
+  if (query.endTime) search.set('endTime', query.endTime)
+  await downloadBinary(
+    `/stations/${stationId}/reports/table/export?${search}`,
+    `BaoCao_${stationId}.xlsx`,
+  )
+}
+
+export async function exportEventHistoryExcel(
+  stationId: number,
+  query: {
+    category?: string
+    deviceId?: number
+    fromDate?: string
+    toDate?: string
+    keyword?: string
+  },
+) {
+  const search = new URLSearchParams()
+  if (query.category) search.set('category', query.category)
+  if (query.deviceId != null) search.set('deviceId', String(query.deviceId))
+  if (query.fromDate) search.set('fromDate', query.fromDate)
+  if (query.toDate) search.set('toDate', query.toDate)
+  if (query.keyword) search.set('keyword', query.keyword)
+  await downloadBinary(
+    `/stations/${stationId}/events/history/export?${search}`,
+    `SuKien_${stationId}.xlsx`,
+  )
+}
+
+export async function getActiveAlarms(
+  stationId: number,
+  query: {
+    deviceId?: number
+    isAcknowledged?: boolean
+    type?: string
+    keyword?: string
+    pageNumber?: number
+    pageSize?: number
+  },
+) {
+  const search = new URLSearchParams()
+  if (query.deviceId != null) search.set('deviceId', String(query.deviceId))
+  if (query.isAcknowledged != null) search.set('isAcknowledged', String(query.isAcknowledged))
+  if (query.type) search.set('type', query.type)
+  if (query.keyword) search.set('keyword', query.keyword)
+  if (query.pageNumber != null) search.set('pageNumber', String(query.pageNumber))
+  if (query.pageSize != null) search.set('pageSize', String(query.pageSize))
+  return apiClient.get<PaginationResult<ActiveAlarmRowDto>>(
+    `/stations/${stationId}/alarms/active?${search}`,
+  )
+}
+
+export async function exportActiveAlarmsExcel(
+  stationId: number,
+  query: {
+    deviceId?: number
+    isAcknowledged?: boolean
+    type?: string
+    keyword?: string
+  },
+) {
+  const search = new URLSearchParams()
+  if (query.deviceId != null) search.set('deviceId', String(query.deviceId))
+  if (query.isAcknowledged != null) search.set('isAcknowledged', String(query.isAcknowledged))
+  if (query.type) search.set('type', query.type)
+  if (query.keyword) search.set('keyword', query.keyword)
+  await downloadBinary(
+    `/stations/${stationId}/alarms/active/export?${search}`,
+    `LoiTonTai_${stationId}.xlsx`,
+  )
 }
