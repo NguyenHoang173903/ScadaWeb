@@ -1803,95 +1803,106 @@ public class ScadaMetadataQueryService(
                 .Distinct()
                 .ToList();
 
-            // Measured: chỉ history DB (1s / 30m), lọc theo device (tag đã match) + from/to.
-            // Threshold (nhiệt/dòng cho phép): Redis như màn Devices — không invent.
+            // Measured history theo loại đồ thị:
+            //   temperature → history_1s
+            //   current     → history_30s
+            // Redis: điểm realtime (tip) cho measured + ngưỡng cho phép — không invent.
+            var chartKind = (chart ?? string.Empty).Trim().ToLowerInvariant();
+            var useHistory30s = chartKind is StationChartCatalog.Current or "dong" or "ampere";
+
             var samplesByTag = new Dictionary<long, List<(DateTimeOffset Time, double Value)>>();
             if (measuredTagIds.Count > 0)
             {
-                // Cửa sổ dài → ưu tiên 30m; cửa sổ ngắn → ưu tiên 1s. Cả hai đều lọc from/to.
-                var prefer30m = span > TimeSpan.FromHours(2);
-
-                async Task<List<(long TagId, DateTimeOffset Time, double Value)>> Load1sAsync()
+                List<(long TagId, DateTimeOffset Time, double Value)> primary;
+                if (useHistory30s)
+                {
+                    var rows = await db.History30s.AsNoTracking()
+                        .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
+                        .OrderBy(h => h.Time)
+                        .Select(h => new { h.TagId, h.Time, h.Value })
+                        .ToListAsync(cancellationToken);
+                    primary = rows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
+                    // Nguồn gốc 30s — không hạ interval xuống 1s.
+                    if (interval is "auto" or "1s")
+                        interval = "30s";
+                    if (bucket.Size < TimeSpan.FromSeconds(30))
+                        bucket = ("30s", TimeSpan.FromSeconds(30));
+                }
+                else
                 {
                     var rows = await db.History1s.AsNoTracking()
                         .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
                         .OrderBy(h => h.Time)
                         .Select(h => new { h.TagId, h.Time, h.Value })
                         .ToListAsync(cancellationToken);
-                    return rows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
-                }
-
-                async Task<List<(long TagId, DateTimeOffset Time, double Value)>> Load30mAsync()
-                {
-                    var rows = await db.History30m.AsNoTracking()
-                        .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
-                        .OrderBy(h => h.Time)
-                        .Select(h => new { h.TagId, h.Time, h.Value })
-                        .ToListAsync(cancellationToken);
-                    return rows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
-                }
-
-                var primary = prefer30m ? await Load30mAsync() : await Load1sAsync();
-                var used30m = prefer30m && primary.Count > 0;
-                if (primary.Count == 0)
-                {
-                    primary = prefer30m ? await Load1sAsync() : await Load30mAsync();
-                    used30m = !prefer30m && primary.Count > 0;
+                    primary = rows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
                 }
 
                 if (primary.Count > 0)
                 {
-                    if (used30m)
+                    var bucketTicks = bucket.Size.Ticks;
+                    var minBucket = useHistory30s
+                        ? TimeSpan.FromSeconds(30).Ticks
+                        : TimeSpan.FromSeconds(1).Ticks;
+
+                    foreach (var group in primary.GroupBy(x => x.TagId))
                     {
-                        interval = "30m";
-                        foreach (var group in primary.GroupBy(x => x.TagId))
+                        List<(DateTimeOffset Time, double Value)> points;
+                        if (bucketTicks <= minBucket)
                         {
-                            samplesByTag[group.Key] = group
+                            points = group
                                 .Select(p => (Time: p.Time, Value: p.Value))
                                 .OrderBy(p => p.Time)
                                 .ToList();
                         }
-                    }
-                    else
-                    {
-                        var bucketTicks = bucket.Size.Ticks;
-                        foreach (var group in primary.GroupBy(x => x.TagId))
+                        else
                         {
-                            List<(DateTimeOffset Time, double Value)> points;
-                            if (bucketTicks <= TimeSpan.FromSeconds(1).Ticks)
-                            {
-                                points = group
-                                    .Select(p => (Time: p.Time, Value: p.Value))
-                                    .OrderBy(p => p.Time)
-                                    .ToList();
-                            }
-                            else
-                            {
-                                points = group
-                                    .GroupBy(x => x.Time.UtcTicks / bucketTicks)
-                                    .Select(g =>
-                                    {
-                                        var first = g.OrderBy(p => p.Time).First();
-                                        var bucketStart = new DateTimeOffset(g.Key * bucketTicks, TimeSpan.Zero);
-                                        return (Time: bucketStart, Value: first.Value);
-                                    })
-                                    .OrderBy(p => p.Time)
-                                    .ToList();
-                            }
-
-                            samplesByTag[group.Key] = points;
+                            points = group
+                                .GroupBy(x => x.Time.UtcTicks / bucketTicks)
+                                .Select(g =>
+                                {
+                                    var first = g.OrderBy(p => p.Time).First();
+                                    var bucketStart = new DateTimeOffset(g.Key * bucketTicks, TimeSpan.Zero);
+                                    return (Time: bucketStart, Value: first.Value);
+                                })
+                                .OrderBy(p => p.Time)
+                                .ToList();
                         }
+
+                        samplesByTag[group.Key] = points;
                     }
                 }
             }
 
-            // Redis chỉ cho ngưỡng cho phép, scoped theo device (tag match) + vẽ trên [from, to].
-            var thresholdTagIds = seriesDefs
-                .Where(d => d.Role == "threshold" && matched.ContainsKey(d.Key))
+            // Redis: ngưỡng + tip realtime cho measured (nối vào cuối series nếu mới hơn history).
+            var redisTagIds = seriesDefs
+                .Where(d => matched.ContainsKey(d.Key))
                 .Select(d => matched[d.Key].TagId)
                 .Distinct()
                 .ToList();
-            var thresholdValues = await LoadLatestHistoryAsync(thresholdTagIds, cancellationToken);
+            var liveByTag = await LoadLatestHistoryAsync(redisTagIds, cancellationToken);
+            var thresholdValues = liveByTag;
+
+            foreach (var tagId in measuredTagIds)
+            {
+                if (!liveByTag.TryGetValue(tagId, out var live))
+                    continue;
+                if (live.Time < from)
+                    continue;
+
+                var tipTime = live.Time > to ? to : live.Time;
+                if (!samplesByTag.TryGetValue(tagId, out var pts))
+                {
+                    samplesByTag[tagId] = [(tipTime, live.Value)];
+                    continue;
+                }
+
+                var last = pts.Count > 0 ? pts[^1] : default;
+                if (pts.Count == 0 || tipTime > last.Time)
+                    pts.Add((tipTime, live.Value));
+                else if (tipTime == last.Time)
+                    pts[^1] = (tipTime, live.Value);
+            }
 
             var series = new List<StationChartSeriesDto>(seriesDefs.Count);
             foreach (var def in seriesDefs)
