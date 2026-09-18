@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Backend.Application.Authorization;
 using Backend.Application.Common;
 using Backend.Application.DTOs.Auth;
 using Backend.Application.Interfaces.Services;
@@ -69,12 +70,16 @@ public class AuthenticationService(
 
         var now = DateTimeOffset.UtcNow;
         var fullName = (string.IsNullOrWhiteSpace(request.FullName) ? request.DisplayName : request.FullName).Trim();
+        var registerRole = string.IsNullOrWhiteSpace(_auth.DefaultRegisterRole)
+            ? ScadaRoles.Operator
+            : _auth.DefaultRegisterRole.Trim();
         var user = new ScadaUser
         {
             Username = username,
             FullName = fullName,
             PasswordHash = passwordHasher.Hash(request.Password),
-            Role = string.IsNullOrWhiteSpace(_auth.DefaultRegisterRole) ? "Operator" : _auth.DefaultRegisterRole.Trim(),
+            Role = ScadaRolePermissionResolver.TryNormalize(registerRole, allowEmptyAsOperator: true)
+                   ?? ScadaRoles.Operator,
             IsActive = true,
             PasswordUpdatedAt = now,
             CreatedAt = now,
@@ -422,13 +427,15 @@ public class AuthenticationService(
         if (!user.IsActive)
             return Result<CurrentUserResponse>.Failure("Auth.Unauthorized", "Account is disabled.");
 
+        var canonicalRole = ScadaRolePermissionResolver.ResolveCanonicalRole(user.Role);
         return Result<CurrentUserResponse>.Success(new CurrentUserResponse
         {
             Id = user.Id,
             Username = user.Username,
             FullName = user.FullName,
             DisplayName = user.FullName,
-            Role = user.Role,
+            Role = canonicalRole,
+            Permissions = ScadaRolePermissionResolver.ResolvePermissions(user.Role),
             IsActive = user.IsActive,
             MustChangePassword = user.MustChangePassword,
             Email = user.Email,
@@ -649,6 +656,7 @@ public class AuthenticationService(
             await db.SaveChangesAsync(cancellationToken);
         }
 
+        var canonicalRole = ScadaRolePermissionResolver.ResolveCanonicalRole(user.Role);
         return new AuthTokenResponse
         {
             AccessToken = accessToken,
@@ -659,7 +667,8 @@ public class AuthenticationService(
             Username = user.Username,
             FullName = user.FullName,
             DisplayName = user.FullName,
-            Role = user.Role,
+            Role = canonicalRole,
+            Permissions = ScadaRolePermissionResolver.ResolvePermissions(user.Role),
             MustChangePassword = user.MustChangePassword,
             Email = user.Email,
             Unit = user.Unit,

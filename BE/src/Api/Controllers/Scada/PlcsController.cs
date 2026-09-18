@@ -12,7 +12,7 @@ namespace Backend.Api.Controllers.Scada;
 [ApiController]
 [Route("api/v1/plcs")]
 [Produces("application/json")]
-[Authorize]
+[Authorize(Policy = Permissions.Technical.View)]
 public class PlcsController(IPlcQueryService plcs) : ControllerBase
 {
     /// <summary>

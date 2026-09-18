@@ -1,3 +1,5 @@
+using Backend.Shared.Constants;
+
 namespace Backend.Application.DTOs.Scada;
 
 /// <summary>Tạo SCADA user (màn Thêm người dùng mới) — không phát token.</summary>
@@ -13,8 +15,8 @@ public class CreateScadaUserRequest
     public string? Unit { get; set; }
     public string? Description { get; set; }
 
-    /// <summary>viewer | Operator | Administrator / Admin</summary>
-    public string Role { get; set; } = "Operator";
+    /// <summary>VIEW | OPERATOR | TECHNICAL | ADMIN (legacy viewer/operator/admin accepted).</summary>
+    public string Role { get; set; } = ScadaRoles.Operator;
 
     public int? Level { get; set; }
 

@@ -12,7 +12,7 @@ namespace Backend.Api.Controllers.Scada;
 [ApiController]
 [Route("api/v1/tag-history-configs")]
 [Produces("application/json")]
-[Authorize(Roles = ScadaRoles.AdminOnly)]
+[Authorize(Policy = Permissions.Configuration.Edit)]
 public class TagHistoryConfigsController(ITagHistoryConfigQueryService configs) : ControllerBase
 {
     /// <summary>

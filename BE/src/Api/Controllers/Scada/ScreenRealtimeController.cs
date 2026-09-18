@@ -16,7 +16,7 @@ namespace Backend.Api.Controllers.Scada;
 [ApiController]
 [Route("api/v1/screens/{screen}")]
 [Produces("application/json")]
-[Authorize]
+[Authorize(Policy = Permissions.Realtime.View)]
 public class ScreenRealtimeController(IScreenRealtimeQueryService screens) : ControllerBase
 {
     /// <summary>

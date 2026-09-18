@@ -25,7 +25,7 @@ public class SessionPolicyController(IAppSettingQueryService settings) : Control
 
     /// <summary>Cập nhật idle timeout (phút) — Admin only.</summary>
     [HttpPut]
-    [Authorize(Roles = ScadaRoles.AdminOnly)]
+    [Authorize(Policy = Permissions.SystemAdministration.Manage)]
     [ProducesResponseType(typeof(ApiResponse<SessionPolicyDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<SessionPolicyDto>), ScadaHttpStatuses.BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<SessionPolicyDto>), ScadaHttpStatuses.Unauthorized)]

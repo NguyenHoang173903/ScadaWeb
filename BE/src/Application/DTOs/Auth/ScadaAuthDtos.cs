@@ -65,6 +65,9 @@ public class AuthTokenResponse
     public string DisplayName { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
 
+    /// <summary>Server-resolved permission keys (same set embedded in the access token).</summary>
+    public IReadOnlyList<string> Permissions { get; set; } = Array.Empty<string>();
+
     /// <summary>True when the user must change password before using business APIs (BE 1.3a).</summary>
     public bool MustChangePassword { get; set; }
 
@@ -90,6 +93,10 @@ public class CurrentUserResponse
     public string FullName { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
+
+    /// <summary>Server-resolved permission keys (same set embedded in the access token).</summary>
+    public IReadOnlyList<string> Permissions { get; set; } = Array.Empty<string>();
+
     public bool IsActive { get; set; }
 
     /// <summary>True when the user must change password before using business APIs (BE 1.3a).</summary>

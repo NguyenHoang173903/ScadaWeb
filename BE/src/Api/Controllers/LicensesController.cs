@@ -13,7 +13,7 @@ namespace Backend.Api.Controllers;
 [ApiController]
 [Route("api/v1/licenses")]
 [Produces("application/json")]
-[Authorize(Roles = ScadaRoles.AdminOnly)]
+[Authorize(Policy = Permissions.SystemAdministration.Manage)]
 public class LicensesController(
     ISystemLicenseAdminService licenses,
     IConcurrentSessionService concurrentSessionService,

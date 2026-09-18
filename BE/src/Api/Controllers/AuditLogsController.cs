@@ -21,7 +21,7 @@ public class AuditLogsController(
 {
     /// <summary>Paged IAM entity-change trail — Admin only.</summary>
     [HttpGet]
-    [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin + "," + ScadaRoles.Admin)]
+    [Authorize(Policy = Permissions.SystemAdministration.View)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<AuditLogDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] AuditLogQuery query, CancellationToken cancellationToken)
     {

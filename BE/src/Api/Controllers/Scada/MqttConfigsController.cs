@@ -11,7 +11,7 @@ namespace Backend.Api.Controllers.Scada;
 [ApiController]
 [Route("api/v1/mqtt-configs")]
 [Produces("application/json")]
-[Authorize(Roles = ScadaRoles.AdminOnly)]
+[Authorize(Policy = Permissions.Configuration.Edit)]
 public class MqttConfigsController(IMqttConfigQueryService configs) : ControllerBase
 {
     /// <summary>

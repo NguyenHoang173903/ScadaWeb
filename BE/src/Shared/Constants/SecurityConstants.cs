@@ -14,28 +14,96 @@ public static class Roles
 }
 
 /// <summary>
-/// SCADA operator roles stored on <c>public.Users.Role</c> (JWT role claim).
+/// SCADA business roles stored on <c>public.Users.Role</c> (JWT role claim).
+/// Canonical values: VIEW / OPERATOR / TECHNICAL / ADMIN.
+/// Legacy DB values (Viewer/Operator/Admin) are normalized at login — no migration required.
 /// Distinct from IAM <see cref="Roles"/> used by app.Users.
 /// </summary>
 public static class ScadaRoles
 {
-    public const string Viewer = "Viewer";
-    public const string Operator = "Operator";
-    public const string Admin = "Admin";
+    public const string View = "VIEW";
+    public const string Operator = "OPERATOR";
+    public const string Technical = "TECHNICAL";
+    public const string Admin = "ADMIN";
+
+    /// <summary>Legacy alias kept for older call sites; same as <see cref="View"/>.</summary>
+    public const string Viewer = View;
 
     /// <summary>Comma-separated for <c>[Authorize(Roles = ...)]</c> — SCADA Admin only.</summary>
     public const string AdminOnly = Admin;
 
     /// <summary>SCADA Admin + IAM SuperAdmin (when same JWT role pipeline).</summary>
     public const string Admins = Admin + "," + Roles.SuperAdmin;
+
+    /// <summary>Operator and above (ack/export style actions).</summary>
+    public const string OperatorAndAbove = Operator + "," + Technical + "," + Admin;
+
+    /// <summary>Technical and Admin.</summary>
+    public const string TechnicalAndAbove = Technical + "," + Admin;
 }
 
 /// <summary>
-/// Fine-grained permission keys used by <c>[Authorize(Policy = Permissions.Users.Create)]</c>.
-/// Format: "{Module}.{Action}".
+/// Fine-grained permission keys used by <c>[Authorize(Policy = "...")]</c>.
+/// Format: "{Module}.{Action}". SCADA RBAC + legacy IAM keys.
 /// </summary>
 public static class Permissions
 {
+    public static class Realtime
+    {
+        public const string View = "Realtime.View";
+    }
+
+    public static class Trend
+    {
+        public const string View = "Trend.View";
+    }
+
+    public static class History
+    {
+        public const string View = "History.View";
+    }
+
+    public static class Report
+    {
+        public const string View = "Report.View";
+        public const string Export = "Report.Export";
+    }
+
+    public static class Alarm
+    {
+        public const string Acknowledge = "Alarm.Acknowledge";
+    }
+
+    public static class Technical
+    {
+        public const string View = "Technical.View";
+        public const string Edit = "Technical.Edit";
+    }
+
+    public static class Configuration
+    {
+        public const string View = "Configuration.View";
+        public const string Edit = "Configuration.Edit";
+    }
+
+    public static class UserManagement
+    {
+        public const string View = "UserManagement.View";
+        public const string Edit = "UserManagement.Edit";
+    }
+
+    public static class RoleManagement
+    {
+        public const string View = "RoleManagement.View";
+        public const string Manage = "RoleManagement.Manage";
+    }
+
+    public static class SystemAdministration
+    {
+        public const string View = "SystemAdministration.View";
+        public const string Manage = "SystemAdministration.Manage";
+    }
+
     public static class Users
     {
         public const string View = "Users.View";
@@ -54,6 +122,27 @@ public static class Permissions
     {
         public const string View = "Reports.View";
     }
+
+    /// <summary>All SCADA policies registered at startup (excluding legacy IAM duplicates already listed).</summary>
+    public static IReadOnlyList<string> AllScadaPolicies { get; } =
+    [
+        Realtime.View,
+        Trend.View,
+        History.View,
+        Report.View,
+        Report.Export,
+        Alarm.Acknowledge,
+        Technical.View,
+        Technical.Edit,
+        Configuration.View,
+        Configuration.Edit,
+        UserManagement.View,
+        UserManagement.Edit,
+        RoleManagement.View,
+        RoleManagement.Manage,
+        SystemAdministration.View,
+        SystemAdministration.Manage
+    ];
 }
 
 /// <summary>Custom JWT claim types used in addition to the standard <see cref="System.Security.Claims.ClaimTypes"/>.</summary>

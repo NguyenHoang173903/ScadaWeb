@@ -18,6 +18,7 @@ namespace Backend.Api.Controllers.Scada;
 public class StationsController(IStationQueryService stations) : ControllerBase
 {
     [HttpGet]
+    [Authorize(Policy = Permissions.Realtime.View)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<StationDto>>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<StationDto>>), ScadaHttpStatuses.Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<StationDto>>), ScadaHttpStatuses.InternalServerError)]
@@ -25,6 +26,7 @@ public class StationsController(IStationQueryService stations) : ControllerBase
         this.ToActionResult(await stations.GetPagedAsync(query, cancellationToken), ScadaApiMessages.StationsListOk);
 
     [HttpGet("{id:long}")]
+    [Authorize(Policy = Permissions.Realtime.View)]
     [ProducesResponseType(typeof(ApiResponse<StationDetailDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<StationDetailDto>), ScadaHttpStatuses.NotFound)]
     [ProducesResponseType(typeof(ApiResponse<StationDetailDto>), ScadaHttpStatuses.Unauthorized)]
@@ -32,9 +34,9 @@ public class StationsController(IStationQueryService stations) : ControllerBase
     public async Task<IActionResult> GetById(long id, CancellationToken cancellationToken) =>
         this.ToActionResult(await stations.GetByIdAsync(id, cancellationToken), ScadaApiMessages.StationDetailOk);
 
-    /// <summary>Cập nhật metadata trạm — Admin only. Không đổi Code.</summary>
+    /// <summary>Cập nhật metadata trạm — Configuration.Edit (TECHNICAL+ / ADMIN).</summary>
     [HttpPut("{id:long}")]
-    [Authorize(Roles = ScadaRoles.AdminOnly)]
+    [Authorize(Policy = Permissions.Configuration.Edit)]
     [ProducesResponseType(typeof(ApiResponse<StationDetailDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<StationDetailDto>), ScadaHttpStatuses.BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<StationDetailDto>), ScadaHttpStatuses.NotFound)]
@@ -49,36 +51,42 @@ public class StationsController(IStationQueryService stations) : ControllerBase
             ScadaApiMessages.StationUpdatedOk);
 
     [HttpGet("{stationId:long}/electrical")]
+    [Authorize(Policy = Permissions.Realtime.View)]
     [ProducesResponseType(typeof(ApiResponse<StationElectricalDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<StationElectricalDto>), ScadaHttpStatuses.NotFound)]
     public async Task<IActionResult> GetElectrical(long stationId, [FromQuery] StationElectricalQuery query, CancellationToken cancellationToken) =>
         this.ToActionResult(await stations.GetElectricalAsync(stationId, query, cancellationToken), ScadaApiMessages.StationElectricalOk);
 
     [HttpGet("{stationId:long}/schematic")]
+    [Authorize(Policy = Permissions.Realtime.View)]
     [ProducesResponseType(typeof(ApiResponse<StationSchematicDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<StationSchematicDto>), ScadaHttpStatuses.NotFound)]
     public async Task<IActionResult> GetSchematic(long stationId, CancellationToken cancellationToken) =>
         this.ToActionResult(await stations.GetSchematicAsync(stationId, cancellationToken), ScadaApiMessages.StationSchematicOk);
 
     [HttpGet("{stationId:long}/device-cards")]
+    [Authorize(Policy = Permissions.Realtime.View)]
     [ProducesResponseType(typeof(ApiResponse<StationDeviceCardsDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<StationDeviceCardsDto>), ScadaHttpStatuses.NotFound)]
     public async Task<IActionResult> GetDeviceCards(long stationId, [FromQuery] StationDeviceCardsQuery query, CancellationToken cancellationToken) =>
         this.ToActionResult(await stations.GetDeviceCardsAsync(stationId, query, cancellationToken), ScadaApiMessages.StationDeviceCardsOk);
 
     [HttpGet("{stationId:long}/device-monitor")]
+    [Authorize(Policy = Permissions.Realtime.View)]
     [ProducesResponseType(typeof(ApiResponse<StationDeviceMonitorDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<StationDeviceMonitorDto>), ScadaHttpStatuses.NotFound)]
     public async Task<IActionResult> GetDeviceMonitor(long stationId, [FromQuery] StationDeviceMonitorQuery query, CancellationToken cancellationToken) =>
         this.ToActionResult(await stations.GetDeviceMonitorAsync(stationId, query, cancellationToken), ScadaApiMessages.StationDeviceMonitorOk);
 
     [HttpGet("{stationId:long}/reports/devices")]
+    [Authorize(Policy = Permissions.Report.View)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<StationReportDeviceOptionDto>>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<StationReportDeviceOptionDto>>), ScadaHttpStatuses.NotFound)]
     public async Task<IActionResult> GetReportDevices(long stationId, CancellationToken cancellationToken) =>
         this.ToActionResult(await stations.GetReportDeviceOptionsAsync(stationId, cancellationToken), ScadaApiMessages.StationReportDevicesOk);
 
     [HttpGet("{stationId:long}/reports/table")]
+    [Authorize(Policy = Permissions.Report.View)]
     [ProducesResponseType(typeof(ApiResponse<StationReportTableDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<StationReportTableDto>), ScadaHttpStatuses.BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<StationReportTableDto>), ScadaHttpStatuses.NotFound)]
@@ -92,7 +100,7 @@ public class StationsController(IStationQueryService stations) : ControllerBase
 
     /// <summary>Xuất Excel bảng báo cáo (history_30m) — tối đa 10_000 dòng.</summary>
     [HttpGet("{stationId:long}/reports/table/export")]
-    [Authorize(Roles = ScadaRoles.Operator + "," + ScadaRoles.Admin)]
+    [Authorize(Policy = Permissions.Report.Export)]
     [Produces(ApplicationConstants.ExcelContentType)]
     [ProducesResponseType(ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.BadRequest)]
@@ -108,6 +116,7 @@ public class StationsController(IStationQueryService stations) : ControllerBase
     }
 
     [HttpGet("{stationId:long}/events/devices")]
+    [Authorize(Policy = Permissions.History.View)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<StationReportDeviceOptionDto>>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<StationReportDeviceOptionDto>>), ScadaHttpStatuses.NotFound)]
     public async Task<IActionResult> GetEventDevices(long stationId, CancellationToken cancellationToken) =>
@@ -116,6 +125,7 @@ public class StationsController(IStationQueryService stations) : ControllerBase
             ScadaApiMessages.StationEventDevicesOk);
 
     [HttpGet("{stationId:long}/events/history")]
+    [Authorize(Policy = Permissions.History.View)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<StationEventHistoryRowDto>>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<StationEventHistoryRowDto>>), ScadaHttpStatuses.BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<StationEventHistoryRowDto>>), ScadaHttpStatuses.NotFound)]
@@ -129,7 +139,7 @@ public class StationsController(IStationQueryService stations) : ControllerBase
 
     /// <summary>Xuất Excel lịch sử sự kiện theo trạm.</summary>
     [HttpGet("{stationId:long}/events/history/export")]
-    [Authorize(Roles = ScadaRoles.Operator + "," + ScadaRoles.Admin)]
+    [Authorize(Policy = Permissions.Report.Export)]
     [Produces(ApplicationConstants.ExcelContentType)]
     [ProducesResponseType(ScadaHttpStatuses.Ok)]
     public async Task<IActionResult> ExportEventHistory(
@@ -146,6 +156,7 @@ public class StationsController(IStationQueryService stations) : ControllerBase
     /// Ack state lọc riêng qua <c>isAcknowledged</c> — không đồng nghĩa với active.
     /// </summary>
     [HttpGet("{stationId:long}/alarms/active")]
+    [Authorize(Policy = Permissions.Realtime.View)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<ActiveAlarmRowDto>>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<ActiveAlarmRowDto>>), ScadaHttpStatuses.NotFound)]
     public async Task<IActionResult> GetActiveAlarms(
@@ -157,7 +168,7 @@ public class StationsController(IStationQueryService stations) : ControllerBase
             ScadaApiMessages.StationActiveAlarmsOk);
 
     [HttpGet("{stationId:long}/alarms/active/export")]
-    [Authorize(Roles = ScadaRoles.Operator + "," + ScadaRoles.Admin)]
+    [Authorize(Policy = Permissions.Report.Export)]
     [Produces(ApplicationConstants.ExcelContentType)]
     [ProducesResponseType(ScadaHttpStatuses.Ok)]
     public async Task<IActionResult> ExportActiveAlarms(
@@ -170,6 +181,7 @@ public class StationsController(IStationQueryService stations) : ControllerBase
     }
 
     [HttpGet("{stationId:long}/reports/water-levels")]
+    [Authorize(Policy = Permissions.Report.View)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<WaterLevelReportRowDto>>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<WaterLevelReportRowDto>>), ScadaHttpStatuses.BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<WaterLevelReportRowDto>>), ScadaHttpStatuses.NotFound)]
@@ -177,6 +189,7 @@ public class StationsController(IStationQueryService stations) : ControllerBase
         this.ToActionResult(await stations.GetWaterLevelReportAsync(stationId, query, cancellationToken), ScadaApiMessages.StationWaterLevelReportOk);
 
     [HttpGet("{stationId:long}/reports/pump-temperatures")]
+    [Authorize(Policy = Permissions.Report.View)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<PumpTemperatureReportRowDto>>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<PumpTemperatureReportRowDto>>), ScadaHttpStatuses.BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<PumpTemperatureReportRowDto>>), ScadaHttpStatuses.NotFound)]
@@ -184,12 +197,14 @@ public class StationsController(IStationQueryService stations) : ControllerBase
         this.ToActionResult(await stations.GetPumpTemperatureReportAsync(stationId, query, cancellationToken), ScadaApiMessages.StationPumpTemperatureReportOk);
 
     [HttpGet("{stationId:long}/charts/devices")]
+    [Authorize(Policy = Permissions.Trend.View)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<StationChartDeviceOptionDto>>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<StationChartDeviceOptionDto>>), ScadaHttpStatuses.NotFound)]
     public async Task<IActionResult> GetChartDevices(long stationId, CancellationToken cancellationToken) =>
         this.ToActionResult(await stations.GetChartDevicesAsync(stationId, cancellationToken), ScadaApiMessages.StationChartDevicesOk);
 
     [HttpGet("{stationId:long}/devices/{deviceId:long}/charts/{chart}/history")]
+    [Authorize(Policy = Permissions.Trend.View)]
     [ProducesResponseType(typeof(ApiResponse<StationChartHistoryDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<StationChartHistoryDto>), ScadaHttpStatuses.BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<StationChartHistoryDto>), ScadaHttpStatuses.NotFound)]

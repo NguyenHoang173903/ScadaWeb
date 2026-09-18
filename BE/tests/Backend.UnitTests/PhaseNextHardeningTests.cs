@@ -46,41 +46,40 @@ public class ClientAuditOwnershipTests
 public class PhaseNextAuthorizationTests
 {
     [Fact]
-    public void AppSettingsController_IsAdminOnly()
+    public void AppSettingsController_RequiresConfigurationEdit()
     {
         var attr = typeof(AppSettingsController).GetCustomAttributes(typeof(AuthorizeAttribute), true)
             .Cast<AuthorizeAttribute>().Single();
-        Assert.Equal(ScadaRoles.Admin, attr.Roles);
+        Assert.Equal(Permissions.Configuration.Edit, attr.Policy);
     }
 
     [Fact]
-    public void MapLayersController_RequiresAuth_MutationsAdmin()
+    public void MapLayersController_RequiresAuth_MutationsConfigurationEdit()
     {
         Assert.Contains(
             typeof(MapLayersController).GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>(),
-            a => a.Roles is null || a.Roles.Length == 0);
+            a => a.Policy == Permissions.Realtime.View);
 
         var upload = typeof(MapLayersController).GetMethod(nameof(MapLayersController.Upload))!;
         Assert.Equal(
-            ScadaRoles.Admin,
-            upload.GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>().Single().Roles);
+            Permissions.Configuration.Edit,
+            upload.GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>().Single().Policy);
     }
 
     [Fact]
-    public void LicensesController_IsAdminOnly()
+    public void LicensesController_RequiresSystemAdministration()
     {
         var attr = typeof(LicensesController).GetCustomAttributes(typeof(AuthorizeAttribute), true)
             .Cast<AuthorizeAttribute>().Single();
-        Assert.Equal(ScadaRoles.Admin, attr.Roles);
+        Assert.Equal(Permissions.SystemAdministration.Manage, attr.Policy);
     }
 
     [Fact]
-    public void AlarmAcknowledge_RequiresOperatorOrAdmin()
+    public void AlarmAcknowledge_RequiresAlarmAcknowledgePermission()
     {
         var method = typeof(AlarmHistoriesController).GetMethod(nameof(AlarmHistoriesController.Acknowledge))!;
-        var roles = method.GetCustomAttributes(typeof(AuthorizeAttribute), true)
-            .Cast<AuthorizeAttribute>().Single().Roles;
-        Assert.Contains(ScadaRoles.Operator, roles);
-        Assert.Contains(ScadaRoles.Admin, roles);
+        var policy = method.GetCustomAttributes(typeof(AuthorizeAttribute), true)
+            .Cast<AuthorizeAttribute>().Single().Policy;
+        Assert.Equal(Permissions.Alarm.Acknowledge, policy);
     }
 }

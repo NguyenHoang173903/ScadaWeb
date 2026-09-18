@@ -174,6 +174,7 @@ public static class DependencyInjection
         // Argon2id is the only password hasher for both SCADA and IAM accounts.
         services.AddScoped<IPasswordHasher, Argon2idPasswordHasher>();
         services.AddScoped<IScadaTokenService, ScadaTokenService>();
+        services.AddScoped<IScadaSessionRevocationService, ScadaSessionRevocationService>();
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IConcurrentLicenseService, ConcurrentLicenseService>();
         services.AddScoped<ISystemLicenseAdminService, SystemLicenseAdminService>();

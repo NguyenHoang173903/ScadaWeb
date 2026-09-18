@@ -11,7 +11,7 @@ namespace Backend.Api.Controllers.Scada;
 [ApiController]
 [Route("api/v1/communication-configs")]
 [Produces("application/json")]
-[Authorize(Roles = ScadaRoles.AdminOnly)]
+[Authorize(Policy = Permissions.Configuration.Edit)]
 public class CommunicationConfigsController(ICommunicationConfigQueryService configs) : ControllerBase
 {
     /// <summary>

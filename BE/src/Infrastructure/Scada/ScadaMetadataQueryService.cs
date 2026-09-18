@@ -1,4 +1,5 @@
 using System.Globalization;
+using Backend.Application.Authorization;
 using Backend.Application.Common;
 using Backend.Application.Configuration;
 using Backend.Application.DTOs.Scada;
@@ -31,6 +32,7 @@ public class ScadaMetadataQueryService(
     ICurrentUserService currentUser,
     ISystemAuditService systemAudit,
     IImportExportService importExport,
+    IScadaSessionRevocationService sessionRevocation,
     IOptions<PasswordPolicyOptions> passwordOptions,
     IOptions<RealtimeOptions> realtimeOptions,
     ILogger<ScadaMetadataQueryService> logger) :
@@ -2646,7 +2648,7 @@ public class ScadaMetadataQueryService(
                 FullName = u.FullName,
                 Department = u.Department,
                 Position = u.Position,
-                Role = u.Role,
+                Role = ScadaRolePermissionResolver.ResolveCanonicalRole(u.Role),
                 Level = u.Level,
                 IsActive = u.IsActive,
                 MustChangePassword = u.MustChangePassword,
@@ -2680,7 +2682,7 @@ public class ScadaMetadataQueryService(
                 FullName = u.FullName,
                 Department = u.Department,
                 Position = u.Position,
-                Role = u.Role,
+                Role = ScadaRolePermissionResolver.ResolveCanonicalRole(u.Role),
                 Level = u.Level,
                 IsActive = u.IsActive,
                 MustChangePassword = u.MustChangePassword,
@@ -2731,7 +2733,7 @@ public class ScadaMetadataQueryService(
             if (role is null)
                 return Result<ScadaUserDto>.Failure(
                     "Auth.Validation",
-                    "Role must be viewer, Operator, or Administrator.");
+                    "Role must be VIEW, OPERATOR, TECHNICAL, or ADMIN (legacy: viewer/operator/admin also accepted).");
 
             if (request.Level is { } level && (level < 1 || level > 100))
                 return Result<ScadaUserDto>.Failure("Auth.Validation", "Level must be between 1 and 100.");
@@ -2818,8 +2820,16 @@ public class ScadaMetadataQueryService(
                 if (role is null)
                     return Result<ScadaUserDto>.Failure(
                         "Auth.Validation",
-                        "Role must be viewer, Operator, or Administrator.");
-                user.Role = role;
+                        "Role must be VIEW, OPERATOR, TECHNICAL, or ADMIN (legacy: viewer/operator/admin also accepted).");
+                if (!string.Equals(user.Role, role, StringComparison.Ordinal))
+                {
+                    user.Role = role;
+                    await sessionRevocation.RevokeAllSessionsAsync(user.Id, cancellationToken);
+                }
+                else
+                {
+                    user.Role = role;
+                }
             }
 
             if (request.Level is { } level)
@@ -2882,6 +2892,8 @@ public class ScadaMetadataQueryService(
             user.UpdatedBy = currentUser.Username;
             await db.SaveChangesAsync(cancellationToken);
 
+            await sessionRevocation.RevokeAllSessionsAsync(user.Id, cancellationToken);
+
             await systemAudit.LogAsync(new SystemAuditEntry
             {
                 Action = AuditActionNames.DeactivateUser,
@@ -2901,19 +2913,8 @@ public class ScadaMetadataQueryService(
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static string? NormalizeScadaRole(string? raw)
-    {
-        var role = (raw ?? string.Empty).Trim();
-        if (role.Length == 0) return ScadaRoles.Operator;
-        if (role.Equals("viewer", StringComparison.OrdinalIgnoreCase))
-            return ScadaRoles.Viewer;
-        if (role.Equals("operator", StringComparison.OrdinalIgnoreCase))
-            return ScadaRoles.Operator;
-        if (role.Equals("admin", StringComparison.OrdinalIgnoreCase)
-            || role.Equals("administrator", StringComparison.OrdinalIgnoreCase))
-            return ScadaRoles.Admin;
-        return null;
-    }
+    private static string? NormalizeScadaRole(string? raw) =>
+        ScadaRolePermissionResolver.TryNormalize(raw, allowEmptyAsOperator: true);
 
     private bool TryValidatePassword(string? password, out string error)
     {
@@ -2937,7 +2938,7 @@ public class ScadaMetadataQueryService(
             FullName = u.FullName,
             Department = u.Department,
             Position = u.Position,
-            Role = u.Role,
+            Role = ScadaRolePermissionResolver.ResolveCanonicalRole(u.Role),
             Level = u.Level,
             IsActive = u.IsActive,
             MustChangePassword = u.MustChangePassword,

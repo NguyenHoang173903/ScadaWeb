@@ -1,6 +1,7 @@
 using Backend.Application.Interfaces.Services;
 using Backend.Domain.Entities.Scada;
 using Backend.Infrastructure.Identity;
+using Backend.Shared.Constants;
 using Microsoft.Extensions.Options;
 
 namespace Backend.UnitTests;
@@ -78,17 +79,14 @@ public class ScadaTokenServiceRoleTests
         }));
 
     [Theory]
-    [InlineData("Admin")]
-    [InlineData("Monitor")]
-    [InlineData("MonitorExport")]
-    [InlineData("Engineer")]
-    [InlineData("Operator")]
-    [InlineData("Supervisor")]
-    [InlineData("Manager")]
-    [InlineData("Maintenance")]
-    [InlineData("Auditor")]
-    [InlineData("MaintenanceManager")]
-    public void AccessToken_Embeds_Dynamic_Role_From_User(string role)
+    [InlineData("VIEW", ScadaRoles.View)]
+    [InlineData("Viewer", ScadaRoles.View)]
+    [InlineData("OPERATOR", ScadaRoles.Operator)]
+    [InlineData("Operator", ScadaRoles.Operator)]
+    [InlineData("TECHNICAL", ScadaRoles.Technical)]
+    [InlineData("Admin", ScadaRoles.Admin)]
+    [InlineData("ADMIN", ScadaRoles.Admin)]
+    public void AccessToken_Embeds_Canonical_Role_And_Permissions(string storedRole, string canonical)
     {
         var sut = CreateSut();
         var user = new ScadaUser
@@ -96,7 +94,7 @@ public class ScadaTokenServiceRoleTests
             Id = 42,
             Username = "roleuser",
             FullName = "Role User",
-            Role = role,
+            Role = storedRole,
             IsActive = true,
             PasswordHash = "$argon2id$test"
         };
@@ -105,14 +103,41 @@ public class ScadaTokenServiceRoleTests
         var principal = sut.ValidateAccessToken(token);
 
         Assert.NotNull(principal);
-        Assert.Equal(role, principal!.FindFirst(ScadaTokenService.RoleClaimType)?.Value
-            ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value);
-        Assert.Equal("roleuser", principal.FindFirst(ScadaTokenService.UsernameClaimType)?.Value
-            ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value);
+        Assert.Equal(canonical, principal!.FindFirst(ScadaTokenService.RoleClaimType)?.Value);
+        Assert.Equal("roleuser", principal.FindFirst(ScadaTokenService.UsernameClaimType)?.Value);
         Assert.Equal("42", principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             ?? principal.FindFirst("sub")?.Value);
         Assert.False(string.IsNullOrWhiteSpace(
             principal.FindFirst(Backend.Shared.Constants.ClaimTypesExtended.SessionId)?.Value));
+
+        var permissions = principal.FindAll(Backend.Shared.Constants.ClaimTypesExtended.Permission)
+            .Select(c => c.Value).ToHashSet(StringComparer.Ordinal);
+        Assert.Contains(Backend.Shared.Constants.Permissions.Realtime.View, permissions);
+        if (canonical == ScadaRoles.View)
+            Assert.DoesNotContain(Backend.Shared.Constants.Permissions.History.View, permissions);
+        if (canonical == ScadaRoles.Admin)
+            Assert.Contains(Backend.Shared.Constants.Permissions.UserManagement.Edit, permissions);
+    }
+
+    [Fact]
+    public void AccessToken_UnknownRole_Has_No_Permissions()
+    {
+        var sut = CreateSut();
+        var user = new ScadaUser
+        {
+            Id = 7,
+            Username = "odd",
+            FullName = "Odd",
+            Role = "MaintenanceManager",
+            IsActive = true,
+            PasswordHash = "x"
+        };
+
+        var (token, _) = sut.CreateAccessToken(user, "sid");
+        var principal = sut.ValidateAccessToken(token);
+        Assert.NotNull(principal);
+        Assert.Equal("MaintenanceManager", principal!.FindFirst(ScadaTokenService.RoleClaimType)?.Value);
+        Assert.Empty(principal.FindAll(Backend.Shared.Constants.ClaimTypesExtended.Permission));
     }
 
     [Fact]
@@ -227,8 +252,10 @@ public class ConcurrentLimitInfoTests
     [Theory]
     [InlineData("Admin", true)]
     [InlineData("admin", true)]
+    [InlineData("ADMIN", true)]
     [InlineData("SuperAdmin", true)]
     [InlineData("Operator", false)]
+    [InlineData("OPERATOR", false)]
     [InlineData("Monitor", false)]
     [InlineData(null, false)]
     public void IsAdminRole_Matches_Security_Roles(string? role, bool expected)

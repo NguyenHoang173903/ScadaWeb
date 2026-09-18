@@ -11,7 +11,7 @@ namespace Backend.Api.Controllers.Scada;
 [ApiController]
 [Route("api/v1/app-settings")]
 [Produces("application/json")]
-[Authorize(Roles = ScadaRoles.AdminOnly)]
+[Authorize(Policy = Permissions.Configuration.Edit)]
 public class AppSettingsController(IAppSettingQueryService settings) : ControllerBase
 {
     [HttpGet]

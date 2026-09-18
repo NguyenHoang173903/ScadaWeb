@@ -2,6 +2,7 @@ using Backend.Application.DTOs.Scada;
 using Backend.Application.Interfaces.Services.Scada;
 using Backend.Application.Realtime;
 using Backend.Application.Scada;
+using Backend.Shared.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
@@ -11,7 +12,7 @@ namespace Backend.Api.Realtime;
 /// Realtime delta hub. Pattern: REST or Snapshot event = initial state; TagChanged = deltas.
 /// Requires JWT (access_token query for WebSocket).
 /// </summary>
-[Authorize]
+[Authorize(Policy = Permissions.Realtime.View)]
 public sealed class ScadaRealtimeHub(IServiceScopeFactory scopeFactory) : Hub
 {
     public const string TagChangedEvent = "TagChanged";

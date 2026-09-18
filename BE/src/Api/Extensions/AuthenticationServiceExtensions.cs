@@ -75,10 +75,18 @@ public static class AuthenticationServiceExtensions
                 };
             });
 
-        // Role-based policy (coarse-grained) for IAM admin APIs.
-        // SCADA roles remain free-form strings from scada.users.role.
-        services.AddAuthorizationBuilder()
-            .AddPolicy(PolicyNames.RequireAdmin, policy => policy.RequireRole(Roles.SuperAdmin, Roles.Admin))
+        // Permission policies: SCADA RBAC (JWT "permission" claims) + legacy IAM keys.
+        var auth = services.AddAuthorizationBuilder()
+            .AddPolicy(PolicyNames.RequireAdmin, policy =>
+                policy.RequireRole(Roles.SuperAdmin, Roles.Admin, ScadaRoles.Admin, "Admin"));
+
+        foreach (var permission in Permissions.AllScadaPolicies)
+        {
+            var p = permission;
+            auth.AddPolicy(p, policy => policy.RequireClaim(ClaimTypesExtended.Permission, p));
+        }
+
+        auth
             .AddPolicy(Permissions.Users.View, policy => policy.RequireClaim(ClaimTypesExtended.Permission, Permissions.Users.View))
             .AddPolicy(Permissions.Users.Create, policy => policy.RequireClaim(ClaimTypesExtended.Permission, Permissions.Users.Create))
             .AddPolicy(Permissions.Users.Update, policy => policy.RequireClaim(ClaimTypesExtended.Permission, Permissions.Users.Update))

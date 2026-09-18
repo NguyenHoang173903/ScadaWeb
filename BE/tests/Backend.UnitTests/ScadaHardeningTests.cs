@@ -1,6 +1,7 @@
-using Backend.Application.Common;
+using Backend.Api.Controllers;
 using Backend.Api.Controllers.Scada;
 using Backend.Api.Realtime;
+using Backend.Application.Common;
 using Backend.Shared.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Xunit;
@@ -34,18 +35,19 @@ public class PasswordComplexityTests
 public class ScadaAuthorizationSurfaceTests
 {
     [Theory]
-    [InlineData(typeof(ScadaUsersController), ScadaRoles.Admin)]
-    [InlineData(typeof(AppSettingsController), ScadaRoles.Admin)]
-    [InlineData(typeof(MqttConfigsController), ScadaRoles.Admin)]
-    [InlineData(typeof(CommunicationConfigsController), ScadaRoles.Admin)]
-    [InlineData(typeof(HistoryProfilesController), ScadaRoles.Admin)]
-    [InlineData(typeof(TagHistoryConfigsController), ScadaRoles.Admin)]
-    public void SensitiveControllers_RequireAdminRole(Type controllerType, string expectedRole)
+    [InlineData(typeof(ScadaUsersController), Permissions.UserManagement.View)]
+    [InlineData(typeof(AppSettingsController), Permissions.Configuration.Edit)]
+    [InlineData(typeof(MqttConfigsController), Permissions.Configuration.Edit)]
+    [InlineData(typeof(CommunicationConfigsController), Permissions.Configuration.Edit)]
+    [InlineData(typeof(HistoryProfilesController), Permissions.Configuration.Edit)]
+    [InlineData(typeof(TagHistoryConfigsController), Permissions.Configuration.Edit)]
+    [InlineData(typeof(LicensesController), Permissions.SystemAdministration.Manage)]
+    public void SensitiveControllers_RequirePermissionPolicy(Type controllerType, string expectedPolicy)
     {
         var attr = controllerType.GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
             .Cast<AuthorizeAttribute>()
             .Single();
-        Assert.Equal(expectedRole, attr.Roles);
+        Assert.Equal(expectedPolicy, attr.Policy);
     }
 
     [Theory]
@@ -61,27 +63,27 @@ public class ScadaAuthorizationSurfaceTests
     {
         Assert.Contains(
             type.GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true).Cast<AuthorizeAttribute>(),
-            a => a.Roles is null || a.Roles.Length == 0 || a.Roles.Contains(ScadaRoles.Admin, StringComparison.Ordinal));
+            a => !string.IsNullOrEmpty(a.Policy) || a.Roles is null || a.Roles.Length == 0);
     }
 
     [Fact]
-    public void SessionPolicy_Put_IsAdminOnly()
+    public void SessionPolicy_Put_RequiresSystemAdministration()
     {
         var method = typeof(SessionPolicyController).GetMethod(nameof(SessionPolicyController.Update))!;
         var attr = method.GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
             .Cast<AuthorizeAttribute>()
             .Single();
-        Assert.Equal(ScadaRoles.Admin, attr.Roles);
+        Assert.Equal(Permissions.SystemAdministration.Manage, attr.Policy);
     }
 
     [Fact]
-    public void Stations_Put_IsAdminOnly()
+    public void Stations_Put_RequiresConfigurationEdit()
     {
         var method = typeof(StationsController).GetMethod(nameof(StationsController.Update))!;
         var attr = method.GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
             .Cast<AuthorizeAttribute>()
             .Single();
-        Assert.Equal(ScadaRoles.Admin, attr.Roles);
+        Assert.Equal(Permissions.Configuration.Edit, attr.Policy);
     }
 
     [Fact]
