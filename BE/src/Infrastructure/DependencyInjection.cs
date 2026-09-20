@@ -230,6 +230,8 @@ public static class DependencyInjection
                     sp.GetRequiredService<ITagStationCodeLookup>(),
                     sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RealtimeOptions>>(),
                     sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<StationSnapshotRealtimeDataStore>>()));
+
+            services.AddHostedService<StationSnapshotChangeHostedService>();
         }
         else if (string.Equals(provider, "Redis", StringComparison.OrdinalIgnoreCase))
         {

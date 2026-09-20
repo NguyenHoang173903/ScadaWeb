@@ -122,7 +122,7 @@ public class ScadaMetadataQueryService(
 
     async Task<Result<StationDetailDto>> IStationQueryService.GetByIdAsync(long id, CancellationToken cancellationToken) =>
         await SafeAsync(async () =>
-        {
+    {
         var dto = await db.Stations.AsNoTracking()
             .Where(s => s.Id == id)
             .Select(s => new StationDetailDto
@@ -1934,7 +1934,12 @@ public class ScadaMetadataQueryService(
                 }
                 else if (tagMeta.TagId != 0 && samplesByTag.TryGetValue(tagMeta.TagId, out var pts))
                 {
-                    dto.Points = pts
+                    // Live charts: tối đa 5 điểm, điểm cuối = mới nhất.
+                    const int maxLivePoints = 5;
+                    var ordered = pts.Count > maxLivePoints
+                        ? pts.Skip(pts.Count - maxLivePoints)
+                        : pts;
+                    dto.Points = ordered
                         .Select(p => new StationChartPointDto { Timestamp = p.Time, Value = p.Value })
                         .ToList();
                 }
@@ -1963,6 +1968,7 @@ public class ScadaMetadataQueryService(
         {
             "15m" or "15min" => "15m",
             "30s" or "30sec" => "30s",
+            "5s" or "5sec" => "5s",
             "1m" or "1min" or "60s" => "1m",
             "1s" => "1s",
             "auto" or "" => "auto",
@@ -1976,6 +1982,7 @@ public class ScadaMetadataQueryService(
             return interval switch
             {
                 "1s" => ("1s", TimeSpan.FromSeconds(1)),
+                "5s" => ("5s", TimeSpan.FromSeconds(5)),
                 "30s" => ("30s", TimeSpan.FromSeconds(30)),
                 "1m" => ("1m", TimeSpan.FromMinutes(1)),
                 _ => ("15m", TimeSpan.FromMinutes(15)),

@@ -13,29 +13,25 @@
 | TTL | ~10s (observed on live Redis) |
 | Update frequency | PLC cycle (seconds) |
 
-## Payload shape
+## Payload shape (live PLC writer)
 
 ```json
 {
   "Station": "TBAB",
-  "PLCs": [
+  "PLCs": [ { "Code": "PLC1" } ],
+  "Devices": [
     {
-      "Code": "PLC1",
-      "Devices": [
+      "Code": "Level",
+      "Tags": [
         {
-          "Code": "Level",
-          "Tags": [
-            {
-              "TagId": 605,
-              "Code": "River",
-              "Tag": "Level_River",
-              "Datatype": "Real",
-              "Unit": "mét",
-              "Value": 2.36,
-              "Quality": "Good",
-              "Timestamp": "2026-09-16T09:24:06.343+07:00"
-            }
-          ]
+          "TagId": 605,
+          "Code": "River",
+          "Tag": "Level_River",
+          "Datatype": "Real",
+          "Unit": "mét",
+          "Value": 2.36,
+          "Quality": "Good",
+          "Timestamp": "2026-09-20T22:08:10.349+07:00"
         }
       ]
     }
@@ -43,8 +39,11 @@
 }
 ```
 
+Consumer also accepts legacy nested `PLCs[].Devices[]`.
+
 ## Payload notes
 
+- **Devices are at station root** (sibling of `PLCs`), not under each PLC — confirmed on live Redis `scada:station:TBAB`.
 - `Value` may be **number**, **null**, or **boolean** (digital tags).
 - Deserialization uses PascalCase-tolerant options (**not** project `JsonHelper` camelCase policy — acronym `PLCs` breaks otherwise).
 - Missing Redis key / tag → API returns `Quality=Uncertain`, `Value=null` (no fake numbers).

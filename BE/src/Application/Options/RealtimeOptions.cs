@@ -32,6 +32,12 @@ public class RealtimeOptions
     /// <summary>Cache TTL for TagId → Station.Code lookup.</summary>
     public int TagStationLookupCacheSeconds { get; set; } = 60;
 
+    /// <summary>
+    /// Poll Redis station snapshot keys and SignalR-notify subscribed screens when payload changes.
+    /// Used when Provider=StationSnapshot (PLC writer does not publish TagChanged).
+    /// </summary>
+    public int SnapshotWatchIntervalSeconds { get; set; } = 2;
+
     public bool SeedExcelOnStartup { get; set; } = true;
 
     /// <summary>Workbook used only to seed tag/device/screen mapping. Not a runtime database.</summary>

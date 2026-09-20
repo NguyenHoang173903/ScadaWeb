@@ -71,6 +71,27 @@ public class StationSnapshotRealtimeDataStoreTests
     }
 
     [Fact]
+    public void FlattenInto_maps_root_level_devices_live_plc_shape()
+    {
+        var snapshot = JsonSerializer.Deserialize<StationRealtimeSnapshotRedisModel>("""
+            {"Station":"TBAB","PLCs":[{"Code":"PLC1"}],"Devices":[{"Code":"Level","Tags":[
+              {"TagId":605,"Value":2.77,"Quality":"Good","Timestamp":"2026-09-20T22:08:10.349+07:00"},
+              {"TagId":573,"Value":376.4,"Quality":"Good","Timestamp":"2026-09-20T22:08:09.683+07:00"}
+            ]}]}
+            """, StationSnapshotRealtimeDataStore.SnapshotJsonOptions)!;
+
+        Assert.Empty(snapshot.PLCs[0].Devices);
+        Assert.Single(snapshot.Devices);
+
+        var target = new Dictionary<long, RealtimeValue>();
+        StationRealtimeSnapshotMapper.FlattenInto(snapshot, new HashSet<long> { 605, 573, 999 }, target);
+
+        Assert.Equal(2.77, Assert.IsType<double>(target[605].Value!));
+        Assert.Equal(376.4, Assert.IsType<double>(target[573].Value!));
+        Assert.False(target.ContainsKey(999));
+    }
+
+    [Fact]
     public void SnapshotOptions_deserializes_saved_tbab_payload()
     {
         var path = @"d:\WEB_TLN\BE\scripts\_tbab.json";
@@ -86,7 +107,9 @@ public class StationSnapshotRealtimeDataStoreTests
         Assert.Null(ex);
         Assert.NotNull(model);
         Assert.Equal("TBAB", model!.Station);
-        var tags = model.PLCs.SelectMany(p => p.Devices).SelectMany(d => d.Tags).ToList();
+        var tags = model.Devices.SelectMany(d => d.Tags)
+            .Concat(model.PLCs.SelectMany(p => p.Devices).SelectMany(d => d.Tags))
+            .ToList();
         Assert.Contains(tags, t => t.TagId == 605);
         Assert.True(tags.Count > 100);
     }

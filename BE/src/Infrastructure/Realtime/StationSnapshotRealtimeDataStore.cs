@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -29,6 +30,11 @@ public sealed class StationSnapshotRealtimeDataStore(
         NumberHandling = JsonNumberHandling.AllowReadingFromString
     };
 
+    /// <summary>Short in-process cache — PLC TTL ~10s; avoids re-deserializing ~140KB on every REST hit.</summary>
+    private static readonly TimeSpan SnapshotCacheTtl = TimeSpan.FromSeconds(1.5);
+    private readonly ConcurrentDictionary<string, CachedSnapshot> _snapshotCache =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public async Task<RealtimeValue?> GetAsync(long tagId, CancellationToken cancellationToken = default)
     {
         var map = await GetManyAsync([tagId], cancellationToken);
@@ -59,63 +65,85 @@ public sealed class StationSnapshotRealtimeDataStore(
         }
 
         var prefix = options.Value.StationKeyPrefix?.Trim().TrimEnd(':') ?? "scada:station";
-        var keys = stationCodes.Select(code => (RedisKey)BuildStationKey(prefix, code)).ToArray();
-
-        RedisValue[] rawValues;
-        try
-        {
-            rawValues = await redis.GetDatabase().StringGetAsync(keys);
-        }
-        catch (RedisException ex)
-        {
-            logger.LogError(
-                ex,
-                "Redis unavailable while reading station snapshots. Stations={Stations} DurationMs={DurationMs}",
-                string.Join(',', stationCodes),
-                sw.ElapsedMilliseconds);
-            throw;
-        }
-
+        var now = DateTimeOffset.UtcNow;
         var byTagId = new Dictionary<long, RealtimeValue>();
         var wanted = ids.ToHashSet();
+        var missingCodes = new List<string>();
 
-        for (var i = 0; i < stationCodes.Length; i++)
+        foreach (var stationCode in stationCodes)
         {
-            var stationCode = stationCodes[i];
-            if (rawValues[i].IsNullOrEmpty)
+            if (_snapshotCache.TryGetValue(stationCode, out var cached)
+                && now - cached.LoadedAt < SnapshotCacheTtl)
             {
-                logger.LogDebug(
-                    "Redis station key missing. Station={Station} Key={Key}",
-                    stationCode,
-                    BuildStationKey(prefix, stationCode));
-                continue;
+                StationRealtimeSnapshotMapper.FlattenInto(cached.Model, wanted, byTagId);
             }
+            else
+            {
+                missingCodes.Add(stationCode);
+            }
+        }
 
-            var json = (string)rawValues[i]!;
-            StationRealtimeSnapshotRedisModel? snapshot;
+        if (missingCodes.Count > 0)
+        {
+            var keys = missingCodes.Select(code => (RedisKey)BuildStationKey(prefix, code)).ToArray();
+            RedisValue[] rawValues;
             try
             {
-                snapshot = JsonSerializer.Deserialize<StationRealtimeSnapshotRedisModel>(json, SnapshotJsonOptions);
+                rawValues = await redis.GetDatabase().StringGetAsync(keys);
             }
-            catch (JsonException ex)
+            catch (RedisException ex)
             {
-                logger.LogWarning(
+                logger.LogError(
                     ex,
-                    "Invalid Redis station payload. Station={Station} Length={Length}",
-                    stationCode,
-                    json.Length);
-                continue;
+                    "Redis unavailable while reading station snapshots. Stations={Stations} DurationMs={DurationMs}",
+                    string.Join(',', missingCodes),
+                    sw.ElapsedMilliseconds);
+                throw;
             }
 
-            if (snapshot is null)
-                continue;
+            for (var i = 0; i < missingCodes.Count; i++)
+            {
+                var stationCode = missingCodes[i];
+                if (rawValues[i].IsNullOrEmpty)
+                {
+                    _snapshotCache.TryRemove(stationCode, out _);
+                    logger.LogDebug(
+                        "Redis station key missing. Station={Station} Key={Key}",
+                        stationCode,
+                        BuildStationKey(prefix, stationCode));
+                    continue;
+                }
 
-            StationRealtimeSnapshotMapper.FlattenInto(snapshot, wanted, byTagId);
+                var json = (string)rawValues[i]!;
+                StationRealtimeSnapshotRedisModel? snapshot;
+                try
+                {
+                    snapshot = JsonSerializer.Deserialize<StationRealtimeSnapshotRedisModel>(
+                        json,
+                        SnapshotJsonOptions);
+                }
+                catch (JsonException ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Invalid Redis station payload. Station={Station} Length={Length}",
+                        stationCode,
+                        json.Length);
+                    continue;
+                }
+
+                if (snapshot is null)
+                    continue;
+
+                _snapshotCache[stationCode] = new CachedSnapshot(snapshot, now);
+                StationRealtimeSnapshotMapper.FlattenInto(snapshot, wanted, byTagId);
+            }
         }
 
         logger.LogDebug(
-            "Station snapshot read done. Stations={StationCount} RequestedTags={TagCount} HitTags={HitCount} DurationMs={DurationMs}",
+            "Station snapshot read done. Stations={StationCount} CacheMiss={CacheMiss} RequestedTags={TagCount} HitTags={HitCount} DurationMs={DurationMs}",
             stationCodes.Length,
+            missingCodes.Count,
             ids.Length,
             byTagId.Count,
             sw.ElapsedMilliseconds);
@@ -133,4 +161,6 @@ public sealed class StationSnapshotRealtimeDataStore(
 
     public static string BuildStationKey(string prefix, string stationCode) =>
         $"{prefix}:{stationCode.Trim()}";
+
+    private sealed record CachedSnapshot(StationRealtimeSnapshotRedisModel Model, DateTimeOffset LoadedAt);
 }
