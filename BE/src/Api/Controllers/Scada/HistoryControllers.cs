@@ -12,7 +12,7 @@ namespace Backend.Api.Controllers.Scada;
 [ApiController]
 [Route("api/v1/history")]
 [Produces("application/json")]
-[Authorize]
+[Authorize(Policy = Permissions.History.View)]
 public class HistorySamplesController(IHistorySampleQueryService history) : ControllerBase
 {
     [HttpGet("1s")]
@@ -46,6 +46,7 @@ public class HistorySamplesController(IHistorySampleQueryService history) : Cont
 public class AlarmHistoriesController(IAlarmHistoryQueryService alarms) : ControllerBase
 {
     [HttpGet]
+    [Authorize(Policy = Permissions.History.View)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<AlarmHistoryDto>>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<AlarmHistoryDto>>), ScadaHttpStatuses.Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<AlarmHistoryDto>>), ScadaHttpStatuses.InternalServerError)]
@@ -57,6 +58,7 @@ public class AlarmHistoriesController(IAlarmHistoryQueryService alarms) : Contro
     /// Lọc thêm stationId / isAcknowledged / deviceId qua query.
     /// </summary>
     [HttpGet("active")]
+    [Authorize(Policy = Permissions.Realtime.View)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<AlarmHistoryDto>>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<AlarmHistoryDto>>), ScadaHttpStatuses.Unauthorized)]
     public async Task<IActionResult> GetActive([FromQuery] AlarmHistoryQuery query, CancellationToken cancellationToken)
@@ -66,15 +68,16 @@ public class AlarmHistoriesController(IAlarmHistoryQueryService alarms) : Contro
     }
 
     [HttpGet("{id:long}")]
+    [Authorize(Policy = Permissions.History.View)]
     [ProducesResponseType(typeof(ApiResponse<AlarmHistoryDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<AlarmHistoryDto>), ScadaHttpStatuses.NotFound)]
     [ProducesResponseType(typeof(ApiResponse<AlarmHistoryDto>), ScadaHttpStatuses.InternalServerError)]
     public async Task<IActionResult> GetById(long id, CancellationToken cancellationToken) =>
         this.ToActionResult(await alarms.GetByIdAsync(id, cancellationToken), "Chi tiết alarm history.");
 
-    /// <summary>Acknowledge alarm — Operator/Admin. Idempotent.</summary>
+    /// <summary>Acknowledge alarm — Operator+.</summary>
     [HttpPost("{id:long}/acknowledge")]
-    [Authorize(Roles = ScadaRoles.Operator + "," + ScadaRoles.Admin)]
+    [Authorize(Policy = Permissions.Alarm.Acknowledge)]
     [ProducesResponseType(typeof(ApiResponse<AlarmHistoryDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<AlarmHistoryDto>), ScadaHttpStatuses.NotFound)]
     [ProducesResponseType(typeof(ApiResponse<AlarmHistoryDto>), ScadaHttpStatuses.Forbidden)]
@@ -86,9 +89,9 @@ public class AlarmHistoriesController(IAlarmHistoryQueryService alarms) : Contro
             await alarms.AcknowledgeAsync(id, request?.Note, cancellationToken),
             "Đã xác nhận alarm.");
 
-    /// <summary>Clear open alarm (EndTime = UtcNow) — Operator/Admin. Keeps history row.</summary>
+    /// <summary>Clear open alarm (EndTime = UtcNow) — Operator+. Keeps history row.</summary>
     [HttpPost("{id:long}/clear")]
-    [Authorize(Roles = ScadaRoles.Operator + "," + ScadaRoles.Admin)]
+    [Authorize(Policy = Permissions.Alarm.Acknowledge)]
     [ProducesResponseType(typeof(ApiResponse<AlarmHistoryDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<AlarmHistoryDto>), ScadaHttpStatuses.NotFound)]
     public async Task<IActionResult> Clear(
@@ -104,7 +107,7 @@ public class AlarmHistoriesController(IAlarmHistoryQueryService alarms) : Contro
 [ApiController]
 [Route("api/v1/event-logs")]
 [Produces("application/json")]
-[Authorize]
+[Authorize(Policy = Permissions.History.View)]
 public class EventLogsController(IScadaEventLogQueryService events) : ControllerBase
 {
     [HttpGet]
@@ -126,7 +129,7 @@ public class EventLogsController(IScadaEventLogQueryService events) : Controller
 [ApiController]
 [Route("api/v1/user-activity-logs")]
 [Produces("application/json")]
-[Authorize]
+[Authorize(Policy = Permissions.SystemAdministration.View)]
 public class UserActivityLogsController(IUserActivityLogQueryService logs) : ControllerBase
 {
     [HttpGet]

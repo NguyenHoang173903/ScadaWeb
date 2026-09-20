@@ -1,3 +1,4 @@
+using Backend.Application.Authorization;
 using Backend.Application.DTOs.Scada;
 using Backend.Shared.Constants;
 using FluentValidation;
@@ -27,12 +28,8 @@ public class UpdateScadaUserRequestValidator : AbstractValidator<UpdateScadaUser
             .When(x => x.Level is not null);
 
         RuleFor(x => x.Role)
-            .Must(r => r is null
-                || r.Equals("viewer", StringComparison.OrdinalIgnoreCase)
-                || r.Equals("operator", StringComparison.OrdinalIgnoreCase)
-                || r.Equals("admin", StringComparison.OrdinalIgnoreCase)
-                || r.Equals("administrator", StringComparison.OrdinalIgnoreCase))
-            .WithMessage("Role must be viewer, Operator, or Administrator.")
+            .Must(r => r is null || ScadaRolePermissionResolver.IsKnownRole(r))
+            .WithMessage("Role must be VIEW, OPERATOR, TECHNICAL, or ADMIN (legacy: viewer/operator/admin also accepted).")
             .When(x => x.Role is not null);
     }
 }

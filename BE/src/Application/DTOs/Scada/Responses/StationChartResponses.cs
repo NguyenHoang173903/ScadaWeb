@@ -14,7 +14,10 @@ public class StationChartHistoryQuery
     public DateTimeOffset? From { get; set; }
     public DateTimeOffset? To { get; set; }
 
-    /// <summary>1s | 30s | 1m | 15m (mặc định chart: đọc history_1s rồi gộp 15 phút).</summary>
+    /// <summary>
+    /// 1s | 30s | 1m | 15m | auto.
+    /// Nhiệt: nguồn history_1s (+ tip Redis). Dòng: nguồn history_30s (+ tip Redis).
+    /// </summary>
     public string? Interval { get; set; }
 }
 

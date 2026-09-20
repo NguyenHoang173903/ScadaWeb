@@ -94,8 +94,9 @@ public interface IStationQueryService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lịch sử nhiều series cho chart nhiệt/dòng (1 query history, group theo tag).
-    /// Threshold lấy last-value Redis/history (đường ngang ổn định).
+    /// Lịch sử chart nhiệt/dòng theo thiết bị.
+    /// Nhiệt: <c>history_1s</c> + tip Redis. Dòng: <c>history_30s</c> + tip Redis.
+    /// Threshold (cho phép): last-value Redis (đường ngang).
     /// </summary>
     Task<Result<StationChartHistoryDto>> GetChartHistoryAsync(
         long stationId,

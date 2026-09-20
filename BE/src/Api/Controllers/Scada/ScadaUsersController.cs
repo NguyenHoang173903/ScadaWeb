@@ -12,7 +12,7 @@ namespace Backend.Api.Controllers.Scada;
 [ApiController]
 [Route("api/v1/scada-users")]
 [Produces("application/json")]
-[Authorize(Roles = ScadaRoles.AdminOnly)]
+[Authorize(Policy = Permissions.UserManagement.View)]
 public class ScadaUsersController(IScadaUserQueryService users) : ControllerBase
 {
     /// <summary>
@@ -45,6 +45,7 @@ public class ScadaUsersController(IScadaUserQueryService users) : ControllerBase
     /// Status : 200 OK | 400 | 401 | 403 | 409 | 500
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = Permissions.UserManagement.Edit)]
     [ProducesResponseType(typeof(ApiResponse<ScadaUserDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<ScadaUserDto>), ScadaHttpStatuses.BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<ScadaUserDto>), ScadaHttpStatuses.Conflict)]
@@ -59,6 +60,7 @@ public class ScadaUsersController(IScadaUserQueryService users) : ControllerBase
     /// Status : 200 OK | 400 | 401 | 403 | 404 | 409 | 500
     /// </summary>
     [HttpPut("{id:long}")]
+    [Authorize(Policy = Permissions.UserManagement.Edit)]
     [ProducesResponseType(typeof(ApiResponse<ScadaUserDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<ScadaUserDto>), ScadaHttpStatuses.BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<ScadaUserDto>), ScadaHttpStatuses.NotFound)]
@@ -76,6 +78,7 @@ public class ScadaUsersController(IScadaUserQueryService users) : ControllerBase
     /// Status : 204 No Content | 401 | 403 | 404 | 500
     /// </summary>
     [HttpDelete("{id:long}")]
+    [Authorize(Policy = Permissions.UserManagement.Edit)]
     [ProducesResponseType(ScadaHttpStatuses.NoContent)]
     [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.NotFound)]
     [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.Forbidden)]

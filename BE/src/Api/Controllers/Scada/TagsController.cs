@@ -12,7 +12,7 @@ namespace Backend.Api.Controllers.Scada;
 [ApiController]
 [Route("api/v1/tags")]
 [Produces("application/json")]
-[Authorize]
+[Authorize(Policy = Permissions.Realtime.View)]
 public class TagsController(ITagQueryService tags) : ControllerBase
 {
     /// <summary>

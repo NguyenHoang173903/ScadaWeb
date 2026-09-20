@@ -12,7 +12,7 @@ namespace Backend.Api.Controllers;
 [ApiController]
 [Route("api/v1/map-layers")]
 [Produces("application/json")]
-[Authorize]
+[Authorize(Policy = Permissions.Realtime.View)]
 public class MapLayersController(IMapLayerService mapLayers) : ControllerBase
 {
     [HttpGet]
@@ -47,7 +47,7 @@ public class MapLayersController(IMapLayerService mapLayers) : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = ScadaRoles.AdminOnly)]
+    [Authorize(Policy = Permissions.Configuration.Edit)]
     [RequestSizeLimit(50_000_000)]
     public async Task<IActionResult> Upload(
         IFormFile? file,
@@ -99,7 +99,7 @@ public class MapLayersController(IMapLayerService mapLayers) : ControllerBase
     }
 
     [HttpPatch("{id:guid}")]
-    [Authorize(Roles = ScadaRoles.AdminOnly)]
+    [Authorize(Policy = Permissions.Configuration.Edit)]
     public async Task<IActionResult> Patch(Guid id, [FromBody] UpdateMapLayerRequest request, CancellationToken cancellationToken)
     {
         var result = await mapLayers.UpdateMetaAsync(id, request, cancellationToken);
@@ -114,7 +114,7 @@ public class MapLayersController(IMapLayerService mapLayers) : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = ScadaRoles.AdminOnly)]
+    [Authorize(Policy = Permissions.Configuration.Edit)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var result = await mapLayers.DeleteAsync(id, cancellationToken);
