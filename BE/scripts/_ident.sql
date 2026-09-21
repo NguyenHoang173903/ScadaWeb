@@ -1,0 +1,1 @@
+SELECT inet_server_addr() AS addr, inet_server_port() AS port, current_database(), pg_backend_pid();

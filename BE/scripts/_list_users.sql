@@ -1,0 +1,1 @@
+SELECT "Id","Username","Role",left("PasswordHash",30) h FROM public."Users" ORDER BY "Id";

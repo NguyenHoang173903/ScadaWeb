@@ -1,0 +1,2 @@
+UPDATE public."Users" SET "PasswordHash" = '$argon2id$v=19$m=65536,t=3,p=4$yKURMa+47jX0+bp4vuRYFw$TFoIJtIuwZO1FL0x2eqF57G2Z/RpUqqKOsJ3D7LT18k', "FailedLoginCount" = 0, "LockoutUntil" = NULL, "UpdatedTime" = now() WHERE "Username" IN ('admin','viewer','operator','technical');
+SELECT "Username", left("PasswordHash",40), "FailedLoginCount" FROM public."Users";

@@ -1,0 +1,1 @@
+SELECT current_database(), "Id","Username","Role" FROM public."Users" WHERE "Username" IN ('smoketest','admin') OR "Id"=23 ORDER BY "Id";

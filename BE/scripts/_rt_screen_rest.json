@@ -1,0 +1,86 @@
+﻿[
+    {
+        "Kind":  "REST",
+        "Path":  "/api/v1/stations/1/schematic",
+        "Status":  200,
+        "Detail":  "OK"
+    },
+    {
+        "Kind":  "REST",
+        "Path":  "/api/v1/stations/1/electrical",
+        "Status":  200,
+        "Detail":  "OK"
+    },
+    {
+        "Kind":  "REST",
+        "Path":  "/api/v1/stations/1/device-cards",
+        "Status":  200,
+        "Detail":  "OK"
+    },
+    {
+        "Kind":  "REST",
+        "Path":  "/api/v1/stations/1/device-monitor",
+        "Status":  200,
+        "Detail":  "OK"
+    },
+    {
+        "Kind":  "REST",
+        "Path":  "/api/v1/stations/1/alarms/active?pageNumber=1\u0026pageSize=5",
+        "Status":  200,
+        "Detail":  "OK"
+    },
+    {
+        "Kind":  "SNAPSHOT",
+        "Path":  "/api/v1/screens/nguyen-ly/snapshot?stationId=1",
+        "Status":  200,
+        "Detail":  "isRealtime=True tags=36"
+    },
+    {
+        "Kind":  "SNAPSHOT",
+        "Path":  "/api/v1/screens/nguyen-ly/snapshot?stationId=1\u0026deviceId=25",
+        "Status":  200,
+        "Detail":  "isRealtime=True tags=0"
+    },
+    {
+        "Kind":  "SNAPSHOT",
+        "Path":  "/api/v1/screens/cong-nghe/snapshot?stationId=1",
+        "Status":  200,
+        "Detail":  "isRealtime=True tags=45"
+    },
+    {
+        "Kind":  "SNAPSHOT",
+        "Path":  "/api/v1/screens/cong-nghe/snapshot?stationId=1\u0026deviceId=25",
+        "Status":  200,
+        "Detail":  "isRealtime=True tags=0"
+    },
+    {
+        "Kind":  "SNAPSHOT",
+        "Path":  "/api/v1/screens/chi-tiet-bom/snapshot?stationId=1",
+        "Status":  400,
+        "Detail":  "FAIL"
+    },
+    {
+        "Kind":  "SNAPSHOT",
+        "Path":  "/api/v1/screens/chi-tiet-bom/snapshot?stationId=1\u0026deviceId=25",
+        "Status":  200,
+        "Detail":  "isRealtime=True tags=0"
+    },
+    {
+        "Kind":  "SNAPSHOT",
+        "Path":  "/api/v1/screens/loi/snapshot?stationId=1",
+        "Status":  200,
+        "Detail":  "isRealtime=True tags=45"
+    },
+    {
+        "Kind":  "SNAPSHOT",
+        "Path":  "/api/v1/screens/loi/snapshot?stationId=1\u0026deviceId=25",
+        "Status":  200,
+        "Detail":  "isRealtime=True tags=0"
+    },
+    {
+        "Kind":  "HUB",
+        "Path":  "/hubs/scada/negotiate",
+        "Status":  200,
+        "Detail":  "{\"negotiateVersion\":1,\"connectionId\":\"iQ_AM1AemAmiuwAgQmuXMQ\",\"connectionToken\":\"V8aTwh4-F6uHeyRoIclqzw\",\"availableTrans"
+    }
+]

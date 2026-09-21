@@ -1,0 +1,1 @@
+SELECT "Id","Username","Role" FROM public."Users" ORDER BY "Id";

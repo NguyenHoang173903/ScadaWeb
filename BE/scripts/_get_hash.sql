@@ -1,0 +1,1 @@
+SELECT "PasswordHash" FROM public."Users" WHERE "Username"='smoketest';
