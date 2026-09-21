@@ -98,7 +98,7 @@ public class StationsController(IStationQueryService stations) : ControllerBase
             await stations.GetReportTableAsync(stationId, query, cancellationToken),
             ScadaApiMessages.StationReportTableOk);
 
-    /// <summary>Xuất Excel bảng báo cáo (history_30m) — tối đa 10_000 dòng.</summary>
+    /// <summary>Xuất Excel bảng báo cáo (history_30m) theo thiết bị — tối đa 10_000 dòng.</summary>
     [HttpGet("{stationId:long}/reports/table/export")]
     [Authorize(Policy = Permissions.Report.Export)]
     [Produces(ApplicationConstants.ExcelContentType)]
@@ -112,7 +112,10 @@ public class StationsController(IStationQueryService stations) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await stations.ExportReportTableExcelAsync(stationId, query, cancellationToken);
-        return ToExcelResult(result, "BaoCao");
+        var filePrefix = query.DeviceId > 0
+            ? $"BaoCao_Device{query.DeviceId}"
+            : "BaoCao";
+        return ToExcelResult(result, filePrefix);
     }
 
     [HttpGet("{stationId:long}/events/devices")]
@@ -152,8 +155,8 @@ public class StationsController(IStationQueryService stations) : ControllerBase
     }
 
     /// <summary>
-    /// Alarm đang mở theo trạm (<c>EndTime IS NULL</c>).
-    /// Ack state lọc riêng qua <c>isAcknowledged</c> — không đồng nghĩa với active.
+    /// Alarm đang mở theo trạm — Redis <c>SCADA:{stationCode}:ALARM:{id}</c>.
+    /// Active khi <c>EndTime</c> null hoặc <c>State=ACTIVE</c>.
     /// </summary>
     [HttpGet("{stationId:long}/alarms/active")]
     [Authorize(Policy = Permissions.Realtime.View)]
@@ -179,6 +182,16 @@ public class StationsController(IStationQueryService stations) : ControllerBase
         var result = await stations.ExportActiveAlarmsExcelAsync(stationId, query, cancellationToken);
         return ToExcelResult(result, "LoiTonTai");
     }
+
+    /// <summary>Tổ vận hành — Redis <c>SCADA:{stationCode}:OPERATOR:{id}</c>.</summary>
+    [HttpGet("{stationId:long}/team")]
+    [Authorize(Policy = Permissions.Realtime.View)]
+    [ProducesResponseType(typeof(ApiResponse<StationTeamDto>), ScadaHttpStatuses.Ok)]
+    [ProducesResponseType(typeof(ApiResponse<StationTeamDto>), ScadaHttpStatuses.NotFound)]
+    public async Task<IActionResult> GetStationTeam(long stationId, CancellationToken cancellationToken) =>
+        this.ToActionResult(
+            await stations.GetStationTeamAsync(stationId, cancellationToken),
+            ScadaApiMessages.StationTeamOk);
 
     [HttpGet("{stationId:long}/reports/water-levels")]
     [Authorize(Policy = Permissions.Report.View)]

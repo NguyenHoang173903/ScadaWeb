@@ -28,6 +28,7 @@ namespace Backend.Infrastructure.Scada;
 public class ScadaMetadataQueryService(
     ApplicationDbContext db,
     IRealtimeDataStore realtimeStore,
+    IScadaRealtimeEntityStore realtimeEntities,
     IPasswordHasher passwordHasher,
     ICurrentUserService currentUser,
     ISystemAuditService systemAudit,
@@ -219,84 +220,120 @@ public class ScadaMetadataQueryService(
         CancellationToken cancellationToken = default) =>
         SafeAsync(async () =>
         {
-            var stationExists = await db.Stations.AsNoTracking()
-                .AnyAsync(s => s.Id == stationId, cancellationToken);
-            if (!stationExists)
+            var station = await db.Stations.AsNoTracking()
+                .Where(s => s.Id == stationId)
+                .Select(s => new { s.Id, s.Code })
+                .FirstOrDefaultAsync(cancellationToken);
+            if (station is null)
                 return Result<PaginationResult<ActiveAlarmRowDto>>.Failure(
                     ScadaErrorCodes.StationNotFound,
                     ScadaApiMessages.StationNotFoundFor(stationId));
 
-            var stationDeviceIds = await db.Devices.AsNoTracking()
-                .Where(d => d.Plc.StationId == stationId)
-                .Select(d => d.Id)
-                .ToListAsync(cancellationToken);
+            var stationCode = (station.Code ?? string.Empty).Trim();
+            var rawAlarms = await realtimeEntities.GetAlarmsAsync(stationCode, cancellationToken);
 
-            var q = db.AlarmHistories.AsNoTracking()
-                .Where(a => a.EndTime == null)
-                .Where(a =>
-                    a.StationId == stationId
-                    || (a.DeviceId != null && stationDeviceIds.Contains(a.DeviceId.Value)));
+            // Active = EndTime null hoặc State ACTIVE (Redis realtime).
+            IEnumerable<RealtimeAlarmRedisModel> filtered = rawAlarms.Where(a =>
+                a.EndTime is null
+                || string.Equals(a.State, "ACTIVE", StringComparison.OrdinalIgnoreCase));
 
             if (query.DeviceId is { } deviceId && deviceId > 0)
-                q = q.Where(a => a.DeviceId == deviceId);
+                filtered = filtered.Where(a => a.DeviceId == deviceId);
             if (query.IsAcknowledged is { } ack)
-                q = q.Where(a => a.IsAcknowledged == ack);
+                filtered = filtered.Where(a => a.Acknowledged == ack);
             if (!string.IsNullOrWhiteSpace(query.Type))
-                q = q.Where(a => a.Type == query.Type);
+            {
+                var type = query.Type.Trim();
+                filtered = filtered.Where(a =>
+                    string.Equals(a.Type, type, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(a.Severity, type, StringComparison.OrdinalIgnoreCase));
+            }
             if (query.HasKeyword)
             {
                 var keyword = query.Keyword!;
-                q = q.Where(a =>
-                    (a.DeviceName != null && a.DeviceName.Contains(keyword)) ||
-                    (a.TagName != null && a.TagName.Contains(keyword)) ||
-                    (a.Description != null && a.Description.Contains(keyword)) ||
-                    (a.Type != null && a.Type.Contains(keyword)));
+                filtered = filtered.Where(a =>
+                    (a.DeviceName != null && a.DeviceName.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
+                    (a.TagName != null && a.TagName.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
+                    (a.Description != null && a.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
+                    (a.Type != null && a.Type.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
+                    (a.Severity != null && a.Severity.Contains(keyword, StringComparison.OrdinalIgnoreCase)));
             }
 
-            var total = await q.CountAsync(cancellationToken);
-            var raw = await q
-                .OrderByDescending(a => a.StartTime)
+            var ordered = filtered
+                .OrderByDescending(a => a.StartTime ?? DateTimeOffset.MinValue)
                 .ThenByDescending(a => a.Id)
+                .ToList();
+
+            var total = ordered.Count;
+            var page = ordered
                 .Skip(query.Skip)
                 .Take(query.PageSize)
-                .Select(a => new
+                .Select(a =>
                 {
-                    a.Id,
-                    a.StartTime,
-                    a.EndTime,
-                    a.Type,
-                    a.Description,
-                    a.DeviceId,
-                    a.DeviceName,
-                    a.TagId,
-                    a.TagName,
-                    a.IsAcknowledged,
-                    a.StationId
+                    var type = string.IsNullOrWhiteSpace(a.Type)
+                        ? (string.IsNullOrWhiteSpace(a.Severity) ? "ERROR" : a.Severity!.Trim())
+                        : a.Type.Trim();
+                    return new ActiveAlarmRowDto
+                    {
+                        Id = a.Id,
+                        StartTime = a.StartTime ?? DateTimeOffset.UtcNow,
+                        EndTime = a.EndTime,
+                        Type = type,
+                        Title = BuildEventTitle(a.Description, a.DeviceName, a.TagName, type),
+                        Description = a.Description,
+                        DeviceId = a.DeviceId,
+                        DeviceName = a.DeviceName,
+                        TagId = a.TagId,
+                        TagName = a.TagName,
+                        IsAcknowledged = a.Acknowledged,
+                        StationId = stationId
+                    };
                 })
-                .ToListAsync(cancellationToken);
-
-            var items = raw.Select(a =>
-            {
-                var type = string.IsNullOrWhiteSpace(a.Type) ? "ERROR" : a.Type.Trim();
-                return new ActiveAlarmRowDto
-                {
-                    Id = a.Id,
-                    StartTime = a.StartTime,
-                    EndTime = a.EndTime,
-                    Type = type,
-                    Title = BuildEventTitle(a.Description, a.DeviceName, a.TagName, type),
-                    Description = a.Description,
-                    DeviceId = a.DeviceId,
-                    DeviceName = a.DeviceName,
-                    TagId = a.TagId,
-                    TagName = a.TagName,
-                    IsAcknowledged = a.IsAcknowledged,
-                    StationId = a.StationId ?? stationId
-                };
-            }).ToList();
+                .ToList();
 
             return Result<PaginationResult<ActiveAlarmRowDto>>.Success(
-                PaginationResult<ActiveAlarmRowDto>.Create(items, total, query));
+                PaginationResult<ActiveAlarmRowDto>.Create(page, total, query));
+        });
+
+    public Task<Result<StationTeamDto>> GetStationTeamAsync(
+        long stationId,
+        CancellationToken cancellationToken = default) =>
+        SafeAsync(async () =>
+        {
+            var station = await db.Stations.AsNoTracking()
+                .Where(s => s.Id == stationId)
+                .Select(s => new { s.Id, s.Code })
+                .FirstOrDefaultAsync(cancellationToken);
+            if (station is null)
+                return Result<StationTeamDto>.Failure(
+                    ScadaErrorCodes.StationNotFound,
+                    ScadaApiMessages.StationNotFoundFor(stationId));
+
+            var stationCode = (station.Code ?? string.Empty).Trim();
+            var operators = await realtimeEntities.GetOperatorsAsync(stationCode, cancellationToken);
+
+            var items = operators
+                .OrderBy(o => o.MaNhanVien ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(o => o.ID)
+                .Select(o => new StationOperatorDto
+                {
+                    Id = o.ID,
+                    FullName = o.HoTen?.Trim() ?? string.Empty,
+                    DateOfBirth = o.NgaySinh,
+                    Position = o.ChucVu,
+                    EducationLevel = o.TrinhDo,
+                    EmployeeCode = o.MaNhanVien,
+                    Phone = o.DienThoai,
+                    ShiftStartTime = o.ThoiGianNhanCa
+                })
+                .ToList();
+
+            return Result<StationTeamDto>.Success(new StationTeamDto
+            {
+                StationId = station.Id,
+                StationCode = stationCode,
+                Operators = items
+            });
         });
 
     public Task<Result<byte[]>> ExportReportTableExcelAsync(
@@ -334,10 +371,30 @@ public class ScadaMetadataQueryService(
                 .Select((h, i) => new ExcelColumn<ExportCellRow>(h, row => row.Cells.Length > i ? row.Cells[i] : ""))
                 .ToList();
 
-            var bytes = await importExport.ExportExcelAsync(flat, columns, "BaoCao", cancellationToken);
-            await AuditExportAsync("StationReport", stationId.ToString(CultureInfo.InvariantCulture), bytes.Length, cancellationToken);
+            // Template cột theo thiết bị (Level / Pump / Metter) — sheet đặt tên theo Device.Code.
+            var sheetName = BuildReportExcelSheetName(table.DeviceCode, table.DeviceId);
+            var bytes = await importExport.ExportExcelAsync(flat, columns, sheetName, cancellationToken);
+            await AuditExportAsync(
+                "StationReport",
+                $"{stationId}:{table.DeviceId}:{table.DeviceCode}",
+                bytes.Length,
+                cancellationToken);
             return Result<byte[]>.Success(bytes);
         });
+
+    private static string BuildReportExcelSheetName(string? deviceCode, long deviceId)
+    {
+        var code = string.IsNullOrWhiteSpace(deviceCode) ? $"Device{deviceId}" : deviceCode.Trim();
+        var raw = $"BaoCao_{code}";
+        var cleaned = new char[Math.Min(raw.Length, 31)];
+        var n = 0;
+        foreach (var ch in raw)
+        {
+            if (n >= cleaned.Length) break;
+            cleaned[n++] = ch is '\\' or '/' or '?' or '*' or '[' or ']' or ':' ? '_' : ch;
+        }
+        return n == 0 ? "BaoCao" : new string(cleaned, 0, n);
+    }
 
     public Task<Result<byte[]>> ExportEventHistoryExcelAsync(
         long stationId,
@@ -1803,47 +1860,28 @@ public class ScadaMetadataQueryService(
                 .Distinct()
                 .ToList();
 
-            // Measured history theo loại đồ thị:
-            //   temperature → history_1s
-            //   current     → history_30s
+            // Measured history: temperature + current → history_1m
             // Redis: điểm realtime (tip) cho measured + ngưỡng cho phép — không invent.
-            var chartKind = (chart ?? string.Empty).Trim().ToLowerInvariant();
-            var useHistory30s = chartKind is StationChartCatalog.Current or "dong" or "ampere";
-
             var samplesByTag = new Dictionary<long, List<(DateTimeOffset Time, double Value)>>();
             if (measuredTagIds.Count > 0)
             {
-                List<(long TagId, DateTimeOffset Time, double Value)> primary;
-                if (useHistory30s)
-                {
-                    var rows = await db.History30s.AsNoTracking()
-                        .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
-                        .OrderBy(h => h.Time)
-                        .Select(h => new { h.TagId, h.Time, h.Value })
-                        .ToListAsync(cancellationToken);
-                    primary = rows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
-                    // Nguồn gốc 30s — không hạ interval xuống 1s.
-                    if (interval is "auto" or "1s")
-                        interval = "30s";
-                    if (bucket.Size < TimeSpan.FromSeconds(30))
-                        bucket = ("30s", TimeSpan.FromSeconds(30));
-                }
-                else
-                {
-                    var rows = await db.History1s.AsNoTracking()
-                        .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
-                        .OrderBy(h => h.Time)
-                        .Select(h => new { h.TagId, h.Time, h.Value })
-                        .ToListAsync(cancellationToken);
-                    primary = rows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
-                }
+                var rows = await db.History1m.AsNoTracking()
+                    .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
+                    .OrderBy(h => h.Time)
+                    .Select(h => new { h.TagId, h.Time, h.Value })
+                    .ToListAsync(cancellationToken);
+                var primary = rows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
+
+                // Nguồn gốc 1m — không hạ interval xuống 1s/5s/30s.
+                if (interval is "auto" or "1s" or "5s" or "30s")
+                    interval = "1m";
+                if (bucket.Size < TimeSpan.FromMinutes(1))
+                    bucket = ("1m", TimeSpan.FromMinutes(1));
 
                 if (primary.Count > 0)
                 {
                     var bucketTicks = bucket.Size.Ticks;
-                    var minBucket = useHistory30s
-                        ? TimeSpan.FromSeconds(30).Ticks
-                        : TimeSpan.FromSeconds(1).Ticks;
+                    var minBucket = TimeSpan.FromMinutes(1).Ticks;
 
                     foreach (var group in primary.GroupBy(x => x.TagId))
                     {
@@ -1934,12 +1972,7 @@ public class ScadaMetadataQueryService(
                 }
                 else if (tagMeta.TagId != 0 && samplesByTag.TryGetValue(tagMeta.TagId, out var pts))
                 {
-                    // Live charts: tối đa 5 điểm, điểm cuối = mới nhất.
-                    const int maxLivePoints = 5;
-                    var ordered = pts.Count > maxLivePoints
-                        ? pts.Skip(pts.Count - maxLivePoints)
-                        : pts;
-                    dto.Points = ordered
+                    dto.Points = pts
                         .Select(p => new StationChartPointDto { Timestamp = p.Time, Value = p.Value })
                         .ToList();
                 }

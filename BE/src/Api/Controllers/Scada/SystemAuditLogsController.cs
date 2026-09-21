@@ -1,8 +1,10 @@
 using Backend.Application.DTOs.Audit;
 using Backend.Application.Interfaces.Services;
 using Backend.Shared.Constants;
+using Backend.Shared.Helpers;
 using Backend.Shared.Pagination;
 using Backend.Shared.Responses;
+using Backend.Shared.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -29,6 +31,23 @@ public class SystemAuditLogsController(ISystemAuditLogQueryService auditLogs) : 
     [ProducesResponseType(typeof(ApiResponse<PaginationResult<SystemAuditLogDto>>), ScadaHttpStatuses.InternalServerError)]
     public async Task<IActionResult> GetAll([FromQuery] SystemAuditLogQuery query, CancellationToken cancellationToken) =>
         this.ToActionResult(await auditLogs.GetPagedAsync(query, cancellationToken), "Danh sách system audit log.");
+
+    /// <summary>Xuất Excel nhật ký đăng nhập / audit (cùng filter với GET list).</summary>
+    [HttpGet("export")]
+    [Authorize(Policy = Permissions.Report.Export)]
+    [Produces(ApplicationConstants.ExcelContentType)]
+    [ProducesResponseType(ScadaHttpStatuses.Ok)]
+    public async Task<IActionResult> Export([FromQuery] SystemAuditLogQuery query, CancellationToken cancellationToken)
+    {
+        var result = await auditLogs.ExportExcelAsync(query, cancellationToken);
+        if (result.IsFailure)
+            return this.ToActionResult(result, string.Empty);
+
+        return File(
+            result.Value!,
+            ApplicationConstants.ExcelContentType,
+            FileHelper.GenerateTimestampedFileName("DangNhap", "xlsx"));
+    }
 
     /// <summary>Chi tiết 1 audit log theo Id.</summary>
     [HttpGet("{id:long}")]
