@@ -9,7 +9,7 @@ Quy uoc:
 - SCADA Admin role: Viewer / Operator / Admin.
 - Map layers: GET/POST/PATCH/DELETE /api/v1/map-layers (Admin mutate).
 - Dashboard stations: dung GET /api/v1/stations (co lat/lng); realtime qua Redis/SignalR.
-- Team: FE mock — chua co BE.
+- Team: GET /api/v1/stations/{stationId}/team — nguon Redis SCADA:{stationCode}:OPERATOR:*; quyen Realtime.View.
 - Alarm ack/clear: POST /api/v1/alarm-histories/{id}/acknowledge|clear
 - Client audit POST /api/v1/audit-logs — khong thay the BE audit Login/Export/...
 - License CRUD: /api/v1/licenses (Admin); key masked.

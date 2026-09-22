@@ -1,13 +1,13 @@
+import {
+  PUMP_STATUS_COLORS,
+  type PumpVisualStatus,
+} from './pumpStatusPalette'
+
 /** Full viewBox — re-export layout cố định (không nằm trong data bơm). */
 export { SCHEMATIC_WIDTH, SCHEMATIC_HEIGHT } from './schematicLayout'
 
 /** Trạng thái khối M (+ thẻ / chú thích tổng) */
-export type MotorStatus =
-  | 'running'
-  | 'error'
-  | 'stopped'
-  | 'maintenance'
-  | 'unknown'
+export type MotorStatus = PumpVisualStatus
 
 /** Trạng thái khối KĐM — độc lập với M (không có xám / bảo trì) */
 export type KdmStatus = 'running' | 'error' | 'stopped'
@@ -135,11 +135,11 @@ export const SCHEMATIC_MOTOR_RADIAL: Record<
   MotorStatus,
   readonly [string, string, string, string, string]
 > = {
-  running: ['#79FFC0', '#58EAA3', '#39CF83', '#1EA45B', '#0B6F37'],
-  error: ['#FDFF79', '#E8EA58', '#CFC039', '#A4871E', '#6F650B'],
-  stopped: ['#FF7979', '#EA5858', '#CF3939', '#A41E1E', '#6F0B0B'],
-  maintenance: ['#6F9AD3', '#689FE5', '#3F85DF', '#226FD3', '#0452B8'],
-  unknown: ['#D8D4D5', '#C5C0C1', '#ABA6A7', '#8E8A8B', '#6A6667'],
+  running: ['#79FFC0', '#58EAA3', PUMP_STATUS_COLORS.running, '#1EA45B', '#0B6F37'],
+  error: ['#FDFF79', '#E8EA58', PUMP_STATUS_COLORS.error, '#A4871E', '#6F650B'],
+  stopped: ['#FF7979', '#EA5858', PUMP_STATUS_COLORS.stopped, '#A41E1E', '#6F0B0B'],
+  maintenance: ['#6F9AD3', '#689FE5', PUMP_STATUS_COLORS.maintenance, '#226FD3', '#0452B8'],
+  unknown: ['#D8D4D5', '#C5C0C1', PUMP_STATUS_COLORS.unknown, '#8E8A8B', '#6A6667'],
 }
 
 const MOTOR_RADIAL_OFFSETS = [undefined, '0.28', '0.55', '0.8', '1'] as const

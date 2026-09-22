@@ -113,12 +113,13 @@ Query danh sách kế thừa `PaginationRequest` luôn có thêm:
 | GET | `/api/v1/stations` | Auth | Danh sách (có `latitude`/`longitude` cho dashboard map) |
 | PUT | `/api/v1/stations/{id}` | Admin | Cập nhật metadata |
 | GET | `/api/v1/stations/{id}/alarms/active` | Auth | Alarm mở theo trạm |
+| GET | `/api/v1/stations/{id}/team` | `Realtime.View` | Tổ vận hành đang nhận ca từ Redis |
 | GET | `.../reports/table/export`, `.../events/history/export` | Operator,Admin | Excel server-side |
 | GET | `/api/v1/plcs`, `/devices`, `/tags` | Auth | Metadata đọc |
 | GET | `/api/v1/history-profiles`, `/tag-history-configs`, `/mqtt-configs`, `/communication-configs` | Admin | Cấu hình |
 | GET | `/api/v1/history/1s|1m|30m` | Auth | Mẫu lịch sử — bắt buộc `from`/`to` |
 
-> **Team:** chưa có BE entity — FE đang mock. **IAlarmService (Industrial Guid):** vẫn stub; ack/clear thật dùng `alarm_history` (long id).
+> **Team:** endpoint đọc từ Redis `SCADA:{stationCode}:OPERATOR:*`; chưa có entity/CRUD nhân sự PostgreSQL. **IAlarmService (Industrial Guid):** vẫn stub; ack/clear thật dùng `alarm_history` (long id).
 
 ---
 
@@ -497,7 +498,7 @@ Controller
 
 1. **Hai hệ user:** `app.Users` (IAM / JWT) ≠ `scada.users` (`ScadaUser` vận hành SCADA).
 2. **SCADA API** — GET vận hành + mutation Admin (users/stations/session/app-settings/map/licenses) + alarm ack/clear Operator.
-3. **Team** — chưa có BE; FE mock.
+3. **Team** — `GET /stations/{stationId}/team`, nguồn Redis realtime; chưa có CRUD nhân sự PostgreSQL.
 4. **Industrial `IAlarmService` (Guid)** — stub; production ack/clear = `HistoryQueryService` + `alarm_history`.
 3. **History bắt buộc `from` + `to`** — tránh quét cả hypertable.
 4. Có **hai** bộ DTO Industrial (Guid, tương lai) khác bộ History/SCADA đang dùng API (`long`).

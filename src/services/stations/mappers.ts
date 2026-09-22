@@ -7,12 +7,14 @@ import type {
   PumpBranch,
 } from '@/pages/StationDetailPage/schematicMock'
 import type { ProcessPumpCard, ProcessPumpStatus } from '@/pages/StationDetailPage/processMock'
+import type { TeamMember } from '@/pages/StationDetailPage/teamMock'
 import type { PumpStation } from '@/data/pumpStations'
 import type {
   DeviceMonitorItemDto,
   SchematicPumpDto,
   StationDetailDto,
   StationElectricalDto,
+  StationOperatorDto,
 } from './stationsApi'
 
 function num(value: number | null | undefined, fallback = 0) {
@@ -24,6 +26,33 @@ function formatRuntime(hours: number | null | undefined) {
   const whole = Math.floor(h)
   const minutes = Math.round((h - whole) * 60)
   return `${whole}h${minutes}'`
+}
+
+function formatDateOnly(value?: string | null) {
+  if (!value) return '—'
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const pad = (part: number) => String(part).padStart(2, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`
+}
+
+export function mapStationOperator(operator: StationOperatorDto): TeamMember {
+  return {
+    id: String(operator.id),
+    employeeId: operator.employeeCode?.trim() || `#${operator.id}`,
+    fullName: operator.fullName?.trim() || 'Chưa cập nhật họ tên',
+    role: operator.position?.trim() || 'Nhân viên vận hành',
+    birthDate: formatDateOnly(operator.dateOfBirth),
+    qualification: operator.educationLevel?.trim() || '—',
+    phone: operator.phone?.trim() || '—',
+    shiftStartAt: formatDateTime(operator.shiftStartTime),
+  }
 }
 
 function asDeviceStatus(status: string): DevicePumpStatus {
@@ -56,6 +85,7 @@ function asLockStatus(status: string): LockStatus {
 
 function asProcessStatus(status: string): ProcessPumpStatus {
   if (status === 'running' || status === 'stopped' || status === 'error') return status
+  if (status === 'maintenance') return 'maintenance'
   return 'unknown'
 }
 
@@ -190,7 +220,22 @@ export function mapElectricalParams(
   dto: StationElectricalDto,
   fallback: ElectricalParams,
 ): ElectricalParams {
-  const params = dto.items[0]?.parameters ?? []
+  // The API returns every station device; items[0] may be Level/Pump and have
+  // no electrical tags. Prefer the station's total meter (Meter0/Metter0),
+  // then fall back to the item with the most available electrical values.
+  const totalMeter = dto.items.find((item) =>
+    /^met+er0$/i.test(item.equipment.code.trim()),
+  )
+  const bestAvailable = dto.items.reduce<(typeof dto.items)[number] | undefined>(
+    (best, item) => {
+      const available = item.parameters.filter((p) => p.value != null).length
+      const bestAvailable =
+        best?.parameters.filter((p) => p.value != null).length ?? -1
+      return available > bestAvailable ? item : best
+    },
+    undefined,
+  )
+  const params = (totalMeter ?? bestAvailable)?.parameters ?? []
   const pick = (key: string) => params.find((p) => p.key === key)?.value
 
   return {

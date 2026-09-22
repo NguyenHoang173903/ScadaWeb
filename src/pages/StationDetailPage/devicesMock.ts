@@ -1,19 +1,19 @@
-export type DevicePumpStatus =
-  | 'running'
-  | 'stopped'
-  | 'error'
-  | 'maintenance'
-  | 'unknown'
+import {
+  PUMP_STATUS_COLORS,
+  type PumpVisualStatus,
+} from './pumpStatusPalette'
+
+export type DevicePumpStatus = PumpVisualStatus
 
 export const DEVICE_STATUS_META: Record<
   DevicePumpStatus,
   { label: string; color: string }
 > = {
-  running: { label: 'Bơm đang chạy', color: '#7CFC00' },
-  stopped: { label: 'Bơm đang dừng', color: '#ef4444' },
-  error: { label: 'Bơm đang lỗi', color: '#eab308' },
-  maintenance: { label: 'Bơm bảo trì', color: '#94a3b8' },
-  unknown: { label: 'Không xác định', color: '#a3a3a3' },
+  running: { label: 'Bơm đang chạy', color: PUMP_STATUS_COLORS.running },
+  stopped: { label: 'Bơm đang dừng', color: PUMP_STATUS_COLORS.stopped },
+  error: { label: 'Bơm đang lỗi', color: PUMP_STATUS_COLORS.error },
+  maintenance: { label: 'Bơm bảo trì', color: PUMP_STATUS_COLORS.maintenance },
+  unknown: { label: 'Không xác định', color: PUMP_STATUS_COLORS.unknown },
 }
 
 export type DevicePump = {

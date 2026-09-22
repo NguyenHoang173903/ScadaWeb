@@ -270,7 +270,7 @@ export function LoginPage() {
                       return
                     }
                     reportAuthEvent({ eventType: 'login', username: apiResult.data.username })
-                    enterApp(apiResult.data)
+                    enterApp(apiResult.data, remember)
                     navigate(ROUTES.dashboard)
                     setBusy(false)
                     return

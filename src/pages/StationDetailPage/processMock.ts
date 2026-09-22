@@ -1,15 +1,16 @@
+import {
+  PUMP_STATUS_COLORS,
+  type PumpVisualStatus,
+} from './pumpStatusPalette'
+
 /** ViewBox — re-export layout cố định (không nằm trong data bơm). */
 export { PROCESS_WIDTH, PROCESS_HEIGHT } from './processLayout'
 
-export type ProcessPumpStatus = 'running' | 'error' | 'stopped' | 'unknown'
+export type ProcessPumpStatus = PumpVisualStatus
 
 /** Màu fill cho phần vàng (#FFFF13) theo trạng thái runtime */
-export const PROCESS_PUMP_COLORS: Record<ProcessPumpStatus, string> = {
-  running: '#22c55e',
-  error: '#ef4444',
-  stopped: '#dc2626',
-  unknown: '#FFFF13',
-}
+export const PROCESS_PUMP_COLORS: Record<ProcessPumpStatus, string> =
+  PUMP_STATUS_COLORS
 
 /** Data runtime / API — không chứa tọa độ SVG. */
 export type ProcessPumpCard = {

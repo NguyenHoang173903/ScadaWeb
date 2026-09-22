@@ -156,7 +156,8 @@
   text-align: center;
 }
 
-.statusBar[data-status='stopped'] {
+.statusBar[data-status='stopped'],
+.statusBar[data-status='maintenance'] {
   color: #ffffff;
 }
 

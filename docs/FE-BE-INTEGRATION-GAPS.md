@@ -62,14 +62,15 @@
 
 ### BE-04 — Tổ vận hành / ca kíp
 
-**Vấn đề:** FE trang Team hiển thị empty state — không còn mock giả dữ liệu.
-
-**Đề xuất tối thiểu:**
+**Đã tích hợp:** FE gọi endpoint hiện có:
 ```
 GET /api/v1/stations/{stationId}/team
 ```
-Item: `employeeId`, `fullName`, `role`, `birthDate`, `qualification`, `phone`, `shiftStartAt`  
-(Tuỳ chọn CRUD sau.)
+Nguồn: Redis `SCADA:{stationCode}:OPERATOR:*`; yêu cầu quyền `Realtime.View`.
+Response gồm `employeeCode`, `fullName`, `position`, `dateOfBirth`,
+`educationLevel`, `phone`, `shiftStartTime`. FE map sang card và refresh mỗi 15 giây.
+
+CRUD nhân sự/ca kíp lưu PostgreSQL vẫn là hạng mục tùy chọn sau.
 
 ---
 

@@ -463,23 +463,3 @@
   border-radius: 50%;
   border: 1px solid rgb(0 0 0 / 25%);
 }
-
-.dotRunning {
-  background: #22c55e;
-}
-
-.dotError {
-  background: #eab308;
-}
-
-.dotStopped {
-  background: #ef4444;
-}
-
-.dotMaintenance {
-  background: #2563eb;
-}
-
-.dotUnknown {
-  background: #9ca3af;
-}

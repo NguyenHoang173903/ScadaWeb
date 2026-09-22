@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import schematicDiagramSvg from '@/assets/images/sdnl_3.svg?raw'
 import { schematicPumpLeftPercent } from './schematicLayout'
+import { PUMP_STATUS_COLORS } from './pumpStatusPalette'
 import {
   ELECTRICAL_PARAMS,
   PUMP_BRANCHES,
@@ -201,23 +202,23 @@ export function SchematicDiagram({
 
       <ul className={styles.schematicLegend} aria-label="Chú thích trạng thái">
         <li>
-          <span className={`${styles.legendDot} ${styles.dotRunning}`} />
+          <span className={styles.legendDot} style={{ background: PUMP_STATUS_COLORS.running }} />
           Đang chạy
         </li>
         <li>
-          <span className={`${styles.legendDot} ${styles.dotError}`} />
+          <span className={styles.legendDot} style={{ background: PUMP_STATUS_COLORS.error }} />
           Lỗi
         </li>
         <li>
-          <span className={`${styles.legendDot} ${styles.dotStopped}`} />
+          <span className={styles.legendDot} style={{ background: PUMP_STATUS_COLORS.stopped }} />
           Dừng
         </li>
         <li>
-          <span className={`${styles.legendDot} ${styles.dotMaintenance}`} />
+          <span className={styles.legendDot} style={{ background: PUMP_STATUS_COLORS.maintenance }} />
           Đang bảo trì, sửa chữa
         </li>
         <li>
-          <span className={`${styles.legendDot} ${styles.dotUnknown}`} />
+          <span className={styles.legendDot} style={{ background: PUMP_STATUS_COLORS.unknown }} />
           Không xác định
         </li>
       </ul>

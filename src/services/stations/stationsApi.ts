@@ -138,6 +138,23 @@ export type StationElectricalDto = {
   }>
 }
 
+export type StationOperatorDto = {
+  id: number
+  fullName: string
+  dateOfBirth?: string | null
+  position?: string | null
+  educationLevel?: string | null
+  employeeCode?: string | null
+  phone?: string | null
+  shiftStartTime?: string | null
+}
+
+export type StationTeamDto = {
+  stationId: number
+  stationCode: string
+  operators: StationOperatorDto[]
+}
+
 export type StationChartDeviceOptionDto = { id: number; name: string }
 
 export type StationChartHistoryDto = {
@@ -228,6 +245,10 @@ export async function getStationSchematic(stationId: number) {
 
 export async function getStationElectrical(stationId: number) {
   return apiClient.get<StationElectricalDto>(`/stations/${stationId}/electrical`)
+}
+
+export async function getStationTeam(stationId: number) {
+  return apiClient.get<StationTeamDto>(`/stations/${stationId}/team`)
 }
 
 export async function getChartDevices(stationId: number) {

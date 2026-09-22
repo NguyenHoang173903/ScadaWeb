@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import deviceSvgRaw from '@/assets/icons/device.svg?raw'
 import { DEVICE_STATUS_META, type DevicePumpStatus } from './devicesMock'
 import styles from './DevicesPage.module.css'
@@ -16,8 +16,11 @@ export function DeviceIcon({ status }: DeviceIconProps) {
         .replace(/<svg([^>]*)>/i, `<svg$1 class="${styles.deviceSvg}">`),
     [],
   )
+  // Keep the same innerHTML object so realtime metric updates do not restore
+  // the original yellow SVG while the pump status itself is unchanged.
+  const svgMarkup = useMemo(() => ({ __html: html }), [html])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const host = hostRef.current
     if (!host) return
     const color = DEVICE_STATUS_META[status].color
@@ -30,7 +33,7 @@ export function DeviceIcon({ status }: DeviceIconProps) {
     <div
       ref={hostRef}
       className={styles.deviceIcon}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={svgMarkup}
       aria-hidden="true"
     />
   )
