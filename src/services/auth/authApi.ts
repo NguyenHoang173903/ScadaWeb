@@ -55,23 +55,27 @@ export type LoginResult =
       blockedUntil?: number | null
     }
 
-function persistTokens(data: AuthTokenResponse) {
+function persistTokens(data: AuthTokenResponse, remember: boolean) {
   setAuthTokens({
     accessToken: data.accessToken,
     refreshToken: data.refreshToken,
     sessionId: data.sessionId,
     accessTokenExpiresAt: data.accessTokenExpiresAt,
-  })
+  }, remember)
 }
 
-export async function loginWithApi(username: string, password: string): Promise<LoginResult> {
+export async function loginWithApi(
+  username: string,
+  password: string,
+  remember = false,
+): Promise<LoginResult> {
   try {
     const data = await http<AuthTokenResponse>('/auth/login', {
       method: 'POST',
       body: { username, password },
       anonymous: true,
     })
-    persistTokens(data)
+    persistTokens(data, remember)
     return { ok: true, data }
   } catch (error) {
     if (!isApiError(error)) {

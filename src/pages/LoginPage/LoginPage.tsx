@@ -29,7 +29,12 @@ import {
   PASSWORD_CHALLENGE_COPY,
   type PasswordChallengeReason,
 } from '@/settings/authAccounts'
-import { beginSession } from '@/settings/session'
+import { getRefreshToken } from '@/settings/authToken'
+import {
+  beginSession,
+  hasActiveSession,
+  isSessionExpired,
+} from '@/settings/session'
 import { fetchSessionPolicy } from '@/services/sessionPolicy/sessionPolicyApi'
 import { setSessionPolicy } from '@/settings/sessionPolicy'
 import styles from './LoginPage.module.css'
@@ -57,12 +62,15 @@ function challengeFromAuth(data: AuthTokenResponse): PasswordChallengeReason | n
   return null
 }
 
-function enterApp(data: Pick<AuthTokenResponse, 'username' | 'fullName' | 'displayName' | 'role'>) {
+function enterApp(
+  data: Pick<AuthTokenResponse, 'username' | 'fullName' | 'displayName' | 'role'>,
+  remember: boolean,
+) {
   beginSession({
     username: data.username,
     displayName: data.fullName || data.displayName,
     role: data.role,
-  })
+  }, remember)
   void fetchSessionPolicy()
     .then((policy) => setSessionPolicy({ idleTimeoutMinutes: policy.idleTimeoutMinutes }))
     .catch(() => {
@@ -83,11 +91,22 @@ export function LoginPage() {
     username: string
     reason: PasswordChallengeReason
     currentPassword: string
+    remember: boolean
   } | null>(null)
   const [resetToken, setResetToken] = useState<{
     username: string
     token: string
   } | null>(null)
+
+  useEffect(() => {
+    if (
+      getRefreshToken() &&
+      hasActiveSession() &&
+      !isSessionExpired()
+    ) {
+      navigate(ROUTES.dashboard, { replace: true })
+    }
+  }, [navigate])
 
   useEffect(() => {
     let cancelled = false
@@ -170,14 +189,14 @@ export function LoginPage() {
                       fullName: me.fullName,
                       displayName: me.displayName,
                       role: me.role,
-                    })
+                    }, challenge.remember)
                   } catch {
                     enterApp({
                       username: challenge.username,
                       fullName: challenge.username,
                       displayName: challenge.username,
                       role: '',
-                    })
+                    }, challenge.remember)
                   }
                   navigate(ROUTES.dashboard)
                 } catch (error) {
@@ -229,14 +248,14 @@ export function LoginPage() {
                   }
                 })()
               }}
-              onSubmit={({ username, password }) => {
+              onSubmit={({ username, password, remember }) => {
                 void (async () => {
                   if (busy) return
                   setBusy(true)
                   setLoginError('')
                   setLoginWarning('')
 
-                  const apiResult = await loginWithApi(username, password)
+                  const apiResult = await loginWithApi(username, password, remember)
 
                   if (apiResult.ok) {
                     const reason = challengeFromAuth(apiResult.data)
@@ -245,6 +264,7 @@ export function LoginPage() {
                         username: apiResult.data.username,
                         reason,
                         currentPassword: password,
+                        remember,
                       })
                       setBusy(false)
                       return
@@ -265,6 +285,7 @@ export function LoginPage() {
                           username: local.account.username,
                           reason: local.challenge,
                           currentPassword: password,
+                          remember,
                         })
                         setBusy(false)
                         return
@@ -276,7 +297,7 @@ export function LoginPage() {
                         username: sessionUser,
                         displayName: account?.fullName,
                         role: account?.role,
-                      })
+                      }, remember)
                       navigate(ROUTES.dashboard)
                       setBusy(false)
                       return

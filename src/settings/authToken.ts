@@ -8,11 +8,11 @@ export type AuthTokens = {
 }
 
 let tokens: AuthTokens | null = null
+let persistent = false
 
-function readStored(): AuthTokens | null {
+function parseStored(raw: string | null): AuthTokens | null {
+  if (!raw) return null
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
     const parsed = JSON.parse(raw) as AuthTokens
     if (!parsed?.accessToken || !parsed?.refreshToken) return null
     return parsed
@@ -21,10 +21,26 @@ function readStored(): AuthTokens | null {
   }
 }
 
+function readStored(): AuthTokens | null {
+  const sessionTokens = parseStored(sessionStorage.getItem(STORAGE_KEY))
+  if (sessionTokens) return sessionTokens
+
+  const rememberedTokens = parseStored(localStorage.getItem(STORAGE_KEY))
+  if (rememberedTokens) {
+    persistent = true
+    return rememberedTokens
+  }
+  return null
+}
+
 function persist() {
   try {
-    if (!tokens) sessionStorage.removeItem(STORAGE_KEY)
-    else sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tokens))
+    sessionStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(STORAGE_KEY)
+    if (!tokens) return
+
+    const storage = persistent ? localStorage : sessionStorage
+    storage.setItem(STORAGE_KEY, JSON.stringify(tokens))
   } catch {
     // Ignore private mode / quota.
   }
@@ -48,12 +64,14 @@ export function getAuthTokens() {
   return tokens ? { ...tokens } : null
 }
 
-export function setAuthTokens(next: AuthTokens) {
+export function setAuthTokens(next: AuthTokens, remember = persistent) {
   tokens = { ...next }
+  persistent = remember
   persist()
 }
 
 export function clearAuthTokens() {
   tokens = null
+  persistent = false
   persist()
 }

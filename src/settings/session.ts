@@ -12,10 +12,14 @@ type SessionState = SessionProfile & {
   lastActivityAt: number
 }
 
-function readSession(): SessionState | null {
+type StoredSession = {
+  state: SessionState
+  persistent: boolean
+}
+
+function parseSession(raw: string | null): SessionState | null {
+  if (!raw) return null
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
     const parsed = JSON.parse(raw) as SessionState
     if (!parsed?.lastActivityAt) return null
     return parsed
@@ -24,33 +28,53 @@ function readSession(): SessionState | null {
   }
 }
 
-function writeSession(state: SessionState) {
+function readStoredSession(): StoredSession | null {
+  const session = parseSession(sessionStorage.getItem(STORAGE_KEY))
+  if (session) return { state: session, persistent: false }
+
+  const remembered = parseSession(localStorage.getItem(STORAGE_KEY))
+  return remembered ? { state: remembered, persistent: true } : null
+}
+
+function readSession(): SessionState | null {
+  return readStoredSession()?.state ?? null
+}
+
+function writeSession(state: SessionState, persistent: boolean) {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    sessionStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(STORAGE_KEY)
+    const storage = persistent ? localStorage : sessionStorage
+    storage.setItem(STORAGE_KEY, JSON.stringify(state))
   } catch {
     // Ignore private mode / quota errors.
   }
 }
 
-export function beginSession(profile?: SessionProfile) {
-  const current = readSession()
+export function beginSession(profile?: SessionProfile, remember?: boolean) {
+  const stored = readStoredSession()
+  const current = stored?.state
   writeSession({
     lastActivityAt: Date.now(),
     username: profile?.username ?? current?.username ?? '',
     displayName: profile?.displayName ?? current?.displayName,
     role: profile?.role ?? current?.role,
-  })
+  }, remember ?? stored?.persistent ?? false)
 }
 
 export function touchSession() {
-  const current = readSession()
-  if (!current) return
-  writeSession({ ...current, lastActivityAt: Date.now() })
+  const stored = readStoredSession()
+  if (!stored) return
+  writeSession(
+    { ...stored.state, lastActivityAt: Date.now() },
+    stored.persistent,
+  )
 }
 
 export function endSession() {
   try {
     sessionStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(STORAGE_KEY)
   } catch {
     // Ignore
   }
