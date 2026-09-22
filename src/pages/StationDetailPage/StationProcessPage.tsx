@@ -14,7 +14,6 @@ export function StationProcessPage() {
   const numericStation = /^\d+$/.test(stationId)
   const [pumps, setPumps] = useState<ProcessPumpCard[]>(PROCESS_PUMPS)
   const [error, setError] = useState('')
-  const [live, setLive] = useState(false)
 
   const load = useCallback(async () => {
     if (!numericStation) return
@@ -36,7 +35,6 @@ export function StationProcessPage() {
     screen: 'cong-nghe',
     enabled: numericStation,
     onInvalidate: () => {
-      setLive(true)
       void load()
     },
   })
@@ -44,9 +42,6 @@ export function StationProcessPage() {
   return (
     <div className={`${styles.page} ${styles.processPage}`}>
       {error ? <p style={{ color: '#b91c1c', margin: '0 0 12px' }}>{error}</p> : null}
-      {live ? (
-        <p style={{ margin: '0 0 8px', fontSize: 12, color: '#166534' }}>Realtime SignalR đang cập nhật</p>
-      ) : null}
       <section className={styles.panel}>
         <div className={styles.diagramStage}>
           <div className={`${styles.diagramInner} ${styles.processInner}`}>

@@ -20,7 +20,6 @@ export function StationSchematicPage() {
   const [pumps, setPumps] = useState<PumpBranch[]>(PUMP_BRANCHES)
   const [electrical, setElectrical] = useState<ElectricalParams>(ELECTRICAL_PARAMS)
   const [error, setError] = useState('')
-  const [live, setLive] = useState(false)
 
   const load = useCallback(async () => {
     if (!numericStation) return
@@ -46,7 +45,6 @@ export function StationSchematicPage() {
     screen: 'nguyen-ly',
     enabled: numericStation,
     onInvalidate: () => {
-      setLive(true)
       void load()
     },
   })
@@ -54,9 +52,6 @@ export function StationSchematicPage() {
   return (
     <div className={styles.page}>
       {error ? <p style={{ color: '#b91c1c', margin: '0 0 12px' }}>{error}</p> : null}
-      {live ? (
-        <p style={{ margin: '0 0 8px', fontSize: 12, color: '#166534' }}>Realtime SignalR đang cập nhật</p>
-      ) : null}
       <section className={styles.panel}>
         <SchematicDiagram pumps={pumps} electrical={electrical} />
       </section>

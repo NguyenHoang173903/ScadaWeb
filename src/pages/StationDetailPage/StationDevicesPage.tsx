@@ -27,7 +27,6 @@ export function StationDevicesPage() {
   const numericStation = /^\d+$/.test(stationId)
   const [pumps, setPumps] = useState<DevicePump[]>([])
   const [error, setError] = useState('')
-  const [live, setLive] = useState(false)
 
   const load = useCallback(async () => {
     if (!numericStation) return
@@ -49,7 +48,6 @@ export function StationDevicesPage() {
     screen: 'chi-tiet-bom',
     enabled: numericStation,
     onInvalidate: () => {
-      setLive(true)
       void load()
     },
   })
@@ -71,9 +69,6 @@ export function StationDevicesPage() {
   return (
     <div className={styles.page}>
       {error ? <p style={{ color: '#b91c1c', margin: '0 0 12px' }}>{error}</p> : null}
-      {live ? (
-        <p style={{ margin: '0 0 8px', fontSize: 12, color: '#166534' }}>Realtime SignalR đang cập nhật</p>
-      ) : null}
       <div className={styles.grid}>
         {visible.map((pump) => (
           <DeviceCard key={pump.id} pump={pump} />

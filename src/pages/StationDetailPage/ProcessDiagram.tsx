@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import processDiagramSvg from '@/assets/images/sdcn_1.svg?raw'
 import { processPumpLeftPercent } from './processLayout'
 import {
@@ -24,24 +24,28 @@ type ProcessDiagramProps = {
 export function ProcessDiagram({ pumps = PROCESS_PUMPS }: ProcessDiagramProps) {
   const svgHostRef = useRef<HTMLDivElement>(null)
   const [svgHtml] = useState(() => prepareInlineSvg(processDiagramSvg))
+  // Keep the inline SVG DOM intact while realtime measurements re-render cards.
+  const svgMarkup = useMemo(() => ({ __html: svgHtml }), [svgHtml])
 
   const pumpKey = useMemo(
     () => pumps.map((p) => `${p.id}:${p.status}`).join('|'),
     [pumps],
   )
+  const pumpStatusRef = useRef<Pick<ProcessPumpCard, 'id' | 'status'>[]>([])
+  pumpStatusRef.current = pumps.map(({ id, status }) => ({ id, status }))
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const host = svgHostRef.current
     if (!host) return
-    applyProcessPumpColors(host, pumps)
-  }, [pumpKey, pumps, svgHtml])
+    applyProcessPumpColors(host, pumpStatusRef.current)
+  }, [pumpKey, svgHtml])
 
   return (
     <div className={styles.diagramLayer}>
       <div
         ref={svgHostRef}
         className={styles.processSvgHost}
-        dangerouslySetInnerHTML={{ __html: svgHtml }}
+        dangerouslySetInnerHTML={svgMarkup}
       />
 
       <div className={styles.processBasinLabel}>Bể Xả</div>

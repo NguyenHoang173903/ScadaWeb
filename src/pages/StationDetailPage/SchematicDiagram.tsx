@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import schematicDiagramSvg from '@/assets/images/sdnl_3.svg?raw'
 import { schematicPumpLeftPercent } from './schematicLayout'
 import {
@@ -34,6 +34,9 @@ export function SchematicDiagram({
   const e = electrical
   const svgHostRef = useRef<HTMLDivElement>(null)
   const [svgHtml] = useState(() => prepareInlineSvg(schematicDiagramSvg))
+  // Keep the same object reference across realtime renders. Otherwise React may
+  // restore the original SVG markup before the status colors are applied again.
+  const svgMarkup = useMemo(() => ({ __html: svgHtml }), [svgHtml])
 
   const pumpKey = useMemo(
     () =>
@@ -45,12 +48,23 @@ export function SchematicDiagram({
         .join('|'),
     [pumps],
   )
+  const pumpStatusRef = useRef<
+    Pick<PumpBranch, 'id' | 'motorStatus' | 'kdmStatus' | 'lockStatus'>[]
+  >([])
+  pumpStatusRef.current = pumps.map(
+    ({ id, motorStatus, kdmStatus, lockStatus }) => ({
+      id,
+      motorStatus,
+      kdmStatus,
+      lockStatus,
+    }),
+  )
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const host = svgHostRef.current
     if (!host) return
-    applySchematicPumpColors(host, pumps)
-  }, [pumpKey, pumps, svgHtml])
+    applySchematicPumpColors(host, pumpStatusRef.current)
+  }, [pumpKey, svgHtml])
 
   return (
     <div className={styles.diagramStage}>
@@ -59,7 +73,7 @@ export function SchematicDiagram({
           <div
             ref={svgHostRef}
             className={styles.processSvgHost}
-            dangerouslySetInnerHTML={{ __html: svgHtml }}
+            dangerouslySetInnerHTML={svgMarkup}
           />
 
           <aside className={styles.electricalBox} aria-label="Thông số điện">
