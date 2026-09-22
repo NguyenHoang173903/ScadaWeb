@@ -59,7 +59,8 @@ public class RedisConcurrentSessionService(
           redis.call('ZADD', normalKey, expireAt, sessionId)
         end
 
-        redis.call('HSET', sessionKey,
+        -- HMSET: Redis 3.x (Windows redis-windows) rejects multi-field HSET.
+        redis.call('HMSET', sessionKey,
           'userId', userId,
           'role', role,
           'isAdmin', isAdmin,

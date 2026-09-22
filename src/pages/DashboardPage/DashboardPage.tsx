@@ -11,7 +11,7 @@ import {
 import type { MapOverlayLayer } from '@/components/map/layerTypes'
 import { ROUTES, stationDataUpdatePath, stationDetailPath } from '@/constants/routes'
 import { APP_COMPANY } from '@/constants/config'
-import { ensureMapPumpStation, registerPumpStation, resolvePumpStationRouteId } from '@/data/pumpStations'
+import { registerPumpStation, resolvePumpStationRouteId } from '@/data/pumpStations'
 import { logoutCurrentUser } from '@/services/auditLog'
 import { getStation, listStations as fetchStationsApi } from '@/services/stations/stationsApi'
 import { getSessionUsername, isSessionAdmin } from '@/settings/session'
@@ -238,17 +238,6 @@ export function DashboardPage() {
     if (listType === 'level') return levelStations
     return []
   }, [listType, pumpStations, rainStations, levelStations])
-
-  useEffect(() => {
-    // Prefetch catalog only — navigation uses resolvePumpStationRouteId (BE id).
-    for (const station of pumpStations) {
-      const beId = resolvePumpStationRouteId(station)
-      if (!beId && station.type === 'pump') {
-        // Keep offline slug only when BE chưa có id khớp.
-        ensureMapPumpStation(station)
-      }
-    }
-  }, [pumpStations])
 
   return (
     <div className={styles.page}>

@@ -273,9 +273,9 @@ function findKmzMatchForPump(dbName: string, dbLat: number, dbLng: number, kmzPu
 }
 
 /**
- * Pump markers come from database (`PUMP_STATIONS`), enriched by KMZ Point placemarks.
- * Unmatched KMZ pump placemarks are also shown so uploaded station KMZ still works.
- * Rain / level points come from KMZ Point placemarks.
+ * Pump markers = catalog từ BE only (getAllPumpStations).
+ * KMZ chỉ enrich tọa độ / mô tả khi khớp tên hoặc vị trí — không tạo trạm bơm mới.
+ * Rain / level vẫn lấy từ KMZ Point placemarks.
  */
 export function buildMapStations(
   layers: Array<{
@@ -288,13 +288,9 @@ export function buildMapStations(
   const fromKmz = extractStationsFromLayers(layers)
   const kmzPumps = fromKmz.filter((station) => station.type === 'pump')
   const sensors = fromKmz.filter((station) => station.type !== 'pump')
-  const matchedKmzKeys = new Set<string>()
 
   const pumpsFromDb: MapStation[] = getAllPumpStations().map((db) => {
     const match = findKmzMatchForPump(db.name, db.lat, db.lng, kmzPumps)
-    if (match) {
-      matchedKmzKeys.add(`${match.lat.toFixed(6)},${match.lng.toFixed(6)}`)
-    }
     const description = match?.description?.trim() ? match.description : undefined
 
     return {
@@ -315,12 +311,7 @@ export function buildMapStations(
     }
   })
 
-  const orphanKmzPumps = kmzPumps.filter((station) => {
-    const key = `${station.lat.toFixed(6)},${station.lng.toFixed(6)}`
-    return !matchedKmzKeys.has(key)
-  })
-
-  return [...pumpsFromDb, ...orphanKmzPumps, ...sensors].sort((a, b) =>
+  return [...pumpsFromDb, ...sensors].sort((a, b) =>
     a.name.localeCompare(b.name, 'vi'),
   )
 }

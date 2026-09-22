@@ -104,8 +104,9 @@ export function getPumpStationById(id: string) {
 }
 
 /**
- * Catalog hiển thị: BE (id số) thắng mock.
- * Tên / mã lấy từ BE; tọa độ mock chỉ bổ sung khi BE chưa có lat/lng.
+ * Catalog hiển thị: khi đã có trạm BE (id số) → chỉ hiện các trạm đó.
+ * Mock PUMP_STATIONS chỉ dùng offline khi chưa load được BE; tọa độ mock
+ * bổ sung khi BE chưa có lat/lng.
  */
 export function getAllPumpStations(): PumpStation[] {
   const dynamic = Object.values(readDynamicStations())
@@ -113,8 +114,10 @@ export function getAllPumpStations(): PumpStation[] {
   const beStations: PumpStation[] = []
 
   for (const station of dynamic) {
-    byId.set(station.id, station)
-    if (/^\d+$/.test(station.id)) beStations.push(station)
+    if (/^\d+$/.test(station.id)) {
+      byId.set(station.id, station)
+      beStations.push(station)
+    }
   }
 
   const findBeMatch = (station: PumpStation) => {
@@ -126,18 +129,24 @@ export function getAllPumpStations(): PumpStation[] {
     return beStations.find((s) => stationNamesMatch(s.name, station.name))
   }
 
-  for (const station of PUMP_STATIONS) {
-    const be = findBeMatch(station)
-    if (be) {
-      // Giữ tên/code BE; mượn tọa độ mock nếu BE chưa có.
+  // Đã có BE → chỉ catalog BE (đã enrich tọa độ mock nếu cần).
+  if (beStations.length > 0) {
+    for (const station of PUMP_STATIONS) {
+      const be = findBeMatch(station)
+      if (!be) continue
       if (!hasCoords(be) && hasCoords(station)) {
         const enriched = { ...be, lat: station.lat, lng: station.lng }
         byId.set(be.id, enriched)
-        const idx = beStations.findIndex((s) => s.id === be.id)
-        if (idx >= 0) beStations[idx] = enriched
       }
-      continue
     }
+    return [...byId.values()]
+  }
+
+  // Offline fallback: mock + dynamic slug (chưa có BE).
+  for (const station of dynamic) {
+    byId.set(station.id, station)
+  }
+  for (const station of PUMP_STATIONS) {
     if (!byId.has(station.id)) byId.set(station.id, station)
   }
 
