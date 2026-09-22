@@ -750,9 +750,10 @@ public class ScadaMetadataQueryService(
             var kdmStatus = SchematicParameterCatalog.ResolveKdmStatus(
                 motorStatus,
                 SchematicParameterCatalog.MapKdmStatus(kdmVal ?? motorVal, kdmRaw));
-            var lockStatus = SchematicParameterCatalog.MapLockStatus(
-                lockVal ?? (motorStatus == ScadaStatusCodes.Running ? 1 : 0),
-                lockRaw);
+            // FB_ON_MCCB only — không suy ra từ motor (bơm chạy ≠ MCCB đóng).
+            var lockStatus = lockVal is not null
+                ? SchematicParameterCatalog.MapLockStatus(lockVal)
+                : SchematicParameterCatalog.MapLockStatus(null, lockRaw);
 
             var currentA = Measure("currentA") ?? MeasureElec("currentA");
             var runtimeRaw = Measure("runtimeH");

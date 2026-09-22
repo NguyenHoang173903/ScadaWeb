@@ -67,8 +67,11 @@ public static class ScadaStatusMapper
         };
     }
 
+    /// <summary>
+    /// MCCB / khoá điện: PLC bool true (1) = đóng (có điện), false (0) = mở.
+    /// </summary>
     public static LockStatus ParseLock(double? value) =>
-        value is 1 ? LockStatus.Closed : LockStatus.Open;
+        value is not null && value != 0 ? LockStatus.Closed : LockStatus.Open;
 
     public static LockStatus ParseLock(string? rawCode)
     {
@@ -77,8 +80,8 @@ public static class ScadaStatusMapper
 
         return rawCode.Trim().ToLowerInvariant() switch
         {
-            ScadaStatusCodes.Closed or "close" or "on" => LockStatus.Closed,
-            ScadaStatusCodes.Open or "off" => LockStatus.Open,
+            ScadaStatusCodes.Closed or "close" or "on" or "true" or "1" => LockStatus.Closed,
+            ScadaStatusCodes.Open or "off" or "false" or "0" => LockStatus.Open,
             _ => LockStatus.Open
         };
     }
@@ -118,18 +121,26 @@ public static class ScadaStatusMapper
 
     public static string MapKdmStatus(double? value, string? rawCode = null)
     {
-        var status = !string.IsNullOrWhiteSpace(rawCode)
-            ? ParseKdm(rawCode)
-            : ParseKdm(value);
-        return ToCode(status);
+        // Prefer numeric/bool PLC value — TagName (DisplayName) is not a status enum.
+        if (value is not null)
+            return ToCode(ParseKdm(value));
+
+        if (!string.IsNullOrWhiteSpace(rawCode))
+            return ToCode(ParseKdm(rawCode));
+
+        return ToCode(PumpOperatingStatus.Stopped);
     }
 
     public static string MapLockStatus(double? value, string? rawCode = null)
     {
-        var status = !string.IsNullOrWhiteSpace(rawCode)
-            ? ParseLock(rawCode)
-            : ParseLock(value);
-        return ToCode(status);
+        // Prefer numeric/bool PLC value (FB_ON_MCCB true/false). TagName is descriptive text.
+        if (value is not null)
+            return ToCode(ParseLock(value));
+
+        if (!string.IsNullOrWhiteSpace(rawCode))
+            return ToCode(ParseLock(rawCode));
+
+        return ToCode(LockStatus.Open);
     }
 
     /// <summary>Khi motor bảo trì mà KĐM đang chạy → ép KĐM dừng.</summary>

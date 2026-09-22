@@ -24,7 +24,8 @@ public static class SchematicParameterCatalog
     [
         new("motorStatus", ["FB_RUN", "MOTOR_STATUS", "PUMP_STATUS", "M_STATUS"]),
         new("kdmStatus", ["FB_RUN", "KDM_STATUS", "KDM", "STARTER_STATUS"]),
-        new("lockStatus", ["LOCK_STATUS", "LOCK", "BREAKER", "MCCB_STATUS"]),
+        // Excel TLHN: FB_ON_MCCB (bool) — true = đóng MCCB / có điện; false = mở cầu dao.
+        new("lockStatus", ["FB_ON_MCCB", "ON_MCCB", "MCCB_ON", "LOCK_STATUS", "LOCK", "BREAKER", "MCCB_STATUS", "MCCB"]),
         new("faultStatus", ["FB_FAULT", "FB_FAULT_SS", "FB_FAULT_TEMP", "FB_FAULT_V", "FB_FAULT_CURENT"]),
         new("stopStatus", ["FB_STOP"]),
         new("maintenanceStatus", ["FB_MAINTENANCE"]),
