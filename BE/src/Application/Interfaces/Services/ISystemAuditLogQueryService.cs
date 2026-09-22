@@ -10,4 +10,7 @@ public interface ISystemAuditLogQueryService
     Task<Result<PaginationResult<SystemAuditLogDto>>> GetPagedAsync(SystemAuditLogQuery query, CancellationToken cancellationToken = default);
 
     Task<Result<SystemAuditLogDto>> GetByIdAsync(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>Xuất Excel nhật ký (tab Đăng nhập / audit) — tối đa 10_000 dòng.</summary>
+    Task<Result<byte[]>> ExportExcelAsync(SystemAuditLogQuery query, CancellationToken cancellationToken = default);
 }

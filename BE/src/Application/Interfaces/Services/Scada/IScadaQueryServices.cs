@@ -52,10 +52,15 @@ public interface IStationQueryService
         StationEventHistoryQuery query,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Alarm đang mở (EndTime IS NULL) theo station.</summary>
+    /// <summary>Alarm đang mở theo station — nguồn Redis <c>SCADA:{code}:ALARM:*</c>.</summary>
     Task<Result<PaginationResult<ActiveAlarmRowDto>>> GetActiveAlarmsAsync(
         long stationId,
         ActiveAlarmQuery query,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Tổ vận hành theo station — nguồn Redis <c>SCADA:{code}:OPERATOR:*</c>.</summary>
+    Task<Result<StationTeamDto>> GetStationTeamAsync(
+        long stationId,
         CancellationToken cancellationToken = default);
 
     /// <summary>Cập nhật metadata trạm.</summary>

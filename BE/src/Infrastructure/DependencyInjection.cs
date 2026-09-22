@@ -231,15 +231,18 @@ public static class DependencyInjection
                     sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RealtimeOptions>>(),
                     sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<StationSnapshotRealtimeDataStore>>()));
 
+            services.AddSingleton<IScadaRealtimeEntityStore, ScadaRealtimeEntityStore>();
             services.AddHostedService<StationSnapshotChangeHostedService>();
         }
         else if (string.Equals(provider, "Redis", StringComparison.OrdinalIgnoreCase))
         {
             services.AddSingleton<IRealtimeDataStore, RedisRealtimeDataStore>();
+            services.AddSingleton<IScadaRealtimeEntityStore, NoopScadaRealtimeEntityStore>();
         }
         else
         {
             services.AddSingleton<IRealtimeDataStore, FakeRealtimeDataStore>();
+            services.AddSingleton<IScadaRealtimeEntityStore, NoopScadaRealtimeEntityStore>();
         }
 
         services.AddSingleton<PumpSimulationStateStore>();

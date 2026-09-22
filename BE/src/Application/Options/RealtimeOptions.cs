@@ -18,6 +18,13 @@ public class RealtimeOptions
     /// <summary>Production station snapshot prefix (Provider=StationSnapshot).</summary>
     public string StationKeyPrefix { get; set; } = "scada:station";
 
+    /// <summary>
+    /// Prefix entity SCADA (alarm / operator) trên RealtimeRedis.
+    /// Key: <c>{ScadaEntityKeyPrefix}:{stationCode}:ALARM:{id}</c>,
+    /// <c>{ScadaEntityKeyPrefix}:{stationCode}:OPERATOR:{id}</c>.
+    /// </summary>
+    public string ScadaEntityKeyPrefix { get; set; } = "SCADA";
+
     /// <summary>When true, hosted fake PLC simulator writes values and SignalR deltas.</summary>
     public bool SimulateChanges { get; set; } = false;
 

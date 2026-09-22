@@ -66,6 +66,18 @@ Consumer also accepts legacy nested `PLCs[].Devices[]`.
 - `SimulateChanges=false` — disables fake PLC hosted service.
 - Missing key / missing tag → API returns `Quality=Uncertain`, `Value=null` (no fake numbers).
 
+## Alarm / Operator entity keys (RealtimeRedis)
+
+| Item | Value |
+|------|--------|
+| Alarm key | `SCADA:{stationCode}:ALARM:{id}` |
+| Operator key | `SCADA:{stationCode}:OPERATOR:{id}` |
+| Example | `SCADA:TBAB:ALARM:500001`, `SCADA:TBAB:OPERATOR:1001` |
+| Redis type | STRING (JSON) |
+| Consumer | `ScadaRealtimeEntityStore` → `GET .../alarms/active`, `GET .../team` |
+
+`ThoiGianNhanCa` (operator) ≠ `LastLoginTime` (UserScada).
+
 ## Verify
 
 ```bash

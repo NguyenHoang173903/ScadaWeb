@@ -1,3 +1,4 @@
+using System.Globalization;
 using Backend.Application.DTOs.Audit;
 using Backend.Application.Interfaces.Services;
 using Backend.Infrastructure.Persistence.Context;
@@ -8,13 +9,76 @@ using Microsoft.EntityFrameworkCore;
 namespace Backend.Infrastructure.Scada;
 
 /// <summary>BE 3.1a — read side of the System Audit Log. Default sort: newest first.</summary>
-public sealed class SystemAuditLogQueryService(ApplicationDbContext db) : ISystemAuditLogQueryService
+public sealed class SystemAuditLogQueryService(
+    ApplicationDbContext db,
+    IImportExportService importExport) : ISystemAuditLogQueryService
 {
+    private const int MaxExportRows = 10_000;
+
     public async Task<Result<PaginationResult<SystemAuditLogDto>>> GetPagedAsync(
         SystemAuditLogQuery query, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
 
+        var q = BuildFilteredQuery(query);
+        var total = await q.CountAsync(cancellationToken);
+        q = ApplyWhitelistedSort(q, query);
+
+        var items = await q
+            .Skip(query.Skip)
+            .Take(query.PageSize)
+            .Select(a => Project(a))
+            .ToListAsync(cancellationToken);
+
+        return Result<PaginationResult<SystemAuditLogDto>>.Success(
+            PaginationResult<SystemAuditLogDto>.Create(items, total, query));
+    }
+
+    public async Task<Result<SystemAuditLogDto>> GetByIdAsync(long id, CancellationToken cancellationToken = default)
+    {
+        var dto = await db.SystemAuditLogs.AsNoTracking()
+            .Where(a => a.Id == id)
+            .Select(a => Project(a))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return dto is null
+            ? Result<SystemAuditLogDto>.Failure("SystemAuditLog.NotFound", $"Audit log '{id}' was not found.")
+            : Result<SystemAuditLogDto>.Success(dto);
+    }
+
+    public async Task<Result<byte[]>> ExportExcelAsync(
+        SystemAuditLogQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        query.PageNumber = 1;
+        query.PageSize = MaxExportRows;
+
+        var q = ApplyWhitelistedSort(BuildFilteredQuery(query), query);
+        var rows = await q
+            .Take(MaxExportRows)
+            .Select(a => new
+            {
+                ThoiGian = a.CreatedAt.ToOffset(TimeSpan.FromHours(7))
+                    .ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture),
+                Loai = a.EventType.ToString(),
+                TieuDe = a.Action,
+                MoTa = a.Description,
+                NguoiDung = a.UserName,
+                TrangThai = a.Status.ToString(),
+                Module = a.Module,
+                Ip = a.IpAddress,
+                Endpoint = a.Endpoint
+            })
+            .ToListAsync(cancellationToken);
+
+        var bytes = await importExport.ExportExcelAsync(rows, "DangNhap", cancellationToken);
+        return Result<byte[]>.Success(bytes);
+    }
+
+    private IQueryable<Domain.Entities.Scada.SystemAuditLog> BuildFilteredQuery(SystemAuditLogQuery query)
+    {
         var q = db.SystemAuditLogs.AsNoTracking().AsQueryable();
 
         if (query.FromUtc.HasValue)
@@ -41,30 +105,7 @@ public sealed class SystemAuditLogQueryService(ApplicationDbContext db) : ISyste
         if (query.HttpStatusCode.HasValue)
             q = q.Where(a => a.HttpStatusCode == query.HttpStatusCode.Value);
 
-        var total = await q.CountAsync(cancellationToken);
-
-        q = ApplyWhitelistedSort(q, query);
-
-        var items = await q
-            .Skip(query.Skip)
-            .Take(query.PageSize)
-            .Select(a => Project(a))
-            .ToListAsync(cancellationToken);
-
-        return Result<PaginationResult<SystemAuditLogDto>>.Success(
-            PaginationResult<SystemAuditLogDto>.Create(items, total, query));
-    }
-
-    public async Task<Result<SystemAuditLogDto>> GetByIdAsync(long id, CancellationToken cancellationToken = default)
-    {
-        var dto = await db.SystemAuditLogs.AsNoTracking()
-            .Where(a => a.Id == id)
-            .Select(a => Project(a))
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return dto is null
-            ? Result<SystemAuditLogDto>.Failure("SystemAuditLog.NotFound", $"Audit log '{id}' was not found.")
-            : Result<SystemAuditLogDto>.Success(dto);
+        return q;
     }
 
     // Whitelisted sorting only (§19) — no arbitrary client-supplied order field.
