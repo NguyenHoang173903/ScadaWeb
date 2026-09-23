@@ -6,5 +6,7 @@ export const APP_COMPANY =
 export const APP_VERSION = '1.0.0'
 export const APP_SUPPORT_EMAIL = 'support@vasco.vn'
 export const APP_COPYRIGHT = '© 2026 VASCO'
+/** Tạm tắt bản đồ ở Login/Dashboard; đổi thành true để bật lại. */
+export const MAP_ENABLED = false
 
 export { getApiBaseUrl } from '@/settings/runtimeConfig'

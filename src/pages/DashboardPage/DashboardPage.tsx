@@ -10,7 +10,7 @@ import {
 } from '@/components/map/extractStations'
 import type { MapOverlayLayer } from '@/components/map/layerTypes'
 import { ROUTES, stationDataUpdatePath, stationDetailPath } from '@/constants/routes'
-import { APP_COMPANY } from '@/constants/config'
+import { APP_COMPANY, MAP_ENABLED } from '@/constants/config'
 import { registerPumpStation, resolvePumpStationRouteId } from '@/data/pumpStations'
 import { logoutCurrentUser } from '@/services/auditLog'
 import { getStation, listStations as fetchStationsApi } from '@/services/stations/stationsApi'
@@ -241,14 +241,16 @@ export function DashboardPage() {
 
   return (
     <div className={styles.page}>
-      <DashboardMap
-        layers={layers}
-        onSelectStation={(station) => {
-          setSelectedStation(station)
-          setListType(null)
-          setLayersOpen(false)
-        }}
-      />
+      {MAP_ENABLED ? (
+        <DashboardMap
+          layers={layers}
+          onSelectStation={(station) => {
+            setSelectedStation(station)
+            setListType(null)
+            setLayersOpen(false)
+          }}
+        />
+      ) : null}
 
       <header className={styles.topBar}>
         <div className={styles.brand}>
@@ -294,23 +296,25 @@ export function DashboardPage() {
               <span>Đo mực nước</span>
             </button>
 
-            <button
-              type="button"
-              className={`${styles.layersButton} ${layersOpen ? styles.layersButtonActive : ''}`}
-              title="Lớp bản đồ"
-              aria-expanded={layersOpen}
-              onClick={() => {
-                setLayersOpen((open) => {
-                  const next = !open
-                  if (next) setSelectedStation(null)
-                  return next
-                })
-                setListType(null)
-              }}
-            >
-              <Layers size={16} />
-              <span>Lớp bản đồ</span>
-            </button>
+            {MAP_ENABLED ? (
+              <button
+                type="button"
+                className={`${styles.layersButton} ${layersOpen ? styles.layersButtonActive : ''}`}
+                title="Lớp bản đồ"
+                aria-expanded={layersOpen}
+                onClick={() => {
+                  setLayersOpen((open) => {
+                    const next = !open
+                    if (next) setSelectedStation(null)
+                    return next
+                  })
+                  setListType(null)
+                }}
+              >
+                <Layers size={16} />
+                <span>Lớp bản đồ</span>
+              </button>
+            ) : null}
           </div>
 
           <time className={styles.clock} dateTime={new Date().toISOString()}>
@@ -362,7 +366,8 @@ export function DashboardPage() {
         </div>
       </header>
 
-      {!layersOpen &&
+      {MAP_ENABLED &&
+      !layersOpen &&
       (!selectedStation ||
         !(selectedStation.hasKmzInfo ?? Boolean(selectedStation.description?.trim()))) ? (
         <aside className={styles.legendPanel}>
@@ -402,37 +407,41 @@ export function DashboardPage() {
         />
       ) : null}
 
-      <FeatureInfoPanel
-        station={selectedStation}
-        canUpdateData={canUpdateStation}
-        onClose={() => setSelectedStation(null)}
-        onUpdateData={(station) => {
-          if (!isSessionAdmin()) {
-            window.alert('Chỉ Admin được cập nhật thông tin trạm.')
-            return
-          }
-          const routeId = resolvePumpStationRouteId(station)
-          if (!routeId) {
-            window.alert(
-              'Trạm này chưa có trong hệ thống (scada.station). Không mở được cập nhật dữ liệu.',
-            )
-            return
-          }
-          setSelectedStation(null)
-          navigate(stationDataUpdatePath(routeId))
-        }}
-      />
+      {MAP_ENABLED ? (
+        <>
+          <FeatureInfoPanel
+            station={selectedStation}
+            canUpdateData={canUpdateStation}
+            onClose={() => setSelectedStation(null)}
+            onUpdateData={(station) => {
+              if (!isSessionAdmin()) {
+                window.alert('Chỉ Admin được cập nhật thông tin trạm.')
+                return
+              }
+              const routeId = resolvePumpStationRouteId(station)
+              if (!routeId) {
+                window.alert(
+                  'Trạm này chưa có trong hệ thống (scada.station). Không mở được cập nhật dữ liệu.',
+                )
+                return
+              }
+              setSelectedStation(null)
+              navigate(stationDataUpdatePath(routeId))
+            }}
+          />
 
-      <LayerPanel
-        open={layersOpen}
-        layers={layers}
-        selectedLayerId={selectedLayerId}
-        onClose={() => setLayersOpen(false)}
-        onUpload={handleUpload}
-        onSelectLayer={setSelectedLayerId}
-        onUpdateLayer={updateLayer}
-        onRemoveLayer={removeLayer}
-      />
+          <LayerPanel
+            open={layersOpen}
+            layers={layers}
+            selectedLayerId={selectedLayerId}
+            onClose={() => setLayersOpen(false)}
+            onUpload={handleUpload}
+            onSelectLayer={setSelectedLayerId}
+            onUpdateLayer={updateLayer}
+            onRemoveLayer={removeLayer}
+          />
+        </>
+      ) : null}
     </div>
   )
 }

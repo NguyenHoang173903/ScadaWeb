@@ -8,7 +8,12 @@ import pumpIcon from '@/assets/icons/Pump.svg'
 import reportIcon from '@/assets/icons/report_1.svg'
 import { DashboardMap } from '@/components/map'
 import type { MapOverlayLayer } from '@/components/map/layerTypes'
-import { APP_COPYRIGHT, APP_SUPPORT_EMAIL, APP_VERSION } from '@/constants/config'
+import {
+  APP_COPYRIGHT,
+  APP_SUPPORT_EMAIL,
+  APP_VERSION,
+  MAP_ENABLED,
+} from '@/constants/config'
 import { ROUTES } from '@/constants/routes'
 import { getLoginLayerVisible } from '@/settings/loginLayerSettings'
 import { peekCachedMapLayers, resolveMapLayers } from '@/services/mapLayers'
@@ -112,7 +117,7 @@ export function LoginPage() {
     let cancelled = false
 
     void (async () => {
-      if (!getLoginLayerVisible()) {
+      if (!MAP_ENABLED || !getLoginLayerVisible()) {
         setLayers([])
         return
       }
@@ -135,9 +140,11 @@ export function LoginPage() {
     <div className={styles.page}>
       <div className={styles.shell}>
         <div className={styles.workspace}>
-          <div className={styles.mapPane}>
-            <DashboardMap layers={layers} zoomLocked />
-          </div>
+          {MAP_ENABLED ? (
+            <div className={styles.mapPane}>
+              <DashboardMap layers={layers} zoomLocked />
+            </div>
+          ) : null}
 
           {resetToken ? (
             <ChangePasswordForm
