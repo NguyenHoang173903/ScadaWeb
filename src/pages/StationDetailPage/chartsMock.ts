@@ -6,20 +6,26 @@ export const CHART_DEVICE_OPTIONS = Array.from({ length: 10 }, (_, index) => {
   return { value: String(id), label: `Bơm ${id}` }
 })
 
-function localToday() {
-  const now = new Date()
+function localDate(date: Date) {
   const pad = (value: number) => String(value).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
-const today = localToday()
+function localTime(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
 
-export const DEFAULT_CHART_FILTER: ChartFilterValues = {
-  deviceId: '1',
-  fromDate: today,
-  fromTime: '00:00:00',
-  toDate: today,
-  toTime: '23:59:59',
+export function createDefaultChartFilter(): ChartFilterValues {
+  const to = new Date()
+  const from = new Date(to.getTime() - 60 * 60 * 1000)
+  return {
+    deviceId: '1',
+    fromDate: localDate(from),
+    fromTime: localTime(from),
+    toDate: localDate(to),
+    toTime: localTime(to),
+  }
 }
 
 export const TEMPERATURE_SERIES: LineChartSeries[] = [

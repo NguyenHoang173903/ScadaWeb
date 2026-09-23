@@ -9,9 +9,9 @@ import { isApiError } from '@/services/api/http'
 import { getChartDevices, getChartHistory } from '@/services/stations/stationsApi'
 import {
   CHART_DEVICE_OPTIONS,
+  createDefaultChartFilter,
   CURRENT_CHART_DATA,
   CURRENT_SERIES,
-  DEFAULT_CHART_FILTER,
   TEMPERATURE_CHART_DATA,
   TEMPERATURE_SERIES,
   type ChartTabId,
@@ -42,8 +42,8 @@ function formatAxisTime(iso: string) {
 export function StationChartsPage() {
   const { stationId = '', chartType } = useParams()
   const numericStation = /^\d+$/.test(stationId)
-  const [draft, setDraft] = useState<ChartFilterValues>(DEFAULT_CHART_FILTER)
-  const [applied, setApplied] = useState<ChartFilterValues>(DEFAULT_CHART_FILTER)
+  const [draft, setDraft] = useState<ChartFilterValues>(createDefaultChartFilter)
+  const [applied, setApplied] = useState<ChartFilterValues>(createDefaultChartFilter)
   const [deviceOptions, setDeviceOptions] = useState(CHART_DEVICE_OPTIONS)
   const [chartData, setChartData] = useState<LineChartPoint[]>([])
   const [error, setError] = useState('')
@@ -127,8 +127,9 @@ export function StationChartsPage() {
         onChange={setDraft}
         onFilter={() => setApplied(draft)}
         onReset={() => {
-          setDraft(DEFAULT_CHART_FILTER)
-          setApplied(DEFAULT_CHART_FILTER)
+          const defaultFilter = createDefaultChartFilter()
+          setDraft(defaultFilter)
+          setApplied(defaultFilter)
         }}
       />
 
