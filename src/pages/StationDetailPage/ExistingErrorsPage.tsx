@@ -141,9 +141,9 @@ export function ExistingErrorsPage() {
           setPage(1)
         }}
         onReset={() => {
-          setDraft(DEFAULT_EVENT_FILTER)
-          setApplied(DEFAULT_EVENT_FILTER)
+          setApplied({ ...draft })
           setPage(1)
+          setRefreshTick((tick) => tick + 1)
         }}
         onExport={() => {
           if (!canExport) {

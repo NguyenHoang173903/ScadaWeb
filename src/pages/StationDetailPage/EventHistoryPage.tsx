@@ -136,6 +136,7 @@ export function EventHistoryPage() {
   const [exportError, setExportError] = useState('')
   const [exportBusy, setExportBusy] = useState(false)
   const [deviceOptions, setDeviceOptions] = useState(EVENT_DEVICE_OPTIONS)
+  const [refreshTick, setRefreshTick] = useState(0)
   const canExport = canSessionExportExcel()
   const showLoginTab = isSessionAdmin()
 
@@ -213,7 +214,7 @@ export function EventHistoryPage() {
     return () => {
       cancelled = true
     }
-  }, [activeTab, applied, stationId, numericStation])
+  }, [activeTab, applied, stationId, numericStation, refreshTick])
 
   useEffect(() => {
     if (activeTab !== 'login') return
@@ -253,7 +254,7 @@ export function EventHistoryPage() {
     return () => {
       cancelled = true
     }
-  }, [activeTab, applied, showLoginTab])
+  }, [activeTab, applied, showLoginTab, refreshTick])
 
   const sourceRows = activeTab === 'login' ? loginRows : apiRows
 
@@ -304,9 +305,9 @@ export function EventHistoryPage() {
           setPage(1)
         }}
         onReset={() => {
-          setDraft(DEFAULT_EVENT_FILTER)
-          setApplied(DEFAULT_EVENT_FILTER)
+          setApplied({ ...draft })
           setPage(1)
+          setRefreshTick((tick) => tick + 1)
         }}
         exportDisabled={!canExport || exportBusy || activeTab === 'login'}
         onExport={() => {

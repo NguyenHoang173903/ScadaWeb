@@ -106,6 +106,7 @@ export function StationReportsPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [exportBusy, setExportBusy] = useState(false)
+  const [refreshTick, setRefreshTick] = useState(0)
   const canExport = canSessionExportExcel()
 
   useEffect(() => {
@@ -233,7 +234,7 @@ export function StationReportsPage() {
     return () => {
       cancelled = true
     }
-  }, [stationId, numericStation, applied, page, selectedDeviceId, selectedKind])
+  }, [stationId, numericStation, applied, page, selectedDeviceId, selectedKind, refreshTick])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / REPORT_PAGE_SIZE) || 1)
   const currentPage = Math.min(page, totalPages)
@@ -284,11 +285,9 @@ export function StationReportsPage() {
           setPage(1)
         }}
         onReset={() => {
-          const fallback = deviceOptions[0]?.value ?? 'water-level'
-          const reset = { ...DEFAULT_REPORT_FILTER, deviceId: fallback }
-          setDraft(reset)
-          setApplied(reset)
+          setApplied({ ...draft })
           setPage(1)
+          setRefreshTick((tick) => tick + 1)
         }}
         onExport={() => void handleExport()}
         exportDisabled={!canExport || exportBusy || selectedDeviceId == null}

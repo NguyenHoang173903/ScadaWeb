@@ -17,6 +17,8 @@ type Options = {
   onTagChanged?: (message: RealtimeChangedMessage) => void
   /** ms giữa các lần invalidate (mặc định 1000). */
   throttleMs?: number
+  /** Chu kỳ REST fallback khi SignalR mất kết nối/subscription (mặc định 5000ms). */
+  pollIntervalMs?: number
 }
 
 /**
@@ -32,6 +34,7 @@ export function useScadaRealtime({
   onSnapshot,
   onTagChanged,
   throttleMs = 1000,
+  pollIntervalMs = 5000,
 }: Options) {
   const onInvalidateRef = useRef(onInvalidate)
   const onSnapshotRef = useRef(onSnapshot)
@@ -47,6 +50,7 @@ export function useScadaRealtime({
     let cancelled = false
     let subscription: Awaited<ReturnType<typeof subscribeScadaScreen>> | null = null
     let timer: number | null = null
+    let pollTimer: number | null = null
     let pending = false
 
     const scheduleInvalidate = () => {
@@ -80,10 +84,18 @@ export function useScadaRealtime({
       }
     })()
 
+    // SignalR reconnects do not guarantee that the server-side group subscription
+    // still exists. Periodic REST invalidation keeps operational values fresh when
+    // the hub fails initially, reconnects, or misses an event.
+    if (pollIntervalMs > 0) {
+      pollTimer = window.setInterval(scheduleInvalidate, pollIntervalMs)
+    }
+
     return () => {
       cancelled = true
       if (timer != null) window.clearTimeout(timer)
+      if (pollTimer != null) window.clearInterval(pollTimer)
       void subscription?.stop()
     }
-  }, [stationId, screen, deviceId, enabled, throttleMs])
+  }, [stationId, screen, deviceId, enabled, throttleMs, pollIntervalMs])
 }
