@@ -6,12 +6,20 @@ export const CHART_DEVICE_OPTIONS = Array.from({ length: 10 }, (_, index) => {
   return { value: String(id), label: `Bơm ${id}` }
 })
 
+function localToday() {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+const today = localToday()
+
 export const DEFAULT_CHART_FILTER: ChartFilterValues = {
   deviceId: '1',
-  fromDate: '2026-01-06',
-  fromTime: '23:12:00',
-  toDate: '2026-01-06',
-  toTime: '23:12:00',
+  fromDate: today,
+  fromTime: '00:00:00',
+  toDate: today,
+  toTime: '23:59:59',
 }
 
 export const TEMPERATURE_SERIES: LineChartSeries[] = [

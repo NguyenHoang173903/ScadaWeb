@@ -1861,23 +1861,40 @@ public class ScadaMetadataQueryService(
                 .Distinct()
                 .ToList();
 
-            // Measured history: temperature + current → history_1m
+            // Measured history: temperature + current → history_1s
             // Redis: điểm realtime (tip) cho measured + ngưỡng cho phép — không invent.
             var samplesByTag = new Dictionary<long, List<(DateTimeOffset Time, double Value)>>();
             if (measuredTagIds.Count > 0)
             {
-                var rows = await db.History1m.AsNoTracking()
+                var rows = await db.History1s.AsNoTracking()
                     .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
                     .OrderBy(h => h.Time)
                     .Select(h => new { h.TagId, h.Time, h.Value })
                     .ToListAsync(cancellationToken);
                 var primary = rows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
+                var sourceInterval = TimeSpan.FromSeconds(1);
+                var sourceLabel = "1s";
 
-                // Nguồn gốc 1m — không hạ interval xuống 1s/5s/30s.
-                if (interval is "auto" or "1s" or "5s" or "30s")
-                    interval = "1m";
-                if (bucket.Size < TimeSpan.FromMinutes(1))
-                    bucket = ("1m", TimeSpan.FromMinutes(1));
+                // Some deployments currently persist report samples only in
+                // history_30m. Use them when history_1s has not been populated.
+                if (primary.Count == 0)
+                {
+                    var fallbackRows = await db.History30m.AsNoTracking()
+                        .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
+                        .OrderBy(h => h.Time)
+                        .Select(h => new { h.TagId, h.Time, h.Value })
+                        .ToListAsync(cancellationToken);
+                    primary = fallbackRows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
+                    sourceInterval = TimeSpan.FromMinutes(30);
+                    sourceLabel = "30m";
+                }
+
+                // Do not advertise or bucket below the actual persisted source.
+                if (bucket.Size < sourceInterval)
+                {
+                    interval = sourceLabel;
+                    bucket = (sourceLabel, sourceInterval);
+                }
 
                 if (primary.Count > 0)
                 {
@@ -1998,14 +2015,15 @@ public class ScadaMetadataQueryService(
         });
 
     private static string NormalizeChartInterval(string? interval) =>
-        (interval ?? "auto").Trim().ToLowerInvariant() switch
+        (interval ?? "1s").Trim().ToLowerInvariant() switch
         {
             "15m" or "15min" => "15m",
             "30s" or "30sec" => "30s",
             "5s" or "5sec" => "5s",
             "1m" or "1min" or "60s" => "1m",
             "1s" => "1s",
-            "auto" or "" => "auto",
+            "" => "1s",
+            "auto" => "auto",
             _ => "auto"
         };
 

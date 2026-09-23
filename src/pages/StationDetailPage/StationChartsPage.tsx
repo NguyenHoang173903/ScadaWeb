@@ -80,7 +80,6 @@ export function StationChartsPage() {
         const result = await getChartHistory(Number(stationId), deviceId, chartType, {
           from: range.from,
           to: range.to,
-          interval: '30s',
         })
         if (cancelled) return
 

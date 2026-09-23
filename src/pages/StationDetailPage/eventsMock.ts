@@ -26,16 +26,14 @@ function isoDate(date: Date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
-function defaultHistoryRange() {
-  const to = new Date()
-  const from = new Date()
-  from.setDate(from.getDate() - 30)
-  return { fromDate: isoDate(from), toDate: isoDate(to) }
+function defaultTodayRange() {
+  const today = isoDate(new Date())
+  return { fromDate: today, toDate: today }
 }
 
 export const DEFAULT_EVENT_FILTER: EventFilterValues = {
   deviceId: 'all',
-  ...defaultHistoryRange(),
+  ...defaultTodayRange(),
   keyword: '',
 }
 

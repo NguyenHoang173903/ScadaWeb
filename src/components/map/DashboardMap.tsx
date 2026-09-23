@@ -104,7 +104,7 @@ function findFillFeatureAt(
   overlays: Map<string, L.GeoJSON>,
 ) {
   const point = map.latLngToLayerPoint(latlng)
-  let found: { feature: Feature; overlay: MapOverlayLayer } | null = null
+  const hits: Array<{ feature: Feature; overlay: MapOverlayLayer }> = []
 
   for (const overlay of layers) {
     if (!overlay.visible) continue
@@ -118,11 +118,11 @@ function findFillFeatureAt(
       }
       if (!isFillGeometry(path.feature?.geometry)) return
       if (!path._containsPoint?.(point) || !path.feature) return
-      found = { feature: path.feature, overlay }
+      hits.push({ feature: path.feature, overlay })
     })
   }
 
-  return found
+  return hits.at(-1) ?? null
 }
 
 type Props = {

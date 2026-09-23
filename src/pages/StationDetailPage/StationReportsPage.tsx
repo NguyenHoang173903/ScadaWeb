@@ -11,12 +11,9 @@ import { canSessionExportExcel } from '@/settings/session'
 import { parsePumpIndex } from '@/services/stations/mappers'
 import {
   exportReportTableExcel,
-  getPumpTemperatureReport,
   getReportDevices,
   getReportTable,
-  getWaterLevelReport,
   type StationReportColumnDto,
-  type WaterLevelReportRowDto,
 } from '@/services/stations/stationsApi'
 import {
   DEFAULT_REPORT_FILTER,
@@ -39,7 +36,9 @@ function fmt(value: number | null | undefined) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1)
 }
 
-function classifyDevice(name: string, code?: string) {
+type ReportDeviceKind = 'level' | 'pump' | 'meter' | 'other'
+
+function classifyDevice(name: string, code?: string): ReportDeviceKind {
   const hay = `${name} ${code ?? ''}`.toLowerCase()
   if (
     hay.includes('level') ||
@@ -62,19 +61,6 @@ function classifyDevice(name: string, code?: string) {
     return 'meter'
   }
   return 'other'
-}
-
-function mapWaterLevelRow(row: WaterLevelReportRowDto, index: number): ReportRow {
-  const values: ReportRow = {
-    id: `${row.time}-${index}`,
-    time: formatTime(row.time),
-    riverLevel: fmt(row.riverLevel),
-  }
-  for (let n = 1; n <= 10; n += 1) {
-    const key = `discharge${n}` as keyof WaterLevelReportRowDto
-    values[`discharge${n}`] = fmt(row[key] as number | null | undefined)
-  }
-  return values
 }
 
 function columnsFromApi(apiColumns: StationReportColumnDto[]): DataTableColumn<ReportRow>[] {
@@ -172,53 +158,25 @@ export function StationReportsPage() {
           pageSize: REPORT_PAGE_SIZE,
         }
 
-        if (selectedKind === 'level') {
-          const result = await getWaterLevelReport(Number(stationId), common)
-          if (cancelled) return
-          setDynamicColumns(null)
-          setRows((result.items ?? []).map(mapWaterLevelRow))
-          setTotalCount(result.totalCount ?? result.items?.length ?? 0)
-        } else if (selectedKind === 'pump') {
-          const result = await getPumpTemperatureReport(Number(stationId), {
-            ...common,
-            deviceId: selectedDeviceId,
-          })
-          if (cancelled) return
-          setDynamicColumns(null)
-          setRows(
-            (result.items ?? []).map((row, index) => ({
-              id: `${row.time}-${row.deviceId}-${index}`,
+        const result = await getReportTable(Number(stationId), {
+          ...common,
+          deviceId: selectedDeviceId,
+        })
+        if (cancelled) return
+        setDynamicColumns(columnsFromApi(result.columns ?? []))
+        setRows(
+          (result.items ?? []).map((row, index) => {
+            const values: ReportRow = {
+              id: `${row.time}-${index}`,
               time: formatTime(row.time),
-              pump: row.pump,
-              tempA: fmt(row.tempA),
-              tempB: fmt(row.tempB),
-              tempC: fmt(row.tempC),
-              bearingBottom: fmt(row.bearingBottom),
-              bearingTop: fmt(row.bearingTop),
-            })),
-          )
-          setTotalCount(result.totalCount ?? result.items?.length ?? 0)
-        } else {
-          const result = await getReportTable(Number(stationId), {
-            ...common,
-            deviceId: selectedDeviceId,
-          })
-          if (cancelled) return
-          setDynamicColumns(columnsFromApi(result.columns ?? []))
-          setRows(
-            (result.items ?? []).map((row, index) => {
-              const values: ReportRow = {
-                id: `${row.time}-${index}`,
-                time: formatTime(row.time),
-              }
-              for (const [key, value] of Object.entries(row.values ?? {})) {
-                values[key] = fmt(value)
-              }
-              return values
-            }),
-          )
-          setTotalCount(result.totalCount ?? result.items?.length ?? 0)
-        }
+            }
+            for (const [key, value] of Object.entries(row.values ?? {})) {
+              values[key] = fmt(value)
+            }
+            return values
+          }),
+        )
+        setTotalCount(result.totalCount ?? result.items?.length ?? 0)
         setError('')
       } catch (err) {
         if (cancelled) return
@@ -234,7 +192,7 @@ export function StationReportsPage() {
     return () => {
       cancelled = true
     }
-  }, [stationId, numericStation, applied, page, selectedDeviceId, selectedKind, refreshTick])
+  }, [stationId, numericStation, applied, page, selectedDeviceId, refreshTick])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / REPORT_PAGE_SIZE) || 1)
   const currentPage = Math.min(page, totalPages)

@@ -15,8 +15,14 @@ export const REPORT_DEVICE_OPTIONS = [
   { value: 'input-meter', label: 'Đồng hồ điện đầu vào' },
 ]
 
+function localToday() {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
 export const DEFAULT_REPORT_FILTER: ReportFilterValues = {
-  reportDate: '2026-01-06',
+  reportDate: localToday(),
   startTime: '00:00:00',
   endTime: '23:59:59',
   deviceId: 'water-level',

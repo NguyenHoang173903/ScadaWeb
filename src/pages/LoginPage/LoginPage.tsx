@@ -140,11 +140,9 @@ export function LoginPage() {
     <div className={styles.page}>
       <div className={styles.shell}>
         <div className={styles.workspace}>
-          {MAP_ENABLED ? (
-            <div className={styles.mapPane}>
-              <DashboardMap layers={layers} zoomLocked />
-            </div>
-          ) : null}
+          <div className={styles.mapPane}>
+            {MAP_ENABLED ? <DashboardMap layers={layers} zoomLocked /> : null}
+          </div>
 
           {resetToken ? (
             <ChangePasswordForm
