@@ -4,7 +4,10 @@ import { StationAlertBar } from '@/components/common/StationAlertBar'
 import { isApiError } from '@/services/api/http'
 import { useScadaRealtime } from '@/services/realtime'
 import { mapDeviceMonitorItem } from '@/services/stations/mappers'
-import { getDeviceMonitor } from '@/services/stations/stationsApi'
+import {
+  getDeviceMonitor,
+  peekDeviceMonitor,
+} from '@/services/stations/stationsApi'
 import { DeviceCard } from './DeviceCard'
 import { getDevicesByGroup, type DevicePump } from './devicesMock'
 import styles from './DevicesPage.module.css'
@@ -25,19 +28,25 @@ export function StationDevicesPage() {
   const { stationId = '', group } = useParams()
   const validGroup = isDeviceGroup(group) ? group : null
   const numericStation = /^\d+$/.test(stationId)
-  const [pumps, setPumps] = useState<DevicePump[]>([])
+  const stationNumber = numericStation ? Number(stationId) : null
+  const cachedMonitor = stationNumber == null ? undefined : peekDeviceMonitor(stationNumber)
+  const [pumps, setPumps] = useState<DevicePump[]>(() =>
+    (cachedMonitor?.items ?? []).map(mapDeviceMonitorItem),
+  )
+  const [ready, setReady] = useState(Boolean(cachedMonitor))
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
-    if (!numericStation) return
+    if (stationNumber == null) return
     try {
-      const result = await getDeviceMonitor(Number(stationId))
+      const result = await getDeviceMonitor(stationNumber)
       setPumps((result.items ?? []).map(mapDeviceMonitorItem))
+      setReady(true)
       setError('')
     } catch (err) {
       setError(isApiError(err) ? err.message : 'Không tải được danh sách bơm.')
     }
-  }, [stationId, numericStation])
+  }, [stationNumber])
 
   useEffect(() => {
     void load()
@@ -69,11 +78,15 @@ export function StationDevicesPage() {
   return (
     <div className={styles.page}>
       {error ? <p style={{ color: '#b91c1c', margin: '0 0 12px' }}>{error}</p> : null}
-      <div className={styles.grid}>
-        {visible.map((pump) => (
-          <DeviceCard key={pump.id} pump={pump} />
-        ))}
-      </div>
+      {ready ? (
+        <div className={styles.grid}>
+          {visible.map((pump) => (
+            <DeviceCard key={pump.id} pump={pump} />
+          ))}
+        </div>
+      ) : (
+        <div className={styles.devicesLoading}>Đang tải dữ liệu vận hành...</div>
+      )}
 
       <StationAlertBar count={0} alerts={[]} />
     </div>

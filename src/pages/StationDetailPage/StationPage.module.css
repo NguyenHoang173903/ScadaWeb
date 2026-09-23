@@ -29,6 +29,14 @@
   line-height: 1.5;
 }
 
+.diagramLoading {
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
 .hint {
   margin-top: 0.85rem !important;
   color: #6b7280 !important;

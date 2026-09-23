@@ -216,6 +216,24 @@ export type PumpTemperatureReportRowDto = {
   bearingTop?: number | null
 }
 
+type DeviceMonitorResponse = { items: DeviceMonitorItemDto[] }
+
+const deviceMonitorCache = new Map<number, DeviceMonitorResponse>()
+const schematicCache = new Map<number, StationSchematicDto>()
+const electricalCache = new Map<number, StationElectricalDto>()
+
+export function peekDeviceMonitor(stationId: number) {
+  return deviceMonitorCache.get(stationId)
+}
+
+export function peekStationSchematic(stationId: number) {
+  return schematicCache.get(stationId)
+}
+
+export function peekStationElectrical(stationId: number) {
+  return electricalCache.get(stationId)
+}
+
 export async function listStations(params?: { keyword?: string; isActive?: boolean }) {
   const search = new URLSearchParams()
   if (params?.keyword) search.set('keyword', params.keyword)
@@ -234,17 +252,23 @@ export async function updateStation(id: number, payload: UpdateStationPayload) {
 }
 
 export async function getDeviceMonitor(stationId: number) {
-  return apiClient.get<{ items: DeviceMonitorItemDto[] }>(
+  const result = await apiClient.get<DeviceMonitorResponse>(
     `/stations/${stationId}/device-monitor?pageSize=100`,
   )
+  deviceMonitorCache.set(stationId, result)
+  return result
 }
 
 export async function getStationSchematic(stationId: number) {
-  return apiClient.get<StationSchematicDto>(`/stations/${stationId}/schematic`)
+  const result = await apiClient.get<StationSchematicDto>(`/stations/${stationId}/schematic`)
+  schematicCache.set(stationId, result)
+  return result
 }
 
 export async function getStationElectrical(stationId: number) {
-  return apiClient.get<StationElectricalDto>(`/stations/${stationId}/electrical`)
+  const result = await apiClient.get<StationElectricalDto>(`/stations/${stationId}/electrical`)
+  electricalCache.set(stationId, result)
+  return result
 }
 
 export async function getStationTeam(stationId: number) {

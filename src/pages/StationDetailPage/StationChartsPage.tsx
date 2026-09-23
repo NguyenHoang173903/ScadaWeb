@@ -47,7 +47,6 @@ export function StationChartsPage() {
   const [deviceOptions, setDeviceOptions] = useState(CHART_DEVICE_OPTIONS)
   const [chartData, setChartData] = useState<LineChartPoint[]>([])
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!numericStation) return
@@ -75,7 +74,6 @@ export function StationChartsPage() {
     if (!Number.isFinite(deviceId)) return
 
     let cancelled = false
-    setLoading(true)
     void (async () => {
       try {
         const range = toIsoRange(applied)
@@ -101,8 +99,6 @@ export function StationChartsPage() {
         if (cancelled) return
         setChartData([])
         setError(isApiError(err) ? err.message : 'Không tải được đồ thị.')
-      } finally {
-        if (!cancelled) setLoading(false)
       }
     })()
 
@@ -138,7 +134,6 @@ export function StationChartsPage() {
       />
 
       {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}
-      {loading ? <p>Đang tải đồ thị…</p> : null}
 
       {chartType === 'temperature' ? (
         <LineChartCard
