@@ -59,11 +59,11 @@ public class RedisConcurrentSessionService(
           redis.call('ZADD', normalKey, expireAt, sessionId)
         end
 
-        redis.call('HSET', sessionKey,
-          'userId', userId,
-          'role', role,
-          'isAdmin', isAdmin,
-          'expireAt', expireAt)
+        -- Redis 3.x only accepts one field/value pair per HSET call.
+        redis.call('HSET', sessionKey, 'userId', userId)
+        redis.call('HSET', sessionKey, 'role', role)
+        redis.call('HSET', sessionKey, 'isAdmin', isAdmin)
+        redis.call('HSET', sessionKey, 'expireAt', expireAt)
         redis.call('EXPIRE', sessionKey, ttl)
 
         adminCount = redis.call('ZCARD', adminKey)
