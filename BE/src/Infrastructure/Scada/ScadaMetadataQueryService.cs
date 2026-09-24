@@ -354,15 +354,15 @@ public class ScadaMetadataQueryService(
 
             var flat = table.Items.Select(item =>
             {
-                var cells = new string[headers.Count];
+                var cells = new object?[headers.Count];
                 cells[0] = item.Time.ToOffset(TimeSpan.FromHours(7))
                     .ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture);
                 for (var i = 0; i < table.Columns.Count; i++)
                 {
                     var col = table.Columns[i];
                     cells[i + 1] = item.Values.TryGetValue(col.Key, out var v) && v is not null
-                        ? Convert.ToString(v, CultureInfo.InvariantCulture) ?? ""
-                        : "";
+                        ? v.Value
+                        : null;
                 }
                 return new ExportCellRow { Cells = cells, Headers = headers };
             }).ToList();
@@ -454,7 +454,7 @@ public class ScadaMetadataQueryService(
 
     private sealed class ExportCellRow
     {
-        public required string[] Cells { get; init; }
+        public required object?[] Cells { get; init; }
         public required IReadOnlyList<string> Headers { get; init; }
     }
 

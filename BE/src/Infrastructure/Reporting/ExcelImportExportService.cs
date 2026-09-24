@@ -109,7 +109,8 @@ public class ExcelImportExportService : IImportExportService
                 var column = columns[index];
                 var cell = worksheet.Cell(rowNumber, index + 1);
 
-                SetCellValue(cell, column.ValueSelector(item));
+                var cellValue = column.ValueSelector(item);
+                SetCellValue(cell, cellValue);
 
                 // Áp định dạng lên từng ô dữ liệu, không áp cho cả cột, để ô tiêu
                 // đề (là text) không bị dính định dạng số/ngày.
@@ -451,13 +452,35 @@ public class ExcelImportExportService : IImportExportService
             case TimeSpan timeSpan:
                 cell.Value = timeSpan;
                 break;
-            case byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal:
+            case float or double or decimal:
+                SetRoundedNumber(cell, Convert.ToDouble(value, CultureInfo.InvariantCulture));
+                break;
+            case byte or sbyte or short or ushort or int or uint or long or ulong:
                 cell.Value = Convert.ToDouble(value, CultureInfo.InvariantCulture);
                 break;
             default:
                 cell.Value = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
                 break;
         }
+    }
+
+    /// <summary>
+    /// Số nguyên giữ nguyên. Số có phần thập phân làm tròn 1 chữ số sau dấu phẩy.
+    /// </summary>
+    private static void SetRoundedNumber(IXLCell cell, double number)
+    {
+        if (double.IsNaN(number) || double.IsInfinity(number))
+            return;
+
+        var nearestInt = Math.Round(number, MidpointRounding.AwayFromZero);
+        if (Math.Abs(number - nearestInt) < 1e-9)
+        {
+            cell.Value = nearestInt;
+            return;
+        }
+
+        cell.Value = Math.Round(number, 1, MidpointRounding.AwayFromZero);
+        cell.Style.NumberFormat.Format = "0.0";
     }
 
     /// <summary>Excel rejects workbooks whose sheet name is empty, over 31 chars or contains <c>[]:*?/\</c>.</summary>
