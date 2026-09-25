@@ -5,7 +5,9 @@ import { isApiError } from '@/services/api/http'
 import { useScadaRealtime } from '@/services/realtime'
 import { mapProcessPumps } from '@/services/stations/mappers'
 import {
+  getDeviceMonitor,
   getStationSchematic,
+  peekDeviceMonitor,
   peekStationSchematic,
 } from '@/services/stations/stationsApi'
 import { ProcessDiagram } from './ProcessDiagram'
@@ -17,19 +19,37 @@ export function StationProcessPage() {
   const numericStation = /^\d+$/.test(stationId)
   const stationNumber = numericStation ? Number(stationId) : null
   const cachedSchematic = stationNumber == null ? undefined : peekStationSchematic(stationNumber)
+  const cachedMonitor = stationNumber == null ? undefined : peekDeviceMonitor(stationNumber)
   const [pumps, setPumps] = useState<ProcessPumpCard[]>(() =>
     cachedSchematic
       ? mapProcessPumps(cachedSchematic.pumps ?? [], PROCESS_PUMPS)
       : [],
   )
-  const [ready, setReady] = useState(Boolean(cachedSchematic))
+  const [riverLevel, setRiverLevel] = useState<number | null>(() => {
+    const value = cachedMonitor?.items.find(
+      (item) => typeof item.waterLevel?.river === 'number',
+    )?.waterLevel.river
+    return typeof value === 'number' && Number.isFinite(value) ? value : null
+  })
+  const [ready, setReady] = useState(Boolean(cachedSchematic && cachedMonitor))
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     if (stationNumber == null) return
     try {
-      const schematic = await getStationSchematic(stationNumber)
+      const [schematic, monitor] = await Promise.all([
+        getStationSchematic(stationNumber),
+        getDeviceMonitor(stationNumber),
+      ])
+      const nextRiverLevel = monitor.items.find(
+        (item) => typeof item.waterLevel?.river === 'number',
+      )?.waterLevel.river
       setPumps(mapProcessPumps(schematic.pumps ?? [], PROCESS_PUMPS))
+      setRiverLevel(
+        typeof nextRiverLevel === 'number' && Number.isFinite(nextRiverLevel)
+          ? nextRiverLevel
+          : null,
+      )
       setReady(true)
       setError('')
     } catch (err) {
@@ -57,7 +77,7 @@ export function StationProcessPage() {
         {ready ? (
           <div className={styles.diagramStage}>
             <div className={`${styles.diagramInner} ${styles.processInner}`}>
-              <ProcessDiagram pumps={pumps} />
+              <ProcessDiagram pumps={pumps} riverLevel={riverLevel} />
             </div>
           </div>
         ) : (

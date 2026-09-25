@@ -34,13 +34,22 @@
 }
 
 .dateField {
-  width: 148px;
-  flex: 0 0 148px;
+  width: 160px;
+  flex: 0 0 160px;
+  padding-inline: 0.65rem 0.45rem;
 }
 
 .timeField {
   width: 168px;
   flex: 0 0 168px;
+}
+
+.lockedField:disabled {
+  cursor: not-allowed;
+  border-color: #cbd5dc;
+  background: #e5e7eb;
+  color: #6b7280;
+  opacity: 1;
 }
 
 .timeField :global(input) {

@@ -21,8 +21,8 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: #043d59;
-  opacity: 0.7;
+  background: #06547B;
+  opacity: 1;
   pointer-events: none;
 }
 

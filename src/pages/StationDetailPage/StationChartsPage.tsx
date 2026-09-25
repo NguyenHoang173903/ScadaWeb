@@ -125,12 +125,22 @@ export function StationChartsPage() {
         values={draft}
         deviceOptions={deviceOptions}
         onChange={setDraft}
-        onFilter={() => setApplied(draft)}
+        onFilter={() => {
+          const current = createDefaultChartFilter()
+          const next = {
+            ...draft,
+            toDate: current.toDate,
+            toTime: current.toTime,
+          }
+          setDraft(next)
+          setApplied(next)
+        }}
         onReset={() => {
           const defaultFilter = createDefaultChartFilter()
           setDraft(defaultFilter)
           setApplied(defaultFilter)
         }}
+        lockEndToNow
       />
 
       {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}

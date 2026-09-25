@@ -42,7 +42,7 @@ export function DashboardPage() {
   const userName = getSessionUsername() ?? 'Admin'
   const canUpdateStation = isSessionAdmin()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [listType, setListType] = useState<MapStationType | null>(null)
+  const [listType, setListType] = useState<MapStationType>('pump')
   const [layersOpen, setLayersOpen] = useState(false)
   const [layers, setLayers] = useState<MapOverlayLayer[]>(() => peekCachedMapLayers())
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(
@@ -160,7 +160,7 @@ export function DashboardPage() {
   }, [])
 
   const openStationList = (type: MapStationType) => {
-    setListType((current) => (current === type ? null : type))
+    setListType(type)
     setSelectedStation(null)
     setLayersOpen(false)
   }
@@ -246,7 +246,6 @@ export function DashboardPage() {
           layers={layers}
           onSelectStation={(station) => {
             setSelectedStation(station)
-            setListType(null)
             setLayersOpen(false)
           }}
         />
@@ -308,7 +307,6 @@ export function DashboardPage() {
                     if (next) setSelectedStation(null)
                     return next
                   })
-                  setListType(null)
                 }}
               >
                 <Layers size={16} />
@@ -387,9 +385,7 @@ export function DashboardPage() {
         <StationListPanel
           type={listType}
           stations={listStations}
-          onClose={() => setListType(null)}
           onSelect={(station) => {
-            setListType(null)
             setLayersOpen(false)
             if (station.type === 'pump') {
               const routeId = resolvePumpStationRouteId(station)

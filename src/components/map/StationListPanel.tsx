@@ -15,7 +15,7 @@ const OFFLINE_COLOR = '#F07167'
 type Props = {
   type: MapStationType
   stations: MapStation[]
-  onClose: () => void
+  onClose?: () => void
   onSelect: (station: MapStation) => void
 }
 
@@ -51,9 +51,11 @@ export function StationListPanel({ type, stations, onClose, onSelect }: Props) {
     <aside className={styles.panel} aria-label={TYPE_TITLE[type]}>
       <div className={styles.header}>
         <h2>{TYPE_TITLE[type]}</h2>
-        <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Đóng">
-          <X size={18} />
-        </button>
+        {onClose ? (
+          <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Đóng">
+            <X size={18} />
+          </button>
+        ) : null}
       </div>
 
       <div className={styles.list}>

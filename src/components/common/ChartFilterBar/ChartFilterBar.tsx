@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/common/Button'
 import { SelectField } from '@/components/common/SelectField'
 import { TextField } from '@/components/common/TextField'
@@ -17,6 +18,16 @@ type ChartFilterBarProps = {
   onChange: (next: ChartFilterValues) => void
   onFilter: () => void
   onReset: () => void
+  lockEndToNow?: boolean
+}
+
+function currentEnd() {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return {
+    date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+    time: `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`,
+  }
 }
 
 export function ChartFilterBar({
@@ -25,7 +36,17 @@ export function ChartFilterBar({
   onChange,
   onFilter,
   onReset,
+  lockEndToNow = false,
 }: ChartFilterBarProps) {
+  const [lockedEnd, setLockedEnd] = useState(currentEnd)
+
+  useEffect(() => {
+    if (!lockEndToNow) return
+    setLockedEnd(currentEnd())
+    const timer = window.setInterval(() => setLockedEnd(currentEnd()), 1000)
+    return () => window.clearInterval(timer)
+  }, [lockEndToNow])
+
   const patch = (partial: Partial<ChartFilterValues>) => {
     onChange({ ...values, ...partial })
   }
@@ -62,19 +83,21 @@ export function ChartFilterBar({
       <div className={styles.rangeGroup}>
         <span className={styles.rangeLabel}>đến</span>
         <TextField
-          className={styles.dateField}
+          className={`${styles.dateField} ${lockEndToNow ? styles.lockedField : ''}`}
           type="date"
-          value={values.toDate}
+          value={lockEndToNow ? lockedEnd.date : values.toDate}
           onChange={(event) => patch({ toDate: event.target.value })}
           aria-label="Đến ngày"
+          disabled={lockEndToNow}
         />
         <TextField
-          className={styles.timeField}
+          className={`${styles.timeField} ${lockEndToNow ? styles.lockedField : ''}`}
           type="time"
           step={1}
-          value={values.toTime}
+          value={lockEndToNow ? lockedEnd.time : values.toTime}
           onChange={(event) => patch({ toTime: event.target.value })}
           aria-label="Đến giờ"
+          disabled={lockEndToNow}
         />
       </div>
 

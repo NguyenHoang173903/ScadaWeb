@@ -19,9 +19,13 @@ function prepareInlineSvg(raw: string) {
 type ProcessDiagramProps = {
   /** Trạng thái runtime từng bơm — đổi màu fill phần vàng */
   pumps?: ProcessPumpCard[]
+  riverLevel?: number | null
 }
 
-export function ProcessDiagram({ pumps = PROCESS_PUMPS }: ProcessDiagramProps) {
+export function ProcessDiagram({
+  pumps = PROCESS_PUMPS,
+  riverLevel,
+}: ProcessDiagramProps) {
   const svgHostRef = useRef<HTMLDivElement>(null)
   const [svgHtml] = useState(() => prepareInlineSvg(processDiagramSvg))
   // Keep the inline SVG DOM intact while realtime measurements re-render cards.
@@ -54,7 +58,11 @@ export function ProcessDiagram({ pumps = PROCESS_PUMPS }: ProcessDiagramProps) {
         <span className={styles.processRiverLabel}>Sông Hồng</span>
         <div className={styles.processWaterBox}>
           <span>Mực nước:</span>
-          <strong>35.5m</strong>
+          <strong>
+            {typeof riverLevel === 'number' && Number.isFinite(riverLevel)
+              ? `${formatOne(riverLevel)}m`
+              : '—'}
+          </strong>
         </div>
       </div>
 
