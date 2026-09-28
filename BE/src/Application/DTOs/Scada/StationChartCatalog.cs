@@ -8,6 +8,7 @@ public static class StationChartCatalog
 {
     public const string Temperature = "temperature";
     public const string Current = "current";
+    public const string Water = "water";
 
     public sealed record SeriesDefinition(
         string Key,
@@ -58,12 +59,22 @@ public static class StationChartCatalog
             ["SET_CURENTT", "SET_CURRENTT", "SET_I3", "I3_MAX", "CURRENT_L3_MAX", "CURRENT_T_MAX", "SET_CURRENT", "CURRENT_MAX"]),
     ];
 
+    public static IReadOnlyList<SeriesDefinition> WaterSeries { get; } =
+    [
+        new("riverLevel", "Mức nước sông", "measured",
+            ["RIVER", "LEVEL_RIVER", "WATER_RIVER", "MUC_NUOC_SONG"]),
+        new("basinLevel", "Mức bể xả", "measured",
+            ["DISCHARGE1", "DISCHARGE", "LEVEL_BASIN", "LEVEL_DISCHARGE", "LEVEL_DISCHARGE_1",
+             "LEVEL_XA_1", "WATER_BASIN", "MUC_NUOC_BE_XA", "MUC_XA_1"]),
+    ];
+
     public static bool TryGetSeries(string chart, out IReadOnlyList<SeriesDefinition> series)
     {
         series = chart.Trim().ToLowerInvariant() switch
         {
             Temperature or "temp" or "nhiet" => TemperatureSeries,
             Current or "dong" or "ampere" => CurrentSeries,
+            Water or "level" or "muc-nuoc" => WaterSeries,
             _ => Array.Empty<SeriesDefinition>()
         };
         return series.Count > 0;

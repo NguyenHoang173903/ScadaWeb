@@ -2,6 +2,7 @@ export const ROUTES = {
   login: '/',
   dashboard: '/dashboard',
   users: '/users',
+  changePassword: '/change-password',
   stationRoot: '/stations/:stationId',
   stationSchematic: '/stations/:stationId/schematic',
   stationDataUpdate: '/stations/:stationId/update-data',

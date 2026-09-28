@@ -282,7 +282,7 @@ export async function getChartDevices(stationId: number) {
 export async function getChartHistory(
   stationId: number,
   deviceId: number,
-  chart: 'temperature' | 'current',
+  chart: 'temperature' | 'current' | 'water',
   query: { from: string; to: string; interval?: string },
 ) {
   const search = new URLSearchParams({

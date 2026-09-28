@@ -8,6 +8,27 @@ public class UpdateAppSettingRequest
     public bool? IsEnable { get; set; }
 }
 
+public class UpdatePasswordPolicyRequest
+{
+    public int MinLength { get; set; }
+    public int MaxLength { get; set; }
+    public bool RequireUppercase { get; set; }
+    public bool RequireLowercase { get; set; }
+    public bool RequireNumber { get; set; }
+    public bool RequireSpecial { get; set; }
+    public int ChangeIntervalDays { get; set; }
+    public int ValidityDays { get; set; }
+    public int MaxFailedLogins { get; set; }
+    public int FailedLoginWindowMinutes { get; set; }
+    public int LoginLockoutMinutes { get; set; }
+}
+
+public class UpdateFrontendConfigRequest
+{
+    public string? ArcgisApiKey { get; set; }
+    public bool? LoginLayerVisible { get; set; }
+}
+
 public class AppSettingCatalogItemDto
 {
     public string Key { get; set; } = string.Empty;

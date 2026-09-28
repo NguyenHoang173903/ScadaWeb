@@ -3,6 +3,11 @@ import { Button } from '@/components/common/Button'
 import { FormField } from '@/components/common/FormField'
 import { TextField } from '@/components/common/TextField'
 import { ToggleSwitch } from '@/components/common/ToggleSwitch'
+import { isApiError } from '@/services/api/http'
+import {
+  fetchPasswordPolicy,
+  updatePasswordPolicy,
+} from '@/services/passwordPolicy/passwordPolicyApi'
 import {
   getPasswordPolicy,
   setPasswordPolicy,
@@ -16,8 +21,34 @@ export function PasswordPolicyForm() {
   const [values, setValues] = useState<PasswordPolicy>(() => getPasswordPolicy())
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => subscribePasswordPolicy(setValues), [])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const remote = await fetchPasswordPolicy()
+        if (cancelled) return
+        setPasswordPolicy(remote)
+        setValues(remote)
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(
+            isApiError(requestError)
+              ? requestError.message
+              : 'Không tải được chính sách mật khẩu từ máy chủ.',
+          )
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const updateNumber = (key: keyof PasswordPolicy, raw: string) => {
     const next = Number(raw)
@@ -55,18 +86,32 @@ export function PasswordPolicyForm() {
       return
     }
     setError('')
-    setPasswordPolicy(values)
-    setValues(getPasswordPolicy())
-    setSaved(true)
+    setSaved(false)
+    setLoading(true)
+    void (async () => {
+      try {
+        const remote = await updatePasswordPolicy(values)
+        setPasswordPolicy(remote)
+        setValues(remote)
+        setSaved(true)
+      } catch (requestError) {
+        setError(
+          isApiError(requestError)
+            ? requestError.message
+            : 'Không lưu được chính sách mật khẩu lên máy chủ.',
+        )
+      } finally {
+        setLoading(false)
+      }
+    })()
   }
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.panel}>
         <p className={styles.hint}>
-          Lưu ý: thay đổi tại đây chỉ lưu trên trình duyệt (localStorage) để kiểm tra UI. Backend
-          đang dùng password policy / login security từ appsettings — chưa có REST đồng bộ. Rule
-          validate khi tạo user / đổi MK trên server không đổi theo form này.
+          Chính sách được lưu trên máy chủ và áp dụng cho tạo tài khoản, đổi mật khẩu, thời hạn mật
+          khẩu và giới hạn đăng nhập sai.
         </p>
         <h3 className={styles.heading}>Độ phức tạp mật khẩu</h3>
         <div className={styles.grid}>
@@ -204,8 +249,8 @@ export function PasswordPolicyForm() {
         ) : (
           <span />
         )}
-        <Button type="submit" variant="success">
-          Lưu chính sách
+        <Button type="submit" variant="success" disabled={loading}>
+          {loading ? 'Đang xử lý...' : 'Lưu chính sách'}
         </Button>
       </div>
     </form>

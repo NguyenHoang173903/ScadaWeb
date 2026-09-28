@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { StationAlertBar } from '@/components/common/StationAlertBar'
 import { isApiError } from '@/services/api/http'
 import { useScadaRealtime } from '@/services/realtime'
 import { mapElectricalParams, mapSchematicPumps } from '@/services/stations/mappers'
 import {
-  getStationElectrical,
-  getStationSchematic,
-  peekStationElectrical,
-  peekStationSchematic,
-} from '@/services/stations/stationsApi'
+  stationElectricalQuery,
+  stationQueryKeys,
+  stationSchematicQuery,
+} from '@/services/stations/stationQueries'
 import { SchematicDiagram } from './SchematicDiagram'
 import {
   ELECTRICAL_PARAMS,
@@ -23,47 +23,49 @@ export function StationSchematicPage() {
   const { stationId = '' } = useParams()
   const numericStation = /^\d+$/.test(stationId)
   const stationNumber = numericStation ? Number(stationId) : null
-  const cachedSchematic = stationNumber == null ? undefined : peekStationSchematic(stationNumber)
-  const cachedElectrical = stationNumber == null ? undefined : peekStationElectrical(stationNumber)
-  const [pumps, setPumps] = useState<PumpBranch[]>(() =>
-    cachedSchematic
-      ? mapSchematicPumps(cachedSchematic.pumps ?? [], PUMP_BRANCHES)
-      : [],
+  const queryClient = useQueryClient()
+  const schematic = useQuery({
+    ...stationSchematicQuery(stationNumber ?? 0),
+    enabled: stationNumber != null,
+  })
+  const electricalQuery = useQuery({
+    ...stationElectricalQuery(stationNumber ?? 0),
+    enabled: stationNumber != null,
+  })
+  const pumps = useMemo<PumpBranch[]>(
+    () =>
+      schematic.data
+        ? mapSchematicPumps(schematic.data.pumps ?? [], PUMP_BRANCHES)
+        : [],
+    [schematic.data],
   )
-  const [electrical, setElectrical] = useState<ElectricalParams>(() =>
-    cachedElectrical
-      ? mapElectricalParams(cachedElectrical, ELECTRICAL_PARAMS)
-      : ELECTRICAL_PARAMS,
+  const electrical = useMemo<ElectricalParams>(
+    () =>
+      electricalQuery.data
+        ? mapElectricalParams(electricalQuery.data, ELECTRICAL_PARAMS)
+        : ELECTRICAL_PARAMS,
+    [electricalQuery.data],
   )
-  const [ready, setReady] = useState(Boolean(cachedSchematic && cachedElectrical))
-  const [error, setError] = useState('')
-
-  const load = useCallback(async () => {
-    if (stationNumber == null) return
-    try {
-      const [schematic, electricalDto] = await Promise.all([
-        getStationSchematic(stationNumber),
-        getStationElectrical(stationNumber),
-      ])
-      setPumps(mapSchematicPumps(schematic.pumps ?? [], PUMP_BRANCHES))
-      setElectrical(mapElectricalParams(electricalDto, ELECTRICAL_PARAMS))
-      setReady(true)
-      setError('')
-    } catch (err) {
-      setError(isApiError(err) ? err.message : 'Không tải được sơ đồ nguyên lý.')
-    }
-  }, [stationNumber])
-
-  useEffect(() => {
-    void load()
-  }, [load])
+  const ready = Boolean(schematic.data && electricalQuery.data)
+  const queryError = schematic.error ?? electricalQuery.error
+  const error = queryError
+    ? isApiError(queryError)
+      ? queryError.message
+      : 'Không tải được sơ đồ nguyên lý.'
+    : ''
 
   useScadaRealtime({
     stationId,
     screen: 'nguyen-ly',
     enabled: numericStation,
     onInvalidate: () => {
-      void load()
+      if (stationNumber == null) return
+      void queryClient.invalidateQueries({
+        queryKey: stationQueryKeys.schematic(stationNumber),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: stationQueryKeys.electrical(stationNumber),
+      })
     },
   })
 

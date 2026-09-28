@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { isApiError } from '@/services/api/http'
 import { mapStationOperator } from '@/services/stations/mappers'
-import { getStationTeam } from '@/services/stations/stationsApi'
+import { stationTeamQuery } from '@/services/stations/stationQueries'
 import { TeamMemberCard } from './TeamMemberCard'
 import type { TeamMember } from './teamMock'
 import styles from './TeamPage.module.css'
@@ -10,35 +11,26 @@ import styles from './TeamPage.module.css'
 export function StationTeamPage() {
   const { stationId = '' } = useParams()
   const numericStation = /^\d+$/.test(stationId)
-  const [members, setMembers] = useState<TeamMember[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  const load = useCallback(async (showLoading = false) => {
-    if (!numericStation) return
-    if (showLoading) setLoading(true)
-    try {
-      const team = await getStationTeam(Number(stationId))
-      setMembers((team.operators ?? []).map(mapStationOperator))
-      setError('')
-    } catch (err) {
-      setError(isApiError(err) ? err.message : 'Không tải được dữ liệu tổ vận hành.')
-    } finally {
-      if (showLoading) setLoading(false)
-    }
-  }, [numericStation, stationId])
-
-  useEffect(() => {
-    void load(true)
-    const timer = window.setInterval(() => void load(), 15_000)
-    return () => window.clearInterval(timer)
-  }, [load])
+  const stationNumber = numericStation ? Number(stationId) : null
+  const team = useQuery({
+    ...stationTeamQuery(stationNumber ?? 0),
+    enabled: stationNumber != null,
+  })
+  const members = useMemo<TeamMember[]>(
+    () => (team.data?.operators ?? []).map(mapStationOperator),
+    [team.data],
+  )
+  const error = team.error
+    ? isApiError(team.error)
+      ? team.error.message
+      : 'Không tải được dữ liệu tổ vận hành.'
+    : ''
 
   return (
     <div className={styles.page}>
       {error ? <p className={styles.error}>{error}</p> : null}
 
-      {loading && members.length === 0 ? (
+      {team.isPending && members.length === 0 ? (
         <div className={styles.empty}>
           <p className={styles.emptyTitle}>Đang tải tổ vận hành...</p>
         </div>

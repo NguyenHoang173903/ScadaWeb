@@ -44,15 +44,21 @@ function formatLastLogin(iso?: string | null) {
 }
 
 function mapRoleLabel(role: string): UserAccount['role'] {
-  if (role === 'Administrator' || role === 'Admin') return 'Administrator'
-  if (role === 'viewer' || role === 'Viewer') return 'Viewer'
+  const normalized = role.trim().toLowerCase()
+  if (normalized === 'admin' || normalized === 'administrator' || normalized === 'superadmin') {
+    return 'Administrator'
+  }
+  if (normalized === 'view' || normalized === 'viewer') return 'Viewer'
   return 'Operator'
 }
 
 function mapRoleForApi(role: string): string {
-  if (role === 'Administrator' || role === 'Admin') return 'Administrator'
-  if (role === 'viewer' || role === 'Viewer') return 'viewer'
-  return 'Operator'
+  const normalized = role.trim().toLowerCase()
+  if (normalized === 'admin' || normalized === 'administrator' || normalized === 'superadmin') {
+    return 'ADMIN'
+  }
+  if (normalized === 'view' || normalized === 'viewer') return 'VIEW'
+  return 'OPERATOR'
 }
 
 function mapScadaUser(dto: ScadaUserDto): UserAccount {
@@ -110,6 +116,7 @@ export function UsersPage() {
     try {
       const result = await listScadaUsers({
         keyword: search || undefined,
+        isActive: true,
         pageNumber,
         pageSize: PAGE_SIZE,
       })
@@ -154,7 +161,7 @@ export function UsersPage() {
     if (!selectedId || actionBusy) return
     const selected = users.find((u) => u.id === selectedId)
     const ok = window.confirm(
-      `Vô hiệu hóa tài khoản "${selected?.username ?? selectedId}"?\n(Soft-delete: IsActive = false)`,
+      `Xóa tài khoản "${selected?.username ?? selectedId}" khỏi danh sách?\nBạn có thể tạo lại tài khoản cùng tên sau này.`,
     )
     if (!ok) return
 
@@ -165,7 +172,7 @@ export function UsersPage() {
       setSelectedId(null)
       await loadUsers(query, page)
     } catch (error) {
-      setListError(isApiError(error) ? error.message : 'Không vô hiệu hóa được tài khoản.')
+      setListError(isApiError(error) ? error.message : 'Không xóa được tài khoản.')
     } finally {
       setActionBusy(false)
     }
@@ -225,7 +232,15 @@ export function UsersPage() {
         header: 'Trạng thái',
         width: 180,
         render: (row) => (
-          <Badge tone={row.status === 'Đang hoạt động' ? 'green' : 'red'}>
+          <Badge
+            tone={
+              row.status === 'Đang hoạt động'
+                ? 'green'
+                : row.status === 'Chờ đổi mật khẩu lần đầu'
+                  ? 'yellow'
+                  : 'red'
+            }
+          >
             {row.status}
           </Badge>
         ),

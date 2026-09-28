@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { StationAlertBar } from '@/components/common/StationAlertBar'
 import { isApiError } from '@/services/api/http'
 import { useScadaRealtime } from '@/services/realtime'
 import { mapProcessPumps } from '@/services/stations/mappers'
 import {
-  getDeviceMonitor,
-  getStationSchematic,
-  peekDeviceMonitor,
-  peekStationSchematic,
-} from '@/services/stations/stationsApi'
+  stationMonitorQuery,
+  stationQueryKeys,
+  stationSchematicQuery,
+} from '@/services/stations/stationQueries'
 import { ProcessDiagram } from './ProcessDiagram'
 import { PROCESS_PUMPS, type ProcessPumpCard } from './processMock'
 import styles from './StationPage.module.css'
@@ -18,55 +18,48 @@ export function StationProcessPage() {
   const { stationId = '' } = useParams()
   const numericStation = /^\d+$/.test(stationId)
   const stationNumber = numericStation ? Number(stationId) : null
-  const cachedSchematic = stationNumber == null ? undefined : peekStationSchematic(stationNumber)
-  const cachedMonitor = stationNumber == null ? undefined : peekDeviceMonitor(stationNumber)
-  const [pumps, setPumps] = useState<ProcessPumpCard[]>(() =>
-    cachedSchematic
-      ? mapProcessPumps(cachedSchematic.pumps ?? [], PROCESS_PUMPS)
-      : [],
+  const queryClient = useQueryClient()
+  const schematic = useQuery({
+    ...stationSchematicQuery(stationNumber ?? 0),
+    enabled: stationNumber != null,
+  })
+  const monitor = useQuery({
+    ...stationMonitorQuery(stationNumber ?? 0),
+    enabled: stationNumber != null,
+  })
+  const pumps = useMemo<ProcessPumpCard[]>(
+    () =>
+      schematic.data
+        ? mapProcessPumps(schematic.data.pumps ?? [], PROCESS_PUMPS)
+        : [],
+    [schematic.data],
   )
-  const [riverLevel, setRiverLevel] = useState<number | null>(() => {
-    const value = cachedMonitor?.items.find(
+  const riverLevel = useMemo<number | null>(() => {
+    const value = monitor.data?.items.find(
       (item) => typeof item.waterLevel?.river === 'number',
     )?.waterLevel.river
     return typeof value === 'number' && Number.isFinite(value) ? value : null
-  })
-  const [ready, setReady] = useState(Boolean(cachedSchematic && cachedMonitor))
-  const [error, setError] = useState('')
-
-  const load = useCallback(async () => {
-    if (stationNumber == null) return
-    try {
-      const [schematic, monitor] = await Promise.all([
-        getStationSchematic(stationNumber),
-        getDeviceMonitor(stationNumber),
-      ])
-      const nextRiverLevel = monitor.items.find(
-        (item) => typeof item.waterLevel?.river === 'number',
-      )?.waterLevel.river
-      setPumps(mapProcessPumps(schematic.pumps ?? [], PROCESS_PUMPS))
-      setRiverLevel(
-        typeof nextRiverLevel === 'number' && Number.isFinite(nextRiverLevel)
-          ? nextRiverLevel
-          : null,
-      )
-      setReady(true)
-      setError('')
-    } catch (err) {
-      setError(isApiError(err) ? err.message : 'Không tải được sơ đồ công nghệ.')
-    }
-  }, [stationNumber])
-
-  useEffect(() => {
-    void load()
-  }, [load])
+  }, [monitor.data])
+  const ready = Boolean(schematic.data && monitor.data)
+  const queryError = schematic.error ?? monitor.error
+  const error = queryError
+    ? isApiError(queryError)
+      ? queryError.message
+      : 'Không tải được sơ đồ công nghệ.'
+    : ''
 
   useScadaRealtime({
     stationId,
     screen: 'cong-nghe',
     enabled: numericStation,
     onInvalidate: () => {
-      void load()
+      if (stationNumber == null) return
+      void queryClient.invalidateQueries({
+        queryKey: stationQueryKeys.schematic(stationNumber),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: stationQueryKeys.monitor(stationNumber),
+      })
     },
   })
 

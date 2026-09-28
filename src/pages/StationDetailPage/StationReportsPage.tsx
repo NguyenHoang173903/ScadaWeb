@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { DataTable, type DataTableColumn } from '@/components/common/DataTable'
 import { Pagination } from '@/components/common/Pagination'
@@ -11,10 +12,12 @@ import { canSessionExportExcel } from '@/settings/session'
 import { parsePumpIndex } from '@/services/stations/mappers'
 import {
   exportReportTableExcel,
-  getReportDevices,
-  getReportTable,
   type StationReportColumnDto,
 } from '@/services/stations/stationsApi'
+import {
+  stationReportDevicesQuery,
+  stationReportTableQuery,
+} from '@/services/stations/stationQueries'
 import {
   DEFAULT_REPORT_FILTER,
   getReportColumns,
@@ -79,52 +82,48 @@ function columnsFromApi(apiColumns: StationReportColumnDto[]): DataTableColumn<R
 export function StationReportsPage() {
   const { stationId = '' } = useParams()
   const numericStation = /^\d+$/.test(stationId)
+  const stationNumber = numericStation ? Number(stationId) : null
   const [draft, setDraft] = useState<ReportFilterValues>(DEFAULT_REPORT_FILTER)
   const [applied, setApplied] = useState<ReportFilterValues>(DEFAULT_REPORT_FILTER)
   const [page, setPage] = useState(1)
-  const [rows, setRows] = useState<ReportRow[]>([])
-  const [totalCount, setTotalCount] = useState(0)
   const [deviceOptions, setDeviceOptions] = useState(REPORT_DEVICE_OPTIONS)
   const [deviceMeta, setDeviceMeta] = useState<
     Array<{ id: number; name: string; kind: ReturnType<typeof classifyDevice> }>
   >([])
-  const [dynamicColumns, setDynamicColumns] = useState<DataTableColumn<ReportRow>[] | null>(null)
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
   const [exportBusy, setExportBusy] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
   const canExport = canSessionExportExcel()
+  const reportDevices = useQuery({
+    ...stationReportDevicesQuery(stationNumber ?? 0),
+    enabled: stationNumber != null,
+  })
 
   useEffect(() => {
-    if (!numericStation) return
-    void getReportDevices(Number(stationId))
-      .then((devices) => {
-        const meta = devices.map((d) => ({
-          id: d.id,
-          name: d.name,
-          kind: classifyDevice(d.name),
-        }))
-        setDeviceMeta(meta)
-        setDeviceOptions(
-          meta.map((d) => ({
-            value: `device-${d.id}`,
-            label: d.name,
-          })),
-        )
-        if (meta.length > 0) {
-          const preferred =
-            meta.find((d) => d.kind === 'level') ??
-            meta.find((d) => d.kind === 'pump') ??
-            meta[0]
-          const nextId = `device-${preferred.id}`
-          setDraft((prev) => ({ ...prev, deviceId: nextId }))
-          setApplied((prev) => ({ ...prev, deviceId: nextId }))
-        }
-      })
-      .catch(() => {
-        // Keep mock options.
-      })
-  }, [stationId, numericStation])
+    const devices = reportDevices.data
+    if (!devices) return
+    const meta = devices.map((d) => ({
+      id: d.id,
+      name: d.name,
+      kind: classifyDevice(d.name),
+    }))
+    setDeviceMeta(meta)
+    setDeviceOptions(
+      meta.map((d) => ({
+        value: `device-${d.id}`,
+        label: d.name,
+      })),
+    )
+    if (meta.length > 0) {
+      const preferred =
+        meta.find((d) => d.kind === 'level') ??
+        meta.find((d) => d.kind === 'pump') ??
+        meta[0]
+      const nextId = `device-${preferred.id}`
+      setDraft((prev) => ({ ...prev, deviceId: nextId }))
+      setApplied((prev) => ({ ...prev, deviceId: nextId }))
+    }
+  }, [reportDevices.data])
 
   const selectedDeviceId = useMemo(() => {
     if (applied.deviceId.startsWith('device-')) {
@@ -138,61 +137,47 @@ export function StationReportsPage() {
     return deviceMeta.find((d) => d.id === selectedDeviceId)?.kind ?? 'other'
   }, [deviceMeta, selectedDeviceId])
 
-  useEffect(() => {
-    if (!numericStation || selectedDeviceId == null) {
-      setRows([])
-      setTotalCount(0)
-      setDynamicColumns(null)
-      return
-    }
-
-    let cancelled = false
-    setLoading(true)
-    void (async () => {
-      try {
-        const common = {
-          reportDate: applied.reportDate,
-          startTime: applied.startTime,
-          endTime: applied.endTime,
-          pageNumber: page,
-          pageSize: REPORT_PAGE_SIZE,
+  const reportTable = useQuery({
+    ...stationReportTableQuery(stationNumber ?? 0, {
+      deviceId: selectedDeviceId ?? 0,
+      reportDate: applied.reportDate,
+      startTime: applied.startTime,
+      endTime: applied.endTime,
+      pageNumber: page,
+      pageSize: REPORT_PAGE_SIZE,
+      refreshTick,
+    }),
+    enabled: stationNumber != null && selectedDeviceId != null,
+  })
+  const dynamicColumns = useMemo(
+    () =>
+      reportTable.data
+        ? columnsFromApi(reportTable.data.columns ?? [])
+        : null,
+    [reportTable.data],
+  )
+  const rows = useMemo<ReportRow[]>(
+    () =>
+      (reportTable.data?.items ?? []).map((row, index) => {
+        const values: ReportRow = {
+          id: `${row.time}-${index}`,
+          time: formatTime(row.time),
         }
-
-        const result = await getReportTable(Number(stationId), {
-          ...common,
-          deviceId: selectedDeviceId,
-        })
-        if (cancelled) return
-        setDynamicColumns(columnsFromApi(result.columns ?? []))
-        setRows(
-          (result.items ?? []).map((row, index) => {
-            const values: ReportRow = {
-              id: `${row.time}-${index}`,
-              time: formatTime(row.time),
-            }
-            for (const [key, value] of Object.entries(row.values ?? {})) {
-              values[key] = fmt(value)
-            }
-            return values
-          }),
-        )
-        setTotalCount(result.totalCount ?? result.items?.length ?? 0)
-        setError('')
-      } catch (err) {
-        if (cancelled) return
-        setRows([])
-        setTotalCount(0)
-        setDynamicColumns(null)
-        setError(isApiError(err) ? err.message : 'Không tải được báo cáo.')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [stationId, numericStation, applied, page, selectedDeviceId, refreshTick])
+        for (const [key, value] of Object.entries(row.values ?? {})) {
+          values[key] = fmt(value)
+        }
+        return values
+      }),
+    [reportTable.data],
+  )
+  const totalCount =
+    reportTable.data?.totalCount ?? reportTable.data?.items?.length ?? 0
+  const queryError = reportTable.error ?? reportDevices.error
+  const queryErrorMessage = queryError
+    ? isApiError(queryError)
+      ? queryError.message
+      : 'Không tải được báo cáo.'
+    : ''
 
   const totalPages = Math.max(1, Math.ceil(totalCount / REPORT_PAGE_SIZE) || 1)
   const currentPage = Math.min(page, totalPages)
@@ -236,22 +221,27 @@ export function StationReportsPage() {
           if (next.deviceId !== draft.deviceId) {
             setApplied((prev) => ({ ...prev, deviceId: next.deviceId }))
             setPage(1)
+            setError('')
           }
         }}
         onFilter={() => {
           setApplied(draft)
           setPage(1)
+          setError('')
         }}
         onReset={() => {
           setApplied({ ...draft })
           setPage(1)
           setRefreshTick((tick) => tick + 1)
+          setError('')
         }}
         onExport={() => void handleExport()}
         exportDisabled={!canExport || exportBusy || selectedDeviceId == null}
       />
 
-      {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}
+      {error || queryErrorMessage ? (
+        <p style={{ color: '#b91c1c' }}>{error || queryErrorMessage}</p>
+      ) : null}
 
       <div className={styles.tablePanel}>
         <DataTable
@@ -261,7 +251,7 @@ export function StationReportsPage() {
           rowKey={(row) => row.id}
           minRows={8}
           totalCount={totalCount}
-          emptyText={loading ? 'Đang tải...' : 'Không có dữ liệu'}
+          emptyText={reportTable.isPending ? 'Đang tải...' : 'Không có dữ liệu'}
           updateHint="Dữ liệu cập nhật 30 phút 1 lần"
           footer={
             <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />

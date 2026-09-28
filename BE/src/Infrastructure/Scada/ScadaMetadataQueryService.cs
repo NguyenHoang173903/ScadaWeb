@@ -35,6 +35,7 @@ public class ScadaMetadataQueryService(
     IImportExportService importExport,
     IScadaSessionRevocationService sessionRevocation,
     IOptions<PasswordPolicyOptions> passwordOptions,
+    IOptions<LoginSecurityOptions> loginOptions,
     IOptions<RealtimeOptions> realtimeOptions,
     ILogger<ScadaMetadataQueryService> logger) :
     IStationQueryService,
@@ -1757,7 +1758,7 @@ public class ScadaMetadataQueryService(
             if (!StationChartCatalog.TryGetSeries(chart ?? string.Empty, out var seriesDefs))
                 return Result<StationChartHistoryDto>.Failure(
                     ScadaErrorCodes.ChartUnknown,
-                    $"Unknown chart '{chart}'. Use temperature or current.");
+                    $"Unknown chart '{chart}'. Use temperature, current, or water.");
 
             var stationExists = await db.Stations.AsNoTracking()
                 .AnyAsync(s => s.Id == stationId, cancellationToken);
@@ -1875,16 +1876,28 @@ public class ScadaMetadataQueryService(
                 var sourceInterval = TimeSpan.FromSeconds(1);
                 var sourceLabel = "1s";
 
-                // Some deployments currently persist report samples only in
-                // history_30m. Use them when history_1s has not been populated.
+                // Water-level reports and some deployments persist samples in
+                // history_30s. Prefer it before the coarse history_30m fallback.
                 if (primary.Count == 0)
                 {
-                    var fallbackRows = await db.History30m.AsNoTracking()
+                    var fallback30s = await db.History30s.AsNoTracking()
                         .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
                         .OrderBy(h => h.Time)
                         .Select(h => new { h.TagId, h.Time, h.Value })
                         .ToListAsync(cancellationToken);
-                    primary = fallbackRows.Select(r => (r.TagId, r.Time, r.Value)).ToList();
+                    primary = fallback30s.Select(r => (r.TagId, r.Time, r.Value)).ToList();
+                    sourceInterval = TimeSpan.FromSeconds(30);
+                    sourceLabel = "30s";
+                }
+
+                if (primary.Count == 0)
+                {
+                    var fallback30m = await db.History30m.AsNoTracking()
+                        .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
+                        .OrderBy(h => h.Time)
+                        .Select(h => new { h.TagId, h.Time, h.Value })
+                        .ToListAsync(cancellationToken);
+                    primary = fallback30m.Select(r => (r.TagId, r.Time, r.Value)).ToList();
                     sourceInterval = TimeSpan.FromMinutes(30);
                     sourceLabel = "30m";
                 }
@@ -2732,7 +2745,9 @@ public class ScadaMetadataQueryService(
                         : (u.LockoutUntil != null && u.LockoutUntil > now)
                             ? "Bị khóa (đăng nhập sai)"
                             : u.MustChangePassword
-                                ? "Bị khóa (hết hạn mật khẩu)"
+                                ? u.PasswordUpdatedAt == null
+                                    ? "Chờ đổi mật khẩu lần đầu"
+                                    : "Bị khóa (hết hạn mật khẩu)"
                                 : "Đang hoạt động"
             })
             .ToListAsync(cancellationToken);
@@ -2766,7 +2781,9 @@ public class ScadaMetadataQueryService(
                         : (u.LockoutUntil != null && u.LockoutUntil > now)
                             ? "Bị khóa (đăng nhập sai)"
                             : u.MustChangePassword
-                                ? "Bị khóa (hết hạn mật khẩu)"
+                                ? u.PasswordUpdatedAt == null
+                                    ? "Chờ đổi mật khẩu lần đầu"
+                                    : "Bị khóa (hết hạn mật khẩu)"
                                 : "Đang hoạt động"
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -2808,33 +2825,40 @@ public class ScadaMetadataQueryService(
             if (request.Level is { } level && (level < 1 || level > 100))
                 return Result<ScadaUserDto>.Failure("Auth.Validation", "Level must be between 1 and 100.");
 
-            var exists = await db.ScadaUsers.AnyAsync(u => u.Username == username, cancellationToken);
-            if (exists)
+            var existingUser = await db.ScadaUsers
+                .FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
+            if (existingUser?.IsActive == true)
                 return Result<ScadaUserDto>.Failure("Auth.UsernameTaken", "Username is already taken.");
 
             var now = DateTimeOffset.UtcNow;
             var actor = currentUser.Username;
-            var user = new ScadaUser
+            var user = existingUser ?? new ScadaUser
             {
                 Username = username,
-                FullName = fullName,
-                PasswordHash = passwordHasher.Hash(request.Password),
-                Role = role,
-                IsActive = request.IsActive,
-                MustChangePassword = request.MustChangePassword,
-                Department = NullIfWhiteSpace(request.Department),
-                Position = NullIfWhiteSpace(request.Position),
-                Unit = NullIfWhiteSpace(request.Unit) ?? NullIfWhiteSpace(request.Department),
-                Description = NullIfWhiteSpace(request.Description),
-                Level = request.Level,
-                PasswordUpdatedAt = request.MustChangePassword ? null : now,
                 CreatedBy = actor,
-                UpdatedBy = actor,
-                CreatedAt = now,
-                UpdatedAt = now
+                CreatedAt = now
             };
 
-            db.ScadaUsers.Add(user);
+            user.FullName = fullName;
+            user.PasswordHash = passwordHasher.Hash(request.Password);
+            user.Role = role;
+            user.IsActive = request.IsActive;
+            user.MustChangePassword = request.MustChangePassword;
+            user.Department = NullIfWhiteSpace(request.Department);
+            user.Position = NullIfWhiteSpace(request.Position);
+            user.Unit = NullIfWhiteSpace(request.Unit) ?? NullIfWhiteSpace(request.Department);
+            user.Description = NullIfWhiteSpace(request.Description);
+            user.Level = request.Level;
+            user.PasswordUpdatedAt = request.MustChangePassword ? null : now;
+            user.FailedLoginCount = 0;
+            user.LockoutUntil = null;
+            user.LastLoginAt = null;
+            user.UpdatedBy = actor;
+            user.UpdatedAt = now;
+
+            if (existingUser is null)
+                db.ScadaUsers.Add(user);
+
             await db.SaveChangesAsync(cancellationToken);
 
             await systemAudit.LogAsync(new SystemAuditEntry
@@ -2845,7 +2869,9 @@ public class ScadaMetadataQueryService(
                 Module = "ScadaUsers",
                 EntityType = "ScadaUser",
                 EntityId = user.Id.ToString(CultureInfo.InvariantCulture),
-                Description = $"Created SCADA user '{user.Username}'.",
+                Description = existingUser is null
+                    ? $"Created SCADA user '{user.Username}'."
+                    : $"Reactivated SCADA user '{user.Username}' with a new profile and password.",
                 UserId = currentUser.OperatorUserId,
                 UserName = actor
             }, cancellationToken);
@@ -3022,7 +3048,9 @@ public class ScadaMetadataQueryService(
                     : (u.LockoutUntil != null && u.LockoutUntil > now)
                         ? "Bị khóa (đăng nhập sai)"
                         : u.MustChangePassword
-                            ? "Bị khóa (hết hạn mật khẩu)"
+                            ? u.PasswordUpdatedAt == null
+                                ? "Chờ đổi mật khẩu lần đầu"
+                                : "Bị khóa (hết hạn mật khẩu)"
                             : "Đang hoạt động"
         };
 
@@ -3108,6 +3136,180 @@ public class ScadaMetadataQueryService(
                 })
                 .ToList();
             return Task.FromResult(Result<IReadOnlyList<AppSettingCatalogItemDto>>.Success(items));
+        });
+
+    public Task<Result<PasswordPolicyDto>> GetPasswordPolicyAsync(
+        CancellationToken cancellationToken = default) =>
+        SafeAsync(async () =>
+        {
+            var rows = await db.AppSettings.AsNoTracking()
+                .Where(s => s.SettingKey.StartsWith("security."))
+                .ToListAsync(cancellationToken);
+            var values = rows.ToDictionary(
+                row => row.SettingKey,
+                row => row.SettingValue,
+                StringComparer.OrdinalIgnoreCase);
+
+            var password = passwordOptions.Value;
+            var login = loginOptions.Value;
+            var result = new PasswordPolicyDto
+            {
+                MinLength = ReadInt(values, "security.password.minLength", password.MinLength),
+                MaxLength = ReadInt(values, "security.password.maxLength", password.MaxLength),
+                RequireUppercase = ReadBool(values, "security.password.requireUppercase", password.RequireUppercase),
+                RequireLowercase = ReadBool(values, "security.password.requireLowercase", password.RequireLowercase),
+                RequireNumber = ReadBool(values, "security.password.requireNumber", password.RequireDigit),
+                RequireSpecial = ReadBool(values, "security.password.requireSpecial", password.RequireSpecial),
+                ChangeIntervalDays = ReadInt(values, "security.password.changeIntervalDays", password.ExpireDays),
+                ValidityDays = ReadInt(values, "security.password.validityDays", Math.Max(password.ExpireDays, 180)),
+                MaxFailedLogins = ReadInt(values, "security.login.maxFailedLogins", login.MaxFailed),
+                FailedLoginWindowMinutes = ReadInt(values, "security.login.failedLoginWindowMinutes", login.WindowMinutes),
+                LoginLockoutMinutes = ReadInt(values, "security.login.lockoutMinutes", login.LockMinutes)
+            };
+
+            ApplyRuntimePasswordPolicy(result);
+            return Result<PasswordPolicyDto>.Success(result);
+        });
+
+    public Task<Result<FrontendConfigDto>> GetFrontendConfigAsync(
+        CancellationToken cancellationToken = default) =>
+        SafeAsync(async () =>
+        {
+            var rows = await db.AppSettings.AsNoTracking()
+                .Where(s => s.SettingKey == "frontend.arcgisApiKey"
+                            || s.SettingKey == "frontend.loginLayerVisible")
+                .ToDictionaryAsync(s => s.SettingKey, s => s.SettingValue, cancellationToken);
+
+            return Result<FrontendConfigDto>.Success(new FrontendConfigDto
+            {
+                ArcgisApiKey = rows.GetValueOrDefault("frontend.arcgisApiKey") ?? string.Empty,
+                LoginLayerVisible =
+                    !rows.TryGetValue("frontend.loginLayerVisible", out var visible)
+                    || !bool.TryParse(visible, out var parsed)
+                    || parsed
+            });
+        });
+
+    public Task<Result<FrontendConfigDto>> UpdateFrontendConfigAsync(
+        UpdateFrontendConfigRequest request,
+        CancellationToken cancellationToken = default) =>
+        SafeAsync(async () =>
+        {
+            if (request.ArcgisApiKey is { Length: > 0 } key && key.Trim().Length < 16)
+                return Result<FrontendConfigDto>.Failure(
+                    "ValidationError",
+                    "ArcGIS API key must contain at least 16 characters.");
+
+            var now = DateTimeOffset.UtcNow;
+            if (request.ArcgisApiKey is not null)
+            {
+                await UpsertFrontendSettingAsync(
+                    "frontend.arcgisApiKey",
+                    request.ArcgisApiKey.Trim(),
+                    "string",
+                    now,
+                    cancellationToken);
+            }
+            if (request.LoginLayerVisible is { } loginLayerVisible)
+            {
+                await UpsertFrontendSettingAsync(
+                    "frontend.loginLayerVisible",
+                    loginLayerVisible.ToString().ToLowerInvariant(),
+                    "boolean",
+                    now,
+                    cancellationToken);
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+
+            await systemAudit.LogAsync(new SystemAuditEntry
+            {
+                Action = AuditActionNames.ConfigurationChanged,
+                EventType = AuditEventType.Configuration,
+                Status = AuditStatus.Success,
+                Module = "FrontendConfig",
+                EntityType = "AppSetting",
+                EntityId = "frontend-config",
+                Description = "Updated shared frontend configuration.",
+                UserId = currentUser.OperatorUserId,
+                UserName = currentUser.Username
+            }, cancellationToken);
+
+            return await GetFrontendConfigAsync(cancellationToken);
+        });
+
+    public Task<Result<PasswordPolicyDto>> UpdatePasswordPolicyAsync(
+        UpdatePasswordPolicyRequest request,
+        CancellationToken cancellationToken = default) =>
+        SafeAsync(async () =>
+        {
+            if (request.MinLength < 1 || request.MaxLength > 256 || request.MinLength > request.MaxLength)
+                return Result<PasswordPolicyDto>.Failure("ValidationError", "Password length limits are invalid.");
+            if (request.ChangeIntervalDays < 1
+                || request.ValidityDays < request.ChangeIntervalDays
+                || request.ValidityDays > 3650)
+                return Result<PasswordPolicyDto>.Failure("ValidationError", "Password lifetime limits are invalid.");
+            if (request.MaxFailedLogins is < 1 or > 50
+                || request.FailedLoginWindowMinutes is < 1 or > 1440
+                || request.LoginLockoutMinutes is < 1 or > 10080)
+                return Result<PasswordPolicyDto>.Failure("ValidationError", "Login lockout limits are invalid.");
+
+            var policy = new PasswordPolicyDto
+            {
+                MinLength = request.MinLength,
+                MaxLength = request.MaxLength,
+                RequireUppercase = request.RequireUppercase,
+                RequireLowercase = request.RequireLowercase,
+                RequireNumber = request.RequireNumber,
+                RequireSpecial = request.RequireSpecial,
+                ChangeIntervalDays = request.ChangeIntervalDays,
+                ValidityDays = request.ValidityDays,
+                MaxFailedLogins = request.MaxFailedLogins,
+                FailedLoginWindowMinutes = request.FailedLoginWindowMinutes,
+                LoginLockoutMinutes = request.LoginLockoutMinutes
+            };
+
+            var now = DateTimeOffset.UtcNow;
+            await UpsertPolicySettingAsync("security.password.minLength", policy.MinLength, now, cancellationToken);
+            await UpsertPolicySettingAsync("security.password.maxLength", policy.MaxLength, now, cancellationToken);
+            await UpsertPolicySettingAsync("security.password.requireUppercase", policy.RequireUppercase, now, cancellationToken);
+            await UpsertPolicySettingAsync("security.password.requireLowercase", policy.RequireLowercase, now, cancellationToken);
+            await UpsertPolicySettingAsync("security.password.requireNumber", policy.RequireNumber, now, cancellationToken);
+            await UpsertPolicySettingAsync("security.password.requireSpecial", policy.RequireSpecial, now, cancellationToken);
+            await UpsertPolicySettingAsync("security.password.changeIntervalDays", policy.ChangeIntervalDays, now, cancellationToken);
+            await UpsertPolicySettingAsync("security.password.validityDays", policy.ValidityDays, now, cancellationToken);
+            await UpsertPolicySettingAsync("security.login.maxFailedLogins", policy.MaxFailedLogins, now, cancellationToken);
+            await UpsertPolicySettingAsync("security.login.failedLoginWindowMinutes", policy.FailedLoginWindowMinutes, now, cancellationToken);
+            await UpsertPolicySettingAsync("security.login.lockoutMinutes", policy.LoginLockoutMinutes, now, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+
+            ApplyRuntimePasswordPolicy(policy);
+
+            var cutoff = now.AddDays(-policy.ChangeIntervalDays);
+            await db.ScadaUsers
+                .Where(u => u.PasswordUpdatedAt != null
+                            && u.PasswordUpdatedAt <= cutoff
+                            && !u.MustChangePassword)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(u => u.MustChangePassword, true)
+                        .SetProperty(u => u.UpdatedAt, now),
+                    cancellationToken);
+
+            await systemAudit.LogAsync(new SystemAuditEntry
+            {
+                Action = AuditActionNames.ConfigurationChanged,
+                EventType = AuditEventType.Configuration,
+                Status = AuditStatus.Success,
+                Module = "PasswordPolicy",
+                EntityType = "SecurityPolicy",
+                EntityId = "password-policy",
+                Description = "Updated password and login security policy.",
+                UserId = currentUser.OperatorUserId,
+                UserName = currentUser.Username
+            }, cancellationToken);
+
+            return Result<PasswordPolicyDto>.Success(policy);
         });
 
     public Task<Result<AppSettingDto>> UpdateByKeyAsync(
@@ -3271,4 +3473,101 @@ public class ScadaMetadataQueryService(
                 UpdatedAt = row.UpdatedAt
             });
         });
+
+    private static int ReadInt(
+        IReadOnlyDictionary<string, string?> values,
+        string key,
+        int fallback) =>
+        values.TryGetValue(key, out var raw)
+        && int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : fallback;
+
+    private static bool ReadBool(
+        IReadOnlyDictionary<string, string?> values,
+        string key,
+        bool fallback) =>
+        values.TryGetValue(key, out var raw) && bool.TryParse(raw, out var parsed)
+            ? parsed
+            : fallback;
+
+    private void ApplyRuntimePasswordPolicy(PasswordPolicyDto policy)
+    {
+        var password = passwordOptions.Value;
+        password.MinLength = policy.MinLength;
+        password.MaxLength = policy.MaxLength;
+        password.RequireUppercase = policy.RequireUppercase;
+        password.RequireLowercase = policy.RequireLowercase;
+        password.RequireDigit = policy.RequireNumber;
+        password.RequireSpecial = policy.RequireSpecial;
+        password.ExpireDays = policy.ChangeIntervalDays;
+        password.WarnBeforeDays = Math.Min(password.WarnBeforeDays, Math.Max(0, policy.ChangeIntervalDays - 1));
+
+        var login = loginOptions.Value;
+        login.MaxFailed = policy.MaxFailedLogins;
+        login.WindowMinutes = policy.FailedLoginWindowMinutes;
+        login.LockMinutes = policy.LoginLockoutMinutes;
+    }
+
+    private async Task UpsertPolicySettingAsync(
+        string key,
+        object value,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var row = await db.AppSettings
+            .FirstOrDefaultAsync(s => s.SettingKey == key, cancellationToken);
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture)?.ToLowerInvariant();
+        var dataType = value is bool ? "boolean" : "integer";
+
+        if (row is null)
+        {
+            db.AppSettings.Add(new AppSetting
+            {
+                SettingKey = key,
+                SettingValue = text,
+                DataType = dataType,
+                Description = "Runtime security policy",
+                IsEnable = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            return;
+        }
+
+        row.SettingValue = text;
+        row.DataType = dataType;
+        row.IsEnable = true;
+        row.UpdatedAt = now;
+    }
+
+    private async Task UpsertFrontendSettingAsync(
+        string key,
+        string value,
+        string dataType,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var row = await db.AppSettings
+            .FirstOrDefaultAsync(s => s.SettingKey == key, cancellationToken);
+        if (row is null)
+        {
+            db.AppSettings.Add(new AppSetting
+            {
+                SettingKey = key,
+                SettingValue = value,
+                DataType = dataType,
+                Description = "Shared frontend configuration",
+                IsEnable = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            return;
+        }
+
+        row.SettingValue = value;
+        row.DataType = dataType;
+        row.IsEnable = true;
+        row.UpdatedAt = now;
+    }
 }

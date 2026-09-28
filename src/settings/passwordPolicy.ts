@@ -39,8 +39,6 @@ export const DEFAULT_PASSWORD_POLICY: PasswordPolicy = {
   loginLockoutMinutes: 15,
 }
 
-const STORAGE_KEY = 'scadaweb.password-policy'
-
 let policy: PasswordPolicy = { ...DEFAULT_PASSWORD_POLICY }
 
 function clampPolicy(value: Partial<PasswordPolicy>): PasswordPolicy {
@@ -70,18 +68,6 @@ function clampPolicy(value: Partial<PasswordPolicy>): PasswordPolicy {
   }
 }
 
-function readStored(): PasswordPolicy {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { ...DEFAULT_PASSWORD_POLICY }
-    return clampPolicy(JSON.parse(raw) as Partial<PasswordPolicy>)
-  } catch {
-    return { ...DEFAULT_PASSWORD_POLICY }
-  }
-}
-
-policy = readStored()
-
 type Listener = (next: PasswordPolicy) => void
 const listeners = new Set<Listener>()
 
@@ -91,11 +77,6 @@ export function getPasswordPolicy() {
 
 export function setPasswordPolicy(next: Partial<PasswordPolicy>) {
   policy = clampPolicy({ ...policy, ...next })
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(policy))
-  } catch {
-    // Ignore private mode / quota errors.
-  }
   listeners.forEach((listener) => listener({ ...policy }))
 }
 

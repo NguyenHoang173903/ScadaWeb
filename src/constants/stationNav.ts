@@ -48,6 +48,7 @@ export const STATION_NAV_ITEMS: StationNavItem[] = [
     children: [
       { id: 'charts-temperature', label: 'Đồ thị nhiệt', path: 'charts/temperature' },
       { id: 'charts-current', label: 'Đồ thị dòng', path: 'charts/current' },
+      { id: 'charts-water', label: 'Đồ thị mực nước', path: 'charts/water' },
     ],
   },
   {

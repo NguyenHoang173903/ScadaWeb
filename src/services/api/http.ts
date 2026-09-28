@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from '@/settings/runtimeConfig'
 import { clearAuthTokens, getAccessToken, getRefreshToken, setAuthTokens } from '@/settings/authToken'
+import { endSession } from '@/settings/session'
 import type { ApiError, BackendApiResponse } from '@/types'
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
@@ -11,6 +12,12 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
 }
 
 let refreshInFlight: Promise<boolean> | null = null
+
+function clearUnauthorizedSession() {
+  clearAuthTokens()
+  endSession()
+  window.dispatchEvent(new Event('scadaweb:unauthorized'))
+}
 
 function resolveUrl(path: string) {
   const base = getApiBaseUrl().replace(/\/$/, '')
@@ -133,6 +140,10 @@ export async function http<T>(path: string, options: RequestOptions = {}): Promi
     if (refreshed) {
       return http<T>(path, { ...options, anonymous: false })
     }
+  }
+
+  if (response.status === 401 && !anonymous) {
+    clearUnauthorizedSession()
   }
 
   if (!response.ok) {

@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Navigate, useParams } from 'react-router-dom'
 import { StationAlertBar } from '@/components/common/StationAlertBar'
 import { isApiError } from '@/services/api/http'
 import { useScadaRealtime } from '@/services/realtime'
 import { mapDeviceMonitorItem } from '@/services/stations/mappers'
 import {
-  getDeviceMonitor,
-  peekDeviceMonitor,
-} from '@/services/stations/stationsApi'
+  stationMonitorQuery,
+  stationQueryKeys,
+} from '@/services/stations/stationQueries'
 import { DeviceCard } from './DeviceCard'
 import { getDevicesByGroup, type DevicePump } from './devicesMock'
 import styles from './DevicesPage.module.css'
@@ -29,35 +30,31 @@ export function StationDevicesPage() {
   const validGroup = isDeviceGroup(group) ? group : null
   const numericStation = /^\d+$/.test(stationId)
   const stationNumber = numericStation ? Number(stationId) : null
-  const cachedMonitor = stationNumber == null ? undefined : peekDeviceMonitor(stationNumber)
-  const [pumps, setPumps] = useState<DevicePump[]>(() =>
-    (cachedMonitor?.items ?? []).map(mapDeviceMonitorItem),
+  const queryClient = useQueryClient()
+  const monitor = useQuery({
+    ...stationMonitorQuery(stationNumber ?? 0),
+    enabled: stationNumber != null,
+  })
+  const pumps = useMemo<DevicePump[]>(
+    () => (monitor.data?.items ?? []).map(mapDeviceMonitorItem),
+    [monitor.data],
   )
-  const [ready, setReady] = useState(Boolean(cachedMonitor))
-  const [error, setError] = useState('')
-
-  const load = useCallback(async () => {
-    if (stationNumber == null) return
-    try {
-      const result = await getDeviceMonitor(stationNumber)
-      setPumps((result.items ?? []).map(mapDeviceMonitorItem))
-      setReady(true)
-      setError('')
-    } catch (err) {
-      setError(isApiError(err) ? err.message : 'Không tải được danh sách bơm.')
-    }
-  }, [stationNumber])
-
-  useEffect(() => {
-    void load()
-  }, [load])
+  const ready = Boolean(monitor.data)
+  const error = monitor.error
+    ? isApiError(monitor.error)
+      ? monitor.error.message
+      : 'Không tải được danh sách bơm.'
+    : ''
 
   useScadaRealtime({
     stationId,
     screen: 'chi-tiet-bom',
     enabled: numericStation,
     onInvalidate: () => {
-      void load()
+      if (stationNumber == null) return
+      void queryClient.invalidateQueries({
+        queryKey: stationQueryKeys.monitor(stationNumber),
+      })
     },
   })
 

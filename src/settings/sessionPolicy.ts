@@ -8,8 +8,6 @@ export const DEFAULT_SESSION_POLICY: SessionPolicy = {
   idleTimeoutMinutes: 3,
 }
 
-const STORAGE_KEY = 'scadaweb.session-policy.v2'
-
 let policy: SessionPolicy = { ...DEFAULT_SESSION_POLICY }
 
 function clampPolicy(value: Partial<SessionPolicy>): SessionPolicy {
@@ -17,18 +15,6 @@ function clampPolicy(value: Partial<SessionPolicy>): SessionPolicy {
     idleTimeoutMinutes: Math.max(1, Math.floor(value.idleTimeoutMinutes ?? policy.idleTimeoutMinutes)),
   }
 }
-
-function readStored(): SessionPolicy {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { ...DEFAULT_SESSION_POLICY }
-    return clampPolicy(JSON.parse(raw) as Partial<SessionPolicy>)
-  } catch {
-    return { ...DEFAULT_SESSION_POLICY }
-  }
-}
-
-policy = readStored()
 
 type Listener = (next: SessionPolicy) => void
 const listeners = new Set<Listener>()
@@ -39,11 +25,6 @@ export function getSessionPolicy() {
 
 export function setSessionPolicy(next: Partial<SessionPolicy>) {
   policy = clampPolicy({ ...policy, ...next })
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(policy))
-  } catch {
-    // Ignore private mode / quota errors.
-  }
   listeners.forEach((listener) => listener({ ...policy }))
 }
 

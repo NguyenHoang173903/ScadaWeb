@@ -182,6 +182,20 @@ public interface IAppSettingQueryService
         UpdateSessionPolicyRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<Result<PasswordPolicyDto>> GetPasswordPolicyAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<Result<PasswordPolicyDto>> UpdatePasswordPolicyAsync(
+        UpdatePasswordPolicyRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<FrontendConfigDto>> GetFrontendConfigAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<Result<FrontendConfigDto>> UpdateFrontendConfigAsync(
+        UpdateFrontendConfigRequest request,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Cập nhật AppSetting theo key — chỉ allowlisted editable keys.</summary>
     Task<Result<AppSettingDto>> UpdateByKeyAsync(
         string settingKey,

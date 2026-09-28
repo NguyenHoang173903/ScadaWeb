@@ -5,6 +5,7 @@ import {
   setLoginLayerVisible,
   subscribeLoginLayerVisible,
 } from '@/settings/loginLayerSettings'
+import { updateFrontendConfig } from '@/services/frontendConfig/frontendConfigApi'
 import type { MapOverlayLayer } from './layerTypes'
 import styles from './LayerPanel.module.css'
 
@@ -34,6 +35,17 @@ export function LayerPanel({
   const [loginVisible, setLoginVisible] = useState(getLoginLayerVisible)
 
   useEffect(() => subscribeLoginLayerVisible(setLoginVisible), [])
+
+  const updateLoginVisibility = async (visible: boolean) => {
+    const previous = getLoginLayerVisible()
+    setLoginLayerVisible(visible)
+    try {
+      const saved = await updateFrontendConfig({ loginLayerVisible: visible })
+      setLoginLayerVisible(saved.loginLayerVisible)
+    } catch {
+      setLoginLayerVisible(previous)
+    }
+  }
 
   if (!open) return null
 
@@ -126,7 +138,7 @@ export function LayerPanel({
                   className={`${styles.visibilityOption} ${
                     !loginVisible ? styles.visibilityActive : ''
                   }`}
-                  onClick={() => setLoginLayerVisible(false)}
+                  onClick={() => void updateLoginVisibility(false)}
                 >
                   Ẩn
                   <span className={`${styles.checkbox} ${!loginVisible ? styles.checkboxOn : ''}`}>
@@ -138,7 +150,7 @@ export function LayerPanel({
                   className={`${styles.visibilityOption} ${
                     loginVisible ? styles.visibilityActive : ''
                   }`}
-                  onClick={() => setLoginLayerVisible(true)}
+                  onClick={() => void updateLoginVisibility(true)}
                 >
                   Hiện
                   <span className={`${styles.checkbox} ${loginVisible ? styles.checkboxOn : ''}`}>

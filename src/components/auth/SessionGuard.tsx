@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import { logoutCurrentUser } from '@/services/auditLog'
+import { fetchSessionPolicy } from '@/services/sessionPolicy/sessionPolicyApi'
+import { getRefreshToken } from '@/settings/authToken'
 import {
-  beginSession,
   hasActiveSession,
   isSessionExpired,
   touchSession,
 } from '@/settings/session'
-import { subscribeSessionPolicy } from '@/settings/sessionPolicy'
+import { setSessionPolicy, subscribeSessionPolicy } from '@/settings/sessionPolicy'
 import { SessionExpiredDialog } from './SessionExpiredDialog'
 
 const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'] as const
@@ -20,9 +21,26 @@ export function SessionGuard() {
 
   useEffect(() => {
     if (location.pathname === ROUTES.login) return
-    if (!hasActiveSession()) beginSession()
-    else touchSession()
-  }, [location.pathname])
+    if (!hasActiveSession() || !getRefreshToken()) {
+      navigate(ROUTES.login, { replace: true })
+      return
+    }
+    touchSession()
+    void fetchSessionPolicy()
+      .then((policy) => setSessionPolicy({ idleTimeoutMinutes: policy.idleTimeoutMinutes }))
+      .catch(() => {
+        // Keep the safe in-memory default when BE is unavailable.
+      })
+  }, [location.pathname, navigate])
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setExpired(false)
+      navigate(ROUTES.login, { replace: true })
+    }
+    window.addEventListener('scadaweb:unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('scadaweb:unauthorized', handleUnauthorized)
+  }, [navigate])
 
   useEffect(() => {
     if (location.pathname === ROUTES.login || expired) return

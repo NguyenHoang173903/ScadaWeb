@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { DataTable } from '@/components/common/DataTable'
 import {
@@ -11,9 +12,12 @@ import { useScadaRealtime } from '@/services/realtime'
 import { canSessionExportExcel } from '@/settings/session'
 import {
   exportActiveAlarmsExcel,
-  getActiveAlarms,
-  getEventDevices,
 } from '@/services/stations/stationsApi'
+import {
+  stationActiveAlarmsQuery,
+  stationEventDevicesQuery,
+  stationQueryKeys,
+} from '@/services/stations/stationQueries'
 import {
   DEFAULT_EVENT_FILTER,
   EVENT_DEVICE_OPTIONS,
@@ -34,89 +38,78 @@ function formatDateTime(iso?: string | null) {
 export function ExistingErrorsPage() {
   const { stationId = '' } = useParams()
   const numericStation = /^\d+$/.test(stationId)
+  const stationNumber = numericStation ? Number(stationId) : null
+  const queryClient = useQueryClient()
   const [draft, setDraft] = useState<EventFilterValues>(DEFAULT_EVENT_FILTER)
   const [applied, setApplied] = useState<EventFilterValues>(DEFAULT_EVENT_FILTER)
   const [page, setPage] = useState(1)
-  const [rows, setRows] = useState<ExistingErrorRow[]>([])
-  const [totalCount, setTotalCount] = useState(0)
   const [deviceOptions, setDeviceOptions] = useState(EVENT_DEVICE_OPTIONS)
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
   const [exportBusy, setExportBusy] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
   const canExport = canSessionExportExcel()
+  const eventDevices = useQuery({
+    ...stationEventDevicesQuery(stationNumber ?? 0),
+    enabled: stationNumber != null,
+  })
 
   useScadaRealtime({
     stationId,
     screen: 'loi',
     enabled: numericStation,
-    onInvalidate: () => setRefreshTick((n) => n + 1),
+    onInvalidate: () => {
+      if (stationNumber == null) return
+      void queryClient.invalidateQueries({
+        queryKey: stationQueryKeys.activeAlarms(stationNumber),
+      })
+    },
   })
 
   useEffect(() => {
-    if (!numericStation) return
-    void getEventDevices(Number(stationId))
-      .then((devices) => {
-        setDeviceOptions([
-          { value: 'all', label: 'Thiết bị' },
-          ...devices.map((d) => ({ value: String(d.id), label: d.name })),
-        ])
-      })
-      .catch(() => {
-        // Keep mock options.
-      })
-  }, [stationId, numericStation])
+    const devices = eventDevices.data
+    if (!devices) return
+    setDeviceOptions([
+      { value: 'all', label: 'Thiết bị' },
+      ...devices.map((d) => ({ value: String(d.id), label: d.name })),
+    ])
+  }, [eventDevices.data])
 
-  useEffect(() => {
-    if (!numericStation) {
-      setRows([])
-      setTotalCount(0)
-      return
-    }
-
-    let cancelled = false
-    setLoading(true)
-    void (async () => {
-      try {
-        const deviceId =
-          applied.deviceId !== 'all' && /^\d+$/.test(applied.deviceId)
-            ? Number(applied.deviceId)
-            : undefined
-        const result = await getActiveAlarms(Number(stationId), {
-          deviceId,
-          keyword: applied.keyword.trim() || undefined,
-          pageNumber: page,
-          pageSize: EVENT_PAGE_SIZE,
-        })
-        if (cancelled) return
-        setRows(
-          (result.items ?? []).map((row, index) => ({
-            id: String(row.id),
-            stt: (page - 1) * EVENT_PAGE_SIZE + index + 1,
-            device: row.deviceName || '—',
-            description: row.description || row.title,
-            type: row.type,
-            startedAt: formatDateTime(row.startTime),
-            status: 'Đang mở',
-            acknowledged: row.isAcknowledged ? 'Đã xác nhận' : 'Chưa',
-          })),
-        )
-        setTotalCount(result.totalCount ?? result.items?.length ?? 0)
-        setError('')
-      } catch (err) {
-        if (cancelled) return
-        setRows([])
-        setTotalCount(0)
-        setError(isApiError(err) ? err.message : 'Không tải được sự kiện.')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [stationId, numericStation, applied, page, refreshTick])
+  const deviceId =
+    applied.deviceId !== 'all' && /^\d+$/.test(applied.deviceId)
+      ? Number(applied.deviceId)
+      : undefined
+  const activeAlarms = useQuery({
+    ...stationActiveAlarmsQuery(stationNumber ?? 0, {
+      deviceId,
+      keyword: applied.keyword.trim() || undefined,
+      pageNumber: page,
+      pageSize: EVENT_PAGE_SIZE,
+      refreshTick,
+    }),
+    enabled: stationNumber != null,
+  })
+  const rows = useMemo<ExistingErrorRow[]>(
+    () =>
+      (activeAlarms.data?.items ?? []).map((row, index) => ({
+        id: String(row.id),
+        stt: (page - 1) * EVENT_PAGE_SIZE + index + 1,
+        device: row.deviceName || '—',
+        description: row.description || row.title,
+        type: row.type,
+        startedAt: formatDateTime(row.startTime),
+        status: 'Đang mở',
+        acknowledged: row.isAcknowledged ? 'Đã xác nhận' : 'Chưa',
+      })),
+    [activeAlarms.data, page],
+  )
+  const totalCount =
+    activeAlarms.data?.totalCount ?? activeAlarms.data?.items?.length ?? 0
+  const queryError = activeAlarms.error ?? eventDevices.error
+  const queryErrorMessage = queryError
+    ? isApiError(queryError)
+      ? queryError.message
+      : 'Không tải được sự kiện.'
+    : ''
 
   const totalPages = Math.max(1, Math.ceil(totalCount / EVENT_PAGE_SIZE) || 1)
   const currentPage = Math.min(page, totalPages)
@@ -173,7 +166,9 @@ export function ExistingErrorsPage() {
         exportDisabled={!canExport || exportBusy}
       />
 
-      {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}
+      {error || queryErrorMessage ? (
+        <p style={{ color: '#b91c1c' }}>{error || queryErrorMessage}</p>
+      ) : null}
 
       <div className={styles.tablePanel}>
         <DataTable
@@ -182,7 +177,7 @@ export function ExistingErrorsPage() {
           rowKey={(row) => row.id}
           minRows={8}
           totalCount={totalCount}
-          emptyText={loading ? 'Đang tải...' : 'Không có dữ liệu'}
+          emptyText={activeAlarms.isPending ? 'Đang tải...' : 'Không có dữ liệu'}
           footer={
             <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
           }

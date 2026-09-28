@@ -22,6 +22,51 @@
   align-content: start;
 }
 
+.passwordField {
+  position: relative;
+}
+
+.passwordField input {
+  padding-right: 3rem;
+}
+
+.passwordToggle {
+  position: absolute;
+  top: 50%;
+  right: 0.55rem;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.passwordToggle:hover {
+  background: rgba(4, 61, 89, 0.08);
+  color: #043d59;
+}
+
+.passwordToggle:focus-visible {
+  outline: 2px solid #043d59;
+  outline-offset: 1px;
+}
+
+.fieldError {
+  color: #b42318;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.column input[aria-invalid='true'] {
+  border-color: #dc2626;
+}
+
 .statusRow {
   display: flex;
   align-items: center;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { Badge } from '@/components/common/Badge'
 import { DataTable, type DataTableColumn } from '@/components/common/DataTable'
@@ -13,9 +14,11 @@ import { isApiError } from '@/services/api/http'
 import { canSessionExportExcel, isSessionAdmin } from '@/settings/session'
 import {
   exportEventHistoryExcel,
-  getEventDevices,
-  getEventHistory,
 } from '@/services/stations/stationsApi'
+import {
+  stationEventDevicesQuery,
+  stationEventHistoryQuery,
+} from '@/services/stations/stationQueries'
 import {
   DEFAULT_EVENT_FILTER,
   EVENT_DEVICE_OPTIONS,
@@ -125,20 +128,21 @@ function filterHistoryRows(rows: HistoryEventRow[], filter: EventFilterValues) {
 export function EventHistoryPage() {
   const { stationId = '' } = useParams()
   const numericStation = /^\d+$/.test(stationId)
+  const stationNumber = numericStation ? Number(stationId) : null
   const [activeTab, setActiveTab] = useState<HistoryTabId>('status')
   const [draft, setDraft] = useState<EventFilterValues>(DEFAULT_EVENT_FILTER)
   const [applied, setApplied] = useState<EventFilterValues>(DEFAULT_EVENT_FILTER)
   const [page, setPage] = useState(1)
-  const [apiRows, setApiRows] = useState<HistoryEventRow[]>([])
-  const [loginRows, setLoginRows] = useState<HistoryEventRow[]>([])
-  const [loginLoading, setLoginLoading] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [exportError, setExportError] = useState('')
   const [exportBusy, setExportBusy] = useState(false)
   const [deviceOptions, setDeviceOptions] = useState(EVENT_DEVICE_OPTIONS)
   const [refreshTick, setRefreshTick] = useState(0)
   const canExport = canSessionExportExcel()
   const showLoginTab = isSessionAdmin()
+  const eventDevices = useQuery({
+    ...stationEventDevicesQuery(stationNumber ?? 0),
+    enabled: stationNumber != null,
+  })
 
   const historyTabs = useMemo(
     () => (showLoginTab ? [...HISTORY_TABS] : HISTORY_TABS.filter((t) => t.id !== 'login')),
@@ -146,116 +150,81 @@ export function EventHistoryPage() {
   )
 
   useEffect(() => {
-    if (!numericStation) return
-    void getEventDevices(Number(stationId))
-      .then((devices) => {
-        setDeviceOptions([
-          { value: 'all', label: 'Thiết bị' },
-          ...devices.map((d) => ({ value: `device-${d.id}`, label: d.name })),
-        ])
-      })
-      .catch(() => {
-        // Keep mock options.
-      })
-  }, [stationId, numericStation])
+    const devices = eventDevices.data
+    if (!devices) return
+    setDeviceOptions([
+      { value: 'all', label: 'Thiết bị' },
+      ...devices.map((d) => ({ value: `device-${d.id}`, label: d.name })),
+    ])
+  }, [eventDevices.data])
 
   useEffect(() => {
-    if (activeTab === 'login') return
-    if (!numericStation) {
-      setApiRows(HISTORY_ROWS_BY_TAB[activeTab])
-      return
-    }
-
-    let cancelled = false
-    setLoading(true)
-    void (async () => {
-      try {
-        const deviceId =
-          applied.deviceId.startsWith('device-')
-            ? Number(applied.deviceId.replace('device-', ''))
-            : undefined
-        const result = await getEventHistory(Number(stationId), {
-          category: activeTab,
-          deviceId: Number.isFinite(deviceId) ? deviceId : undefined,
-          fromDate: applied.fromDate || undefined,
-          toDate: applied.toDate || undefined,
-          keyword: applied.keyword.trim() || undefined,
-          pageNumber: 1,
-          pageSize: 500,
-        })
-        if (cancelled) return
-        setApiRows(
-          (result.items ?? []).map((row, index) => ({
-            id: String(row.id),
-            stt: index + 1,
-            time: new Date(row.startTime).toLocaleString('vi-VN'),
-            type: (['ERROR', 'INFO', 'WARNING', 'PUMP', 'Communication', 'Security'].includes(
-              row.type,
-            )
-              ? row.type
-              : 'INFO') as HistoryEventRow['type'],
-            title: row.title,
-            detail: row.description || '',
-            device: row.deviceName || '',
-            deviceId: row.deviceId != null ? `device-${row.deviceId}` : 'all',
-            tag: row.tagName || '',
-            user: row.username || '',
-            endedAt: row.endTime ? new Date(row.endTime).toLocaleString('vi-VN') : '',
-            occurredAt: row.startTime,
-          })),
-        )
-      } catch {
-        if (!cancelled) setApiRows([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [activeTab, applied, stationId, numericStation, refreshTick])
-
-  useEffect(() => {
-    if (activeTab !== 'login') return
-    if (!showLoginTab) {
+    if (activeTab === 'login' && !showLoginTab) {
       setActiveTab('status')
-      return
     }
+  }, [activeTab, showLoginTab])
 
-    let cancelled = false
-    setLoginLoading(true)
-
-    void (async () => {
-      try {
-        const result = await fetchLoginHistory({
+  const filterDeviceId = applied.deviceId.startsWith('device-')
+    ? Number(applied.deviceId.replace('device-', ''))
+    : undefined
+  const eventHistory = useQuery({
+    ...stationEventHistoryQuery(stationNumber ?? 0, {
+      category: activeTab,
+      deviceId: Number.isFinite(filterDeviceId) ? filterDeviceId : undefined,
+      fromDate: applied.fromDate || undefined,
+      toDate: applied.toDate || undefined,
+      keyword: applied.keyword.trim() || undefined,
+      refreshTick,
+    }),
+    enabled: stationNumber != null && activeTab !== 'login',
+  })
+  const loginHistory = useQuery({
+    queryKey: [
+      'login-history',
+      applied.fromDate,
+      applied.toDate,
+      applied.keyword.trim(),
+      refreshTick,
+    ],
+    queryFn: () =>
+      fetchLoginHistory({
           from: applied.fromDate || undefined,
           to: applied.toDate || undefined,
           keyword: applied.keyword.trim() || undefined,
-        })
-        if (cancelled) return
-        setLoginRows(result.items.map((item, index) => auditLogToHistoryRow(item, index)))
-      } catch (err) {
-        if (!cancelled) {
-          setLoginRows([])
-          setExportError(
-            isApiError(err) && err.status === 403
-              ? 'Chỉ Admin được xem nhật ký đăng nhập.'
-              : isApiError(err)
-                ? err.message
-                : 'Không tải được nhật ký đăng nhập.',
-          )
-        }
-      } finally {
-        if (!cancelled) setLoginLoading(false)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [activeTab, applied, showLoginTab, refreshTick])
-
+      }),
+    enabled: activeTab === 'login' && showLoginTab,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    gcTime: 15 * 60_000,
+  })
+  const apiRows = useMemo<HistoryEventRow[]>(() => {
+    if (!numericStation) return HISTORY_ROWS_BY_TAB[activeTab]
+    return (eventHistory.data?.items ?? []).map((row, index) => ({
+      id: String(row.id),
+      stt: index + 1,
+      time: new Date(row.startTime).toLocaleString('vi-VN'),
+      type: (['ERROR', 'INFO', 'WARNING', 'PUMP', 'Communication', 'Security'].includes(
+        row.type,
+      )
+        ? row.type
+        : 'INFO') as HistoryEventRow['type'],
+      title: row.title,
+      detail: row.description || '',
+      device: row.deviceName || '',
+      deviceId: row.deviceId != null ? `device-${row.deviceId}` : 'all',
+      tag: row.tagName || '',
+      user: row.username || '',
+      endedAt: row.endTime ? new Date(row.endTime).toLocaleString('vi-VN') : '',
+      occurredAt: row.startTime,
+    }))
+  }, [activeTab, eventHistory.data, numericStation])
+  const loginRows = useMemo(
+    () =>
+      (loginHistory.data?.items ?? []).map((item, index) =>
+        auditLogToHistoryRow(item, index),
+      ),
+    [loginHistory.data],
+  )
   const sourceRows = activeTab === 'login' ? loginRows : apiRows
 
   const filteredRows = useMemo(
@@ -273,12 +242,21 @@ export function EventHistoryPage() {
       stt: (currentPage - 1) * EVENT_PAGE_SIZE + index + 1,
     }))
 
+  const dataError = activeTab === 'login' ? loginHistory.error : eventHistory.error
+  const apiDataError = isApiError(dataError) ? dataError : null
+  const dataErrorMessage = dataError
+    ? apiDataError?.status === 403
+      ? 'Chỉ Admin được xem nhật ký đăng nhập.'
+      : apiDataError
+        ? apiDataError.message
+        : 'Không tải được lịch sử sự kiện.'
+    : ''
   const emptyText =
     activeTab === 'login'
-      ? loginLoading
+      ? loginHistory.isPending
         ? 'Đang tải nhật ký đăng nhập...'
         : 'Chưa có sự kiện đăng nhập'
-      : loading
+      : eventHistory.isPending
         ? 'Đang tải...'
         : 'Không có dữ liệu'
 
@@ -344,7 +322,9 @@ export function EventHistoryPage() {
         }}
       />
 
-      {exportError ? <p style={{ color: '#b91c1c' }}>{exportError}</p> : null}
+      {exportError || dataErrorMessage ? (
+        <p style={{ color: '#b91c1c' }}>{exportError || dataErrorMessage}</p>
+      ) : null}
 
       <div className={styles.tablePanel}>
         <DataTable

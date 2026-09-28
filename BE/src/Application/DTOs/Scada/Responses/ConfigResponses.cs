@@ -99,3 +99,24 @@ public class AppSettingDto
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
+
+public class PasswordPolicyDto
+{
+    public int MinLength { get; set; }
+    public int MaxLength { get; set; }
+    public bool RequireUppercase { get; set; }
+    public bool RequireLowercase { get; set; }
+    public bool RequireNumber { get; set; }
+    public bool RequireSpecial { get; set; }
+    public int ChangeIntervalDays { get; set; }
+    public int ValidityDays { get; set; }
+    public int MaxFailedLogins { get; set; }
+    public int FailedLoginWindowMinutes { get; set; }
+    public int LoginLockoutMinutes { get; set; }
+}
+
+public class FrontendConfigDto
+{
+    public string ArcgisApiKey { get; set; } = string.Empty;
+    public bool LoginLayerVisible { get; set; } = true;
+}

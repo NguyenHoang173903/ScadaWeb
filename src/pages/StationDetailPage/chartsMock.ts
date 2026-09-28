@@ -132,6 +132,11 @@ export const CURRENT_SERIES: LineChartSeries[] = [
   { key: 'phaseRAllowed', label: 'Dòng điện R cho phép', color: '#ef4444', showDot: false },
 ]
 
+export const WATER_LEVEL_SERIES: LineChartSeries[] = [
+  { key: 'riverLevel', label: 'Mức nước sông', color: '#2563eb' },
+  { key: 'basinLevel', label: 'Mức bể xả', color: '#0d9488' },
+]
+
 /** Mock data đồ thị dòng điện (interval 30s) */
 export const CURRENT_CHART_DATA: LineChartPoint[] = [
   {
@@ -190,4 +195,4 @@ export const CURRENT_CHART_DATA: LineChartPoint[] = [
   },
 ]
 
-export type ChartTabId = 'temperature' | 'current'
+export type ChartTabId = 'temperature' | 'current' | 'water'

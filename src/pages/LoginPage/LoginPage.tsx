@@ -15,12 +15,14 @@ import {
   MAP_ENABLED,
 } from '@/constants/config'
 import { ROUTES } from '@/constants/routes'
-import { getLoginLayerVisible } from '@/settings/loginLayerSettings'
+import {
+  getLoginLayerVisible,
+  subscribeLoginLayerVisible,
+} from '@/settings/loginLayerSettings'
 import { peekCachedMapLayers, resolveMapLayers } from '@/services/mapLayers'
 import { reportAuthEvent } from '@/services/auditLog'
 import {
   changePasswordWithApi,
-  fetchCurrentUser,
   forgotPasswordWithApi,
   loginWithApi,
   resetPasswordWithApi,
@@ -29,20 +31,25 @@ import {
 import { isApiError } from '@/services/api/http'
 import { LoginForm } from './LoginForm'
 import { ChangePasswordForm } from './ChangePasswordForm'
-import {
-  authenticateAccount,
-  PASSWORD_CHALLENGE_COPY,
-  type PasswordChallengeReason,
-} from '@/settings/authAccounts'
-import { getRefreshToken } from '@/settings/authToken'
+import { clearAuthTokens, getRefreshToken } from '@/settings/authToken'
 import {
   beginSession,
+  endSession,
   hasActiveSession,
   isSessionExpired,
 } from '@/settings/session'
 import { fetchSessionPolicy } from '@/services/sessionPolicy/sessionPolicyApi'
 import { setSessionPolicy } from '@/settings/sessionPolicy'
 import styles from './LoginPage.module.css'
+
+type PasswordChallengeReason = 'default' | 'interval' | 'expired'
+
+const PASSWORD_CHALLENGE_COPY: Record<PasswordChallengeReason, string> = {
+  default: 'Đây là lần đăng nhập đầu tiên với mật khẩu mặc định. Vui lòng đặt mật khẩu mới.',
+  interval: 'Đã đến kỳ đổi mật khẩu định kỳ. Vui lòng đặt mật khẩu mới để tiếp tục.',
+  expired:
+    'Tài khoản đã bị khóa vì mật khẩu hết hạn hiệu lực. Đặt mật khẩu mới để tự động mở khóa.',
+}
 
 type ServiceItem = {
   id: string
@@ -88,6 +95,7 @@ export function LoginPage() {
   const [layers, setLayers] = useState<MapOverlayLayer[]>(() =>
     getLoginLayerVisible() ? peekCachedMapLayers() : [],
   )
+  const [loginLayerVisible, setLoginLayerVisibleState] = useState(getLoginLayerVisible)
   const [loginError, setLoginError] = useState('')
   const [loginWarning, setLoginWarning] = useState('')
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null)
@@ -114,10 +122,14 @@ export function LoginPage() {
   }, [navigate])
 
   useEffect(() => {
+    return subscribeLoginLayerVisible(setLoginLayerVisibleState)
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
 
     void (async () => {
-      if (!MAP_ENABLED || !getLoginLayerVisible()) {
+      if (!MAP_ENABLED || !loginLayerVisible) {
         setLayers([])
         return
       }
@@ -134,7 +146,7 @@ export function LoginPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loginLayerVisible])
 
   return (
     <div className={styles.page}>
@@ -186,24 +198,11 @@ export function LoginPage() {
                     eventType: 'password-changed',
                     username: challenge.username,
                   })
-                  reportAuthEvent({ eventType: 'login', username: challenge.username })
-                  try {
-                    const me = await fetchCurrentUser()
-                    enterApp({
-                      username: me.username,
-                      fullName: me.fullName,
-                      displayName: me.displayName,
-                      role: me.role,
-                    }, challenge.remember)
-                  } catch {
-                    enterApp({
-                      username: challenge.username,
-                      fullName: challenge.username,
-                      displayName: challenge.username,
-                      role: '',
-                    }, challenge.remember)
-                  }
-                  navigate(ROUTES.dashboard)
+                  clearAuthTokens()
+                  endSession()
+                  setChallenge(null)
+                  setLoginError('')
+                  setLoginWarning('Đổi mật khẩu thành công. Vui lòng đăng nhập lại.')
                 } catch (error) {
                   setLoginError(
                     isApiError(error) ? error.message : 'Không đổi được mật khẩu. Thử lại.',
@@ -277,44 +276,6 @@ export function LoginPage() {
                     reportAuthEvent({ eventType: 'login', username: apiResult.data.username })
                     enterApp(apiResult.data, remember)
                     navigate(ROUTES.dashboard)
-                    setBusy(false)
-                    return
-                  }
-
-                  // Fallback local demo khi BE không kết nối được.
-                  if (!apiResult.status) {
-                    const local = authenticateAccount(username, password)
-                    if (local.ok) {
-                      if (local.challenge && local.account) {
-                        setChallenge({
-                          username: local.account.username,
-                          reason: local.challenge,
-                          currentPassword: password,
-                          remember,
-                        })
-                        setBusy(false)
-                        return
-                      }
-                      const account = local.account
-                      const sessionUser = account?.username ?? username
-                      reportAuthEvent({ eventType: 'login', username: sessionUser })
-                      beginSession({
-                        username: sessionUser,
-                        displayName: account?.fullName,
-                        role: account?.role,
-                      }, remember)
-                      navigate(ROUTES.dashboard)
-                      setBusy(false)
-                      return
-                    }
-                    reportAuthEvent({
-                      eventType: 'login-failed',
-                      username,
-                      detail: local.message,
-                    })
-                    setLoginError(local.message)
-                    setLoginWarning(local.warning ?? '')
-                    setBlockedUntil(local.blockedUntil ?? null)
                     setBusy(false)
                     return
                   }

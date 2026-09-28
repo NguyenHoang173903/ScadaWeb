@@ -112,10 +112,17 @@ public static class AppSettingCatalog
             EditableViaApi: false),
 
         new(
-            "fe.passwordPolicy",
-            "object",
-            "FE localStorage password policy — not BE source of truth.",
-            AppSettingSourceKind.FrontendLocal,
+            "frontend.arcgisApiKey",
+            "string",
+            "ArcGIS browser API key shared with frontend clients.",
+            AppSettingSourceKind.DatabaseAppSettings,
+            EditableViaApi: false),
+
+        new(
+            "frontend.loginLayerVisible",
+            "boolean",
+            "Whether map layers are visible on the login page.",
+            AppSettingSourceKind.DatabaseAppSettings,
             EditableViaApi: false)
     ];
 

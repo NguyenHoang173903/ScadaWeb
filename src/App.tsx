@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { SessionGuard } from '@/components/auth/SessionGuard'
 import { ROUTES } from '@/constants/routes'
 import { StationIndexRedirect, StationLayout } from '@/layouts/StationLayout'
+import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
 import {
@@ -15,6 +17,11 @@ import {
 } from '@/pages/StationDetailPage'
 import { StationDataUpdatePage } from '@/pages/StationDataUpdatePage'
 import { UsersPage } from '@/pages/UsersPage'
+import { isSessionAdmin } from '@/settings/session'
+
+function AdminRoute({ children }: { children: ReactNode }) {
+  return isSessionAdmin() ? children : <Navigate to={ROUTES.dashboard} replace />
+}
 
 function App() {
   return (
@@ -23,7 +30,15 @@ function App() {
         <Route path={ROUTES.login} element={<LoginPage />} />
         <Route element={<SessionGuard />}>
           <Route path={ROUTES.dashboard} element={<DashboardPage />} />
-          <Route path={ROUTES.users} element={<UsersPage />} />
+          <Route path={ROUTES.changePassword} element={<ChangePasswordPage />} />
+          <Route
+            path={ROUTES.users}
+            element={
+              <AdminRoute>
+                <UsersPage />
+              </AdminRoute>
+            }
+          />
           <Route path={ROUTES.stationDataUpdate} element={<StationDataUpdatePage />} />
           <Route path={ROUTES.stationRoot} element={<StationLayout />}>
             <Route index element={<StationIndexRedirect />} />

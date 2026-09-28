@@ -103,6 +103,17 @@ function normalizeRole(role?: string | null) {
   return (role ?? '').trim().toLowerCase()
 }
 
+export function getRoleDisplayName(role?: string | null) {
+  const normalized = normalizeRole(role)
+  if (normalized === 'view' || normalized === 'viewer') return 'Viewer'
+  if (normalized === 'operator') return 'Operator'
+  if (normalized === 'technical' || normalized === 'technician') return 'Technical'
+  if (normalized === 'admin' || normalized === 'administrator' || normalized === 'superadmin') {
+    return 'Administrator'
+  }
+  return role?.trim() || 'Người dùng'
+}
+
 /** Admin / Administrator / SuperAdmin */
 export function isAdminRole(role?: string | null) {
   const r = normalizeRole(role)

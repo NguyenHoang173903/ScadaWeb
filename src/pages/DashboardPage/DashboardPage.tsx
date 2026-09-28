@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown, Layers, UserRound } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
@@ -14,6 +15,7 @@ import { APP_COMPANY, MAP_ENABLED } from '@/constants/config'
 import { registerPumpStation, resolvePumpStationRouteId } from '@/data/pumpStations'
 import { logoutCurrentUser } from '@/services/auditLog'
 import { getStation, listStations as fetchStationsApi } from '@/services/stations/stationsApi'
+import { prefetchStationOverview } from '@/services/stations/stationQueries'
 import { getSessionUsername, isSessionAdmin } from '@/settings/session'
 import {
   deleteMapLayer,
@@ -39,6 +41,7 @@ function formatNow(date: Date) {
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const userName = getSessionUsername() ?? 'Admin'
   const canUpdateStation = isSessionAdmin()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -335,16 +338,29 @@ export function DashboardPage() {
 
             {menuOpen ? (
               <div className={styles.dropdown} role="menu">
+                {canUpdateStation ? (
+                  <button
+                    type="button"
+                    className={styles.dropdownItem}
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      navigate(ROUTES.users)
+                    }}
+                  >
+                    Quản lý người dùng
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className={styles.dropdownItem}
                   role="menuitem"
                   onClick={() => {
                     setMenuOpen(false)
-                    navigate(ROUTES.users)
+                    navigate(ROUTES.changePassword)
                   }}
                 >
-                  Quản lý người dùng
+                  Đổi mật khẩu
                 </button>
                 <button
                   type="button"
@@ -394,6 +410,9 @@ export function DashboardPage() {
                   'Trạm này chưa có trong hệ thống (scada.station). Đồng bộ danh sách trạm từ backend rồi thử lại.',
                 )
                 return
+              }
+              if (/^\d+$/.test(routeId)) {
+                void prefetchStationOverview(queryClient, Number(routeId))
               }
               navigate(stationDetailPath(routeId))
               return

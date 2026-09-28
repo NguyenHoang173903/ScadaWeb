@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Lock, KeyRound } from 'lucide-react'
+import { Eye, EyeOff, Lock, KeyRound } from 'lucide-react'
 import { PasswordRuleList } from '@/components/auth/PasswordRuleList'
 import { DEFAULT_PASSWORD, validatePassword } from '@/settings/passwordPolicy'
 import styles from './LoginPage.module.css'
@@ -14,6 +14,8 @@ type Props = {
 export function ChangePasswordForm({ username, message, onSubmit, onCancel }: Props) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -50,7 +52,7 @@ export function ChangePasswordForm({ username, message, onSubmit, onCancel }: Pr
         <label className={styles.field}>
           <Lock size={18} className={styles.fieldIcon} />
           <input
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             name="new-password"
             autoComplete="new-password"
             placeholder="Mật khẩu mới"
@@ -58,12 +60,21 @@ export function ChangePasswordForm({ username, message, onSubmit, onCancel }: Pr
             onChange={(event) => setPassword(event.target.value)}
             required
           />
+          <button
+            type="button"
+            className={styles.eyeButton}
+            aria-label={showPassword ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
+            aria-pressed={showPassword}
+            onClick={() => setShowPassword((visible) => !visible)}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
         </label>
 
         <label className={styles.field}>
           <KeyRound size={18} className={styles.fieldIcon} />
           <input
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             name="confirm-password"
             autoComplete="new-password"
             placeholder="Xác nhận mật khẩu mới"
@@ -71,6 +82,17 @@ export function ChangePasswordForm({ username, message, onSubmit, onCancel }: Pr
             onChange={(event) => setConfirmPassword(event.target.value)}
             required
           />
+          <button
+            type="button"
+            className={styles.eyeButton}
+            aria-label={
+              showConfirmPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'
+            }
+            aria-pressed={showConfirmPassword}
+            onClick={() => setShowConfirmPassword((visible) => !visible)}
+          >
+            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
         </label>
 
         <PasswordRuleList password={password} />

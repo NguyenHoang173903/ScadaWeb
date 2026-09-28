@@ -59,15 +59,12 @@ export function SessionPolicyForm() {
         setError('')
         setSaved(true)
       } catch (err) {
-        // Fallback local save if BE fails.
-        setSessionPolicy(values)
-        setValues(getSessionPolicy())
         setError(
           isApiError(err)
-            ? `${err.message} — đã lưu tạm trên máy.`
-            : 'Không lưu được lên server — đã lưu tạm trên máy.',
+            ? err.message
+            : 'Không lưu được cấu hình phiên lên máy chủ.',
         )
-        setSaved(true)
+        setSaved(false)
       }
     })()
   }

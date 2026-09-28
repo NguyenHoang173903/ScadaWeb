@@ -163,6 +163,8 @@ public static class DependencyInjection
                 "Invalid 'Password' configuration (ExpireDays, WarnBeforeDays, Min/MaxLength).")
             .ValidateOnStart();
         services.AddSingleton<IPasswordExpirationPolicy, PasswordExpirationPolicy>();
+        services.AddHostedService<RuntimeSecurityPolicyInitializer>();
+        services.AddHostedService<PasswordExpirationWorker>();
 
         // BE 1.4 — failed-login limiting / lockout thresholds. Validated on start
         // so an invalid config cannot silently disable brute-force protection.

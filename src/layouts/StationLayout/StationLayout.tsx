@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Navigate, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Activity, Users } from 'lucide-react'
 import { Button } from '@/components/common/Button'
@@ -15,17 +16,24 @@ import { getPumpStationById, registerPumpStation, type PumpStation } from '@/dat
 import { isApiError } from '@/services/api/http'
 import { stationDetailToPumpStation } from '@/services/stations/mappers'
 import { getStation } from '@/services/stations/stationsApi'
+import { prefetchStationOverview } from '@/services/stations/stationQueries'
 import styles from './StationLayout.module.css'
 
 export function StationLayout() {
   const { stationId = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const [station, setStation] = useState<PumpStation | undefined>(() =>
     getPumpStationById(stationId),
   )
   const [loading, setLoading] = useState(!getPumpStationById(stationId))
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!/^\d+$/.test(stationId)) return
+    void prefetchStationOverview(queryClient, Number(stationId))
+  }, [queryClient, stationId])
 
   useEffect(() => {
     const local = getPumpStationById(stationId)
