@@ -85,4 +85,45 @@ public class ScadaUsersController(IScadaUserQueryService users) : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.Unauthorized)]
     public async Task<IActionResult> Deactivate(long id, CancellationToken cancellationToken) =>
         this.ToNoContentResult(await users.DeactivateAsync(id, cancellationToken));
+
+    /// <summary>
+    /// Xóa vĩnh viễn user khỏi danh sách — tên đăng nhập có thể tạo lại. Không xóa được chính mình / admin cuối cùng.
+    /// Status : 204 No Content | 401 | 403 | 404 | 500
+    /// </summary>
+    [HttpDelete("{id:long}/permanent")]
+    [Authorize(Policy = Permissions.UserManagement.Edit)]
+    [ProducesResponseType(ScadaHttpStatuses.NoContent)]
+    [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.NotFound)]
+    [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.Unauthorized)]
+    public async Task<IActionResult> DeletePermanently(long id, CancellationToken cancellationToken) =>
+        this.ToNoContentResult(await users.DeletePermanentlyAsync(id, cancellationToken));
+
+    /// <summary>
+    /// Admin cấp lại mật khẩu (user quên mật khẩu): mở khóa, thu hồi phiên, mặc định bắt đổi ở lần đăng nhập sau.
+    /// Status : 204 No Content | 400 | 401 | 403 | 404 | 500
+    /// </summary>
+    [HttpPost("{id:long}/reset-password")]
+    [Authorize(Policy = Permissions.UserManagement.Edit)]
+    [ProducesResponseType(ScadaHttpStatuses.NoContent)]
+    [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.NotFound)]
+    [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), ScadaHttpStatuses.Unauthorized)]
+    public async Task<IActionResult> ResetPassword(
+        long id,
+        [FromBody] AdminResetScadaUserPasswordRequest request,
+        CancellationToken cancellationToken) =>
+        this.ToNoContentResult(await users.ResetPasswordAsync(id, request, cancellationToken));
+
+    /// <summary>
+    /// Kiểm tra tên đăng nhập hợp lệ + chưa tồn tại (gọi khi rời ô tên đăng nhập).
+    /// Status : 200 OK | 401 | 403
+    /// </summary>
+    [HttpGet("check-username")]
+    [ProducesResponseType(typeof(ApiResponse<UsernameAvailabilityDto>), ScadaHttpStatuses.Ok)]
+    [ProducesResponseType(typeof(ApiResponse<UsernameAvailabilityDto>), ScadaHttpStatuses.Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<UsernameAvailabilityDto>), ScadaHttpStatuses.Forbidden)]
+    public async Task<IActionResult> CheckUsername([FromQuery] string? username, CancellationToken cancellationToken) =>
+        this.ToActionResult(await users.CheckUsernameAsync(username, cancellationToken), "Kiểm tra tên đăng nhập.");
 }

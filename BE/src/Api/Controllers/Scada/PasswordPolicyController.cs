@@ -1,3 +1,4 @@
+using Backend.Api.Middlewares;
 using Backend.Application.DTOs.Scada;
 using Backend.Application.Interfaces.Services.Scada;
 using Backend.Shared.Constants;
@@ -10,10 +11,12 @@ namespace Backend.Api.Controllers.Scada;
 [ApiController]
 [Route("api/v1/password-policy")]
 [Produces("application/json")]
-[Authorize(Policy = Permissions.SystemAdministration.Manage)]
+[Authorize]
 public class PasswordPolicyController(IAppSettingQueryService settings) : ControllerBase
 {
+    /// <summary>Mọi user đã đăng nhập (kể cả đang bị buộc đổi mật khẩu) cần đọc rule để validate form đổi mật khẩu.</summary>
     [HttpGet]
+    [AllowWhenPasswordChangeRequired]
     [ProducesResponseType(typeof(ApiResponse<PasswordPolicyDto>), ScadaHttpStatuses.Ok)]
     public async Task<IActionResult> Get(CancellationToken cancellationToken) =>
         this.ToActionResult(
@@ -21,6 +24,7 @@ public class PasswordPolicyController(IAppSettingQueryService settings) : Contro
             "Chính sách mật khẩu.");
 
     [HttpPut]
+    [Authorize(Policy = Permissions.SystemAdministration.Manage)]
     [ProducesResponseType(typeof(ApiResponse<PasswordPolicyDto>), ScadaHttpStatuses.Ok)]
     [ProducesResponseType(typeof(ApiResponse<PasswordPolicyDto>), ScadaHttpStatuses.BadRequest)]
     public async Task<IActionResult> Update(

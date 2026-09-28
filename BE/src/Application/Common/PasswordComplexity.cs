@@ -59,4 +59,40 @@ public static class PasswordComplexity
         error = string.Empty;
         return true;
     }
+
+    private static readonly HashSet<string> CommonPasswords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "123456", "1234567", "12345678", "123456789", "1234567890", "111111", "000000",
+        "password", "password1", "password1!", "password@123", "p@ssw0rd", "p@ssword1",
+        "admin", "admin123", "admin@123", "admin@1234", "administrator", "root", "root@123",
+        "qwerty", "qwerty123", "qwerty@123", "abc123", "abc@123", "abcd@1234",
+        "welcome1", "welcome@123", "changeme", "letmein", "iloveyou",
+        "scada", "scada@123", "scada123", "operator", "operator@123", "user@123", "test@123",
+    };
+
+    /// <summary>
+    /// Rejects passwords that pass the character-class rules but are still trivially
+    /// guessable: well-known leaked passwords or passwords built from the username
+    /// (e.g. <c>Vasco/Vasco@123</c>, <c>admin/Admin@123</c>).
+    /// </summary>
+    public static bool TryValidateNotGuessable(string? password, string? username, out string error)
+    {
+        var pwd = password ?? string.Empty;
+        if (CommonPasswords.Contains(pwd))
+        {
+            error = "Password is too common. Choose a less predictable password.";
+            return false;
+        }
+
+        var user = username?.Trim();
+        if (!string.IsNullOrEmpty(user) && user.Length >= 3
+            && pwd.Contains(user, StringComparison.OrdinalIgnoreCase))
+        {
+            error = "Password must not contain the username.";
+            return false;
+        }
+
+        error = string.Empty;
+        return true;
+    }
 }

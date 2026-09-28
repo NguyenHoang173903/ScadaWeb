@@ -166,6 +166,15 @@ public interface IScadaUserQueryService
 
     /// <summary>Deactivate user (<c>IsActive = false</c>) — giữ lịch sử audit.</summary>
     Task<Result> DeactivateAsync(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>Xóa vĩnh viễn user (token cascade) — username có thể tạo lại. Audit log giữ tên dạng text.</summary>
+    Task<Result> DeletePermanentlyAsync(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>Admin cấp lại mật khẩu, mở khóa và thu hồi mọi phiên của user.</summary>
+    Task<Result> ResetPasswordAsync(long id, AdminResetScadaUserPasswordRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Kiểm tra username hợp lệ + chưa có user đang hoạt động trùng tên (form Thêm người dùng, on-blur).</summary>
+    Task<Result<UsernameAvailabilityDto>> CheckUsernameAsync(string? username, CancellationToken cancellationToken = default);
 }
 
 public interface IAppSettingQueryService

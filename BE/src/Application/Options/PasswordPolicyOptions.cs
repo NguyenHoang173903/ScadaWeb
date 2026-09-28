@@ -28,4 +28,11 @@ public class PasswordPolicyOptions
     public bool RequireLowercase { get; set; } = true;
     public bool RequireDigit { get; set; } = true;
     public bool RequireSpecial { get; set; } = true;
+
+    /// <summary>
+    /// When a user logs in with a password that no longer satisfies the policy
+    /// (legacy/default/common/username-based), flag the account so it must change
+    /// the password before using business APIs.
+    /// </summary>
+    public bool ForceChangeWeakOnLogin { get; set; } = true;
 }

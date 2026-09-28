@@ -75,4 +75,13 @@ public class JwtSettings
 
         return trimmed.Contains("CHANGE_ME", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// Keys committed to source control (marked <c>DEV_ONLY</c>) are public. Any
+    /// non-Development host must use its own secret so tokens from one environment
+    /// (e.g. Test) are never accepted by another (e.g. Production).
+    /// </summary>
+    public static bool IsDevelopmentOnlySigningKey(string? key) =>
+        !string.IsNullOrWhiteSpace(key)
+        && key.Contains("DEV_ONLY", StringComparison.OrdinalIgnoreCase);
 }

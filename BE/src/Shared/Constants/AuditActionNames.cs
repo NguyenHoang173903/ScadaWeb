@@ -24,6 +24,8 @@ public static class AuditActionNames
     public const string CreateUser = "CreateUser";
     public const string UpdateUser = "UpdateUser";
     public const string DeactivateUser = "DeactivateUser";
+    public const string DeleteUser = "DeleteUser";
+    public const string ResetUserPassword = "ResetUserPassword";
     public const string UpdateStation = "UpdateStation";
 
     public const string AcknowledgeAlarm = "AcknowledgeAlarm";

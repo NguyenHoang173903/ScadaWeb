@@ -37,6 +37,7 @@ public class AuthenticationService(
     IOptions<AuthSettings> authOptions,
     IOptions<LoginSecurityOptions> loginOptions,
     IOptions<PasswordPolicyOptions> passwordOptions,
+    IPasswordExpirationPolicy passwordExpiration,
     IHostEnvironment environment,
     ILogger<AuthenticationService> logger) : IAuthenticationService
 {
@@ -58,7 +59,7 @@ public class AuthenticationService(
         if (string.IsNullOrWhiteSpace(username))
             return Result<AuthTokenResponse>.Failure("Auth.Validation", "Username is required.");
 
-        if (!IsPasswordValid(request.Password, out var passwordError))
+        if (!IsPasswordValid(request.Password, username, out var passwordError))
             return Result<AuthTokenResponse>.Failure("Auth.PasswordPolicy", passwordError);
 
         if (string.IsNullOrWhiteSpace(request.FullName) && string.IsNullOrWhiteSpace(request.DisplayName))
@@ -132,6 +133,21 @@ public class AuthenticationService(
 
         // (3) Success — clear the temporary Redis counter first, then issue tokens.
         await loginAttempts.ResetAsync(username, ipAddress, cancellationToken);
+
+        // Weak/legacy password (e.g. admin/123456): force a change before business APIs.
+        if (_password.ForceChangeWeakOnLogin
+            && !user!.MustChangePassword
+            && !IsPasswordValid(request.Password, user.Username, out var weakReason))
+        {
+            user.MustChangePassword = true;
+            logger.LogWarning("WeakPasswordOnLogin UserId={UserId} Reason={Reason} → MustChangePassword", user.Id, weakReason);
+        }
+
+        if (!user!.MustChangePassword && passwordExpiration.Evaluate(user.PasswordUpdatedAt, now).IsExpired)
+        {
+            user.MustChangePassword = true;
+            logger.LogInformation("PasswordExpiredOnLogin UserId={UserId} → MustChangePassword", user.Id);
+        }
 
         var tokens = await TryIssueTokensWithSessionAsync(user!, ipAddress, cancellationToken);
         if (tokens.IsFailure)
@@ -427,9 +443,20 @@ public class AuthenticationService(
         if (!user.IsActive)
             return Result<CurrentUserResponse>.Failure("Auth.Unauthorized", "Account is disabled.");
 
+        var expiration = passwordExpiration.Evaluate(user.PasswordUpdatedAt, DateTimeOffset.UtcNow);
+        if (expiration.IsExpired && !user.MustChangePassword)
+        {
+            await db.ScadaUsers
+                .Where(u => u.Id == user.Id && !u.MustChangePassword)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.MustChangePassword, true), cancellationToken);
+            user.MustChangePassword = true;
+        }
+
         var canonicalRole = ScadaRolePermissionResolver.ResolveCanonicalRole(user.Role);
         return Result<CurrentUserResponse>.Success(new CurrentUserResponse
         {
+            PasswordExpiresInDays = expiration.ExpiresInDays,
+            PasswordExpiringSoon = expiration.ShouldWarn,
             Id = user.Id,
             Username = user.Username,
             FullName = user.FullName,
@@ -455,12 +482,12 @@ public class AuthenticationService(
         if (userId is null)
             return Result.Failure("Auth.Unauthorized", "Authentication is required.");
 
-        if (!IsPasswordValid(request.NewPassword, out var passwordError))
-            return Result.Failure("Auth.PasswordPolicy", passwordError);
-
         var user = await db.ScadaUsers.FirstOrDefaultAsync(u => u.Id == userId.Value, cancellationToken);
         if (user is null)
             return Result.Failure("Auth.NotFound", "User was not found.");
+
+        if (!IsPasswordValid(request.NewPassword, user.Username, out var passwordError))
+            return Result.Failure("Auth.PasswordPolicy", passwordError);
 
         if (!user.IsActive)
             return Result.Failure("Auth.Unauthorized", "Account is disabled.");
@@ -537,9 +564,6 @@ public class AuthenticationService(
         if (string.IsNullOrWhiteSpace(request.Token))
             return Result.Failure("Auth.InvalidResetToken", "Invalid or expired reset token.");
 
-        if (!IsPasswordValid(request.NewPassword, out var passwordError))
-            return Result.Failure("Auth.PasswordPolicy", passwordError);
-
         var hash = HashToken(request.Token);
         var stored = await db.ScadaPasswordResetTokens
             .Include(t => t.User)
@@ -547,6 +571,9 @@ public class AuthenticationService(
 
         if (stored is null || !stored.IsUsable || !stored.User.IsActive)
             return Result.Failure("Auth.InvalidResetToken", "Invalid or expired reset token.");
+
+        if (!IsPasswordValid(request.NewPassword, stored.User.Username, out var passwordError))
+            return Result.Failure("Auth.PasswordPolicy", passwordError);
 
         var now = DateTimeOffset.UtcNow;
         stored.UsedAt = now;
@@ -657,8 +684,11 @@ public class AuthenticationService(
         }
 
         var canonicalRole = ScadaRolePermissionResolver.ResolveCanonicalRole(user.Role);
+        var expiration = passwordExpiration.Evaluate(user.PasswordUpdatedAt, now);
         return new AuthTokenResponse
         {
+            PasswordExpiresInDays = expiration.ExpiresInDays,
+            PasswordExpiringSoon = expiration.ShouldWarn,
             AccessToken = accessToken,
             RefreshToken = refreshPlain,
             AccessTokenExpiresAt = expiresAt,
@@ -701,7 +731,7 @@ public class AuthenticationService(
         return Convert.ToHexString(bytes);
     }
 
-    private bool IsPasswordValid(string password, out string error) =>
+    private bool IsPasswordValid(string password, string? username, out string error) =>
         PasswordComplexity.TryValidate(
             password,
             _password.MinLength > 0 ? _password.MinLength : PasswordComplexity.DefaultMinLength,
@@ -710,5 +740,6 @@ public class AuthenticationService(
             _password.RequireLowercase,
             _password.RequireDigit,
             _password.RequireSpecial,
-            out error);
+            out error)
+        && PasswordComplexity.TryValidateNotGuessable(password, username, out error);
 }

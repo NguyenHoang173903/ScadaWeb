@@ -12,6 +12,7 @@ using Backend.Domain.Enums;
 using Backend.Domain.Interfaces;
 using Backend.Infrastructure.Persistence.Context;
 using Backend.Shared.Constants;
+using Backend.Shared.Extensions;
 using Backend.Shared.Models;
 using Backend.Shared.Pagination;
 using Backend.Shared.Results;
@@ -2805,11 +2806,14 @@ public class ScadaMetadataQueryService(
             if (username.Length > 32)
                 return Result<ScadaUserDto>.Failure("Auth.Validation", "Username must be at most 32 characters.");
 
+            if (!username.IsSafeIdentifier())
+                return Result<ScadaUserDto>.Failure("Auth.Validation", "Username may only contain letters, digits, '.', '_' and '-'.");
+
             if (!string.IsNullOrEmpty(request.ConfirmPassword)
                 && !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
                 return Result<ScadaUserDto>.Failure("Auth.Validation", "Confirm password does not match.");
 
-            if (!TryValidatePassword(request.Password, out var passwordError))
+            if (!TryValidatePassword(request.Password, username, out var passwordError))
                 return Result<ScadaUserDto>.Failure("Auth.PasswordPolicy", passwordError);
 
             var fullName = (request.FullName ?? string.Empty).Trim();
@@ -3006,13 +3010,128 @@ public class ScadaMetadataQueryService(
             return Result.Success();
         });
 
+    public Task<Result> DeletePermanentlyAsync(long id, CancellationToken cancellationToken = default) =>
+        SafeAsync(async () =>
+        {
+            var user = await db.ScadaUsers.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+            if (user is null)
+                return Result.Failure("ScadaUser.NotFound", $"SCADA user '{id}' was not found.");
+
+            if (currentUser.OperatorUserId is { } selfId && selfId == id)
+                return Result.Failure("Auth.Forbidden", "Cannot delete your own account.");
+
+            if (ScadaRolePermissionResolver.TryNormalize(user.Role) == ScadaRoles.Admin && user.IsActive)
+            {
+                var activeAdmins = (await db.ScadaUsers.AsNoTracking()
+                        .Where(u => u.IsActive && u.Id != id)
+                        .Select(u => u.Role)
+                        .ToListAsync(cancellationToken))
+                    .Count(r => ScadaRolePermissionResolver.TryNormalize(r) == ScadaRoles.Admin);
+                if (activeAdmins == 0)
+                    return Result.Failure("Auth.Forbidden", "Cannot delete the last active administrator.");
+            }
+
+            await sessionRevocation.RevokeAllSessionsAsync(user.Id, cancellationToken);
+
+            var username = user.Username;
+            db.ScadaUsers.Remove(user);
+            await db.SaveChangesAsync(cancellationToken);
+
+            await systemAudit.LogAsync(new SystemAuditEntry
+            {
+                Action = AuditActionNames.DeleteUser,
+                EventType = AuditEventType.Configuration,
+                Status = AuditStatus.Success,
+                Module = "ScadaUsers",
+                EntityType = "ScadaUser",
+                EntityId = id.ToString(CultureInfo.InvariantCulture),
+                Description = $"Permanently deleted SCADA user '{username}'.",
+                UserId = currentUser.OperatorUserId,
+                UserName = currentUser.Username
+            }, cancellationToken);
+
+            return Result.Success();
+        });
+
+    public Task<Result> ResetPasswordAsync(
+        long id,
+        AdminResetScadaUserPasswordRequest request,
+        CancellationToken cancellationToken = default) =>
+        SafeAsync(async () =>
+        {
+            var user = await db.ScadaUsers.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+            if (user is null)
+                return Result.Failure("ScadaUser.NotFound", $"SCADA user '{id}' was not found.");
+
+            if (!string.IsNullOrEmpty(request.ConfirmPassword)
+                && !string.Equals(request.NewPassword, request.ConfirmPassword, StringComparison.Ordinal))
+                return Result.Failure("Auth.Validation", "Confirm password does not match.");
+
+            if (!TryValidatePassword(request.NewPassword, user.Username, out var passwordError))
+                return Result.Failure("Auth.PasswordPolicy", passwordError);
+
+            var now = DateTimeOffset.UtcNow;
+            user.PasswordHash = passwordHasher.Hash(request.NewPassword);
+            user.MustChangePassword = request.MustChangePassword;
+            user.PasswordUpdatedAt = request.MustChangePassword ? null : now;
+            user.FailedLoginCount = 0;
+            user.LockoutUntil = null;
+            user.UpdatedAt = now;
+            user.UpdatedBy = currentUser.Username;
+            await db.SaveChangesAsync(cancellationToken);
+
+            await sessionRevocation.RevokeAllSessionsAsync(user.Id, cancellationToken);
+
+            await systemAudit.LogAsync(new SystemAuditEntry
+            {
+                Action = AuditActionNames.ResetUserPassword,
+                EventType = AuditEventType.Configuration,
+                Status = AuditStatus.Success,
+                Module = "ScadaUsers",
+                EntityType = "ScadaUser",
+                EntityId = user.Id.ToString(CultureInfo.InvariantCulture),
+                Description = $"Administrator reset password for SCADA user '{user.Username}'.",
+                UserId = currentUser.OperatorUserId,
+                UserName = currentUser.Username
+            }, cancellationToken);
+
+            return Result.Success();
+        });
+
+    public Task<Result<UsernameAvailabilityDto>> CheckUsernameAsync(
+        string? username,
+        CancellationToken cancellationToken = default) =>
+        SafeAsync(async () =>
+        {
+            var name = (username ?? string.Empty).Trim();
+            var dto = new UsernameAvailabilityDto { Username = name };
+
+            if (name.Length == 0)
+                dto.Message = "Tên đăng nhập không được để trống.";
+            else if (name.Length > 32)
+                dto.Message = "Tên đăng nhập tối đa 32 ký tự.";
+            else if (!name.IsSafeIdentifier())
+                dto.Message = "Tên đăng nhập chỉ gồm chữ, số và các ký tự '.', '_', '-'.";
+            else
+                dto.IsValid = true;
+
+            if (dto.IsValid)
+            {
+                dto.IsAvailable = !await db.ScadaUsers.AsNoTracking()
+                    .AnyAsync(u => u.Username == name && u.IsActive, cancellationToken);
+                dto.Message = dto.IsAvailable ? "Tên đăng nhập hợp lệ." : "Tên đăng nhập đã tồn tại.";
+            }
+
+            return Result<UsernameAvailabilityDto>.Success(dto);
+        });
+
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string? NormalizeScadaRole(string? raw) =>
         ScadaRolePermissionResolver.TryNormalize(raw, allowEmptyAsOperator: true);
 
-    private bool TryValidatePassword(string? password, out string error)
+    private bool TryValidatePassword(string? password, string? username, out string error)
     {
         var opt = passwordOptions.Value;
         return PasswordComplexity.TryValidate(
@@ -3023,7 +3142,8 @@ public class ScadaMetadataQueryService(
             opt.RequireLowercase,
             opt.RequireDigit,
             opt.RequireSpecial,
-            out error);
+            out error)
+            && PasswordComplexity.TryValidateNotGuessable(password, username, out error);
     }
 
     private static ScadaUserDto MapScadaUserDto(ScadaUser u, DateTimeOffset now) =>
@@ -3243,8 +3363,12 @@ public class ScadaMetadataQueryService(
         CancellationToken cancellationToken = default) =>
         SafeAsync(async () =>
         {
-            if (request.MinLength < 1 || request.MaxLength > 256 || request.MinLength > request.MaxLength)
-                return Result<PasswordPolicyDto>.Failure("ValidationError", "Password length limits are invalid.");
+            if (request.MinLength < PasswordComplexity.DefaultMinLength
+                || request.MaxLength > 256
+                || request.MinLength > request.MaxLength)
+                return Result<PasswordPolicyDto>.Failure(
+                    "ValidationError",
+                    $"Password length limits are invalid (minimum length must be at least {PasswordComplexity.DefaultMinLength}).");
             if (request.ChangeIntervalDays < 1
                 || request.ValidityDays < request.ChangeIntervalDays
                 || request.ValidityDays > 3650)

@@ -4,12 +4,41 @@ using Backend.Api.Middlewares;
 using Backend.Api.Swagger;
 using Backend.Application;
 using Backend.Infrastructure;
+using Backend.Infrastructure.Identity;
 using Backend.Infrastructure.Logging;
 using Backend.Infrastructure.Persistence.Context;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (!builder.Environment.IsDevelopment()
+    && JwtSettings.IsDevelopmentOnlySigningKey(builder.Configuration[$"{JwtSettings.SectionName}:SigningKey"]))
+{
+    throw new InvalidOperationException(
+        $"Jwt:SigningKey is the public DEV_ONLY key but environment is '{builder.Environment.EnvironmentName}'. " +
+        "Set a unique secret per environment via Jwt__SigningKey (Test and Production must differ).");
+}
+
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+
+// Behind Cloudflare / reverse proxy: trust only the scheme so HTTPS redirect + HSTS
+// work. X-Forwarded-For is NOT trusted (would let clients spoof IPs for rate limiting).
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = true;
+});
+// HTTPS port comes from ASPNETCORE_HTTPS_PORT (e.g. 443 behind a proxy) or a Kestrel HTTPS endpoint.
+builder.Services.AddHttpsRedirection(options =>
+    options.RedirectStatusCode = StatusCodes.Status301MovedPermanently);
 
 // Serilog replaces the default provider as early as possible so that even
 // host-startup failures are captured with the same sinks/format as the app.
@@ -46,6 +75,9 @@ var app = builder.Build();
 // carry Access-Control-Allow-* headers; otherwise the browser reports a CORS
 // failure and hides the real API error from the frontend.
 // ---------------------------------------------------------------------------
+app.UseForwardedHeaders();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 app.UseCors(CorsSettings.PolicyName);
 
 app.UseMiddleware<CorrelationIdMiddleware>();
@@ -65,6 +97,7 @@ else
 {
     // HTTPS redirect in Development often breaks FE preflight (OPTIONS → 307
     // without CORS headers) when the SPA calls http://localhost:5140.
+    app.UseHsts();
     app.UseHttpsRedirection();
 }
 
