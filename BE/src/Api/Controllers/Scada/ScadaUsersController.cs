@@ -40,6 +40,16 @@ public class ScadaUsersController(IScadaUserQueryService users) : ControllerBase
     public async Task<IActionResult> GetById(long id, CancellationToken cancellationToken) =>
         this.ToActionResult(await users.GetByIdAsync(id, cancellationToken), "Chi tiết SCADA user.");
 
+    [HttpGet("username-available")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), ScadaHttpStatuses.Ok)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), ScadaHttpStatuses.BadRequest)]
+    public async Task<IActionResult> IsUsernameAvailable(
+        [FromQuery] string username,
+        CancellationToken cancellationToken) =>
+        this.ToActionResult(
+            await users.IsUsernameAvailableAsync(username, cancellationToken),
+            "Kiểm tra tên đăng nhập.");
+
     /// <summary>
     /// Tạo SCADA user (màn Thêm người dùng mới). Không phát JWT.
     /// Status : 200 OK | 400 | 401 | 403 | 409 | 500

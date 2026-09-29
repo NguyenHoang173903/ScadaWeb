@@ -2799,6 +2799,26 @@ public class ScadaMetadataQueryService(
             : Result<ScadaUserDto>.Success(dto);
     }
 
+    public Task<Result<bool>> IsUsernameAvailableAsync(
+        string username,
+        CancellationToken cancellationToken = default) =>
+        SafeAsync(async () =>
+        {
+            var normalized = (username ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+                return Result<bool>.Failure("ValidationError", "Username is required.");
+            if (!IsValidScadaUsername(normalized))
+                return Result<bool>.Failure(
+                    "ValidationError",
+                    "Username must be 3-32 characters, start with a letter, and contain only letters, digits, '.', '_' or '-'.");
+
+            var activeExists = await db.ScadaUsers.AsNoTracking()
+                .AnyAsync(
+                    user => user.Username == normalized && user.IsActive,
+                    cancellationToken);
+            return Result<bool>.Success(!activeExists);
+        });
+
     public Task<Result<ScadaUserDto>> CreateAsync(
         CreateScadaUserRequest request,
         CancellationToken cancellationToken = default) =>
@@ -2808,8 +2828,10 @@ public class ScadaMetadataQueryService(
             if (string.IsNullOrWhiteSpace(username))
                 return Result<ScadaUserDto>.Failure("Auth.Validation", "Username is required.");
 
-            if (username.Length > 32)
-                return Result<ScadaUserDto>.Failure("Auth.Validation", "Username must be at most 32 characters.");
+            if (!IsValidScadaUsername(username))
+                return Result<ScadaUserDto>.Failure(
+                    "Auth.Validation",
+                    "Username must be 3-32 characters, start with a letter, and contain only letters, digits, '.', '_' or '-'.");
 
             if (!username.IsSafeIdentifier())
                 return Result<ScadaUserDto>.Failure("Auth.Validation", "Username may only contain letters, digits, '.', '_' and '-'.");
@@ -3132,6 +3154,12 @@ public class ScadaMetadataQueryService(
 
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static bool IsValidScadaUsername(string username) =>
+        System.Text.RegularExpressions.Regex.IsMatch(
+            username,
+            @"^[A-Za-z][A-Za-z0-9._-]{2,31}$",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
     private static string? NormalizeScadaRole(string? raw) =>
         ScadaRolePermissionResolver.TryNormalize(raw, allowEmptyAsOperator: true);

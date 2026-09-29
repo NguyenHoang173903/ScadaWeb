@@ -71,6 +71,11 @@ export async function getScadaUser(id: number) {
   return apiClient.get<ScadaUserDto>(`/scada-users/${id}`)
 }
 
+export async function isScadaUsernameAvailable(username: string) {
+  const search = new URLSearchParams({ username })
+  return apiClient.get<boolean>(`/scada-users/username-available?${search}`)
+}
+
 export async function createScadaUser(payload: CreateScadaUserPayload) {
   return apiClient.post<ScadaUserDto>('/scada-users', payload)
 }

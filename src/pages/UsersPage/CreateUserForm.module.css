@@ -63,6 +63,12 @@
   line-height: 1.35;
 }
 
+.fieldHint {
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .column input[aria-invalid='true'] {
   border-color: #dc2626;
 }

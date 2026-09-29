@@ -27,11 +27,18 @@ export function validateUsername(value: string): ValidationResult {
   if (username.length < 3 || username.length > 32) {
     return fail('Tên đăng nhập phải từ 3 đến 32 ký tự.')
   }
-  if (!USERNAME_PATTERN.test(username)) {
+  const invalidCharacters = [...new Set([...username].filter((char) => !/[A-Za-z0-9._-]/.test(char)))]
+  if (invalidCharacters.length > 0) {
     return fail(
-      'Tên đăng nhập không hợp lệ. Bắt đầu bằng chữ cái, chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang.',
+      `Tên đăng nhập chứa ký tự không được phép: ${invalidCharacters
+        .map((char) => `"${char}"`)
+        .join(', ')}. Chỉ được dùng chữ, số, dấu chấm (.), gạch dưới (_) hoặc gạch ngang (-).`,
     )
   }
+  if (!/^[A-Za-z]/.test(username)) {
+    return fail('Tên đăng nhập phải bắt đầu bằng một chữ cái (A-Z hoặc a-z).')
+  }
+  if (!USERNAME_PATTERN.test(username)) return fail('Tên đăng nhập không hợp lệ.')
   return ok()
 }
 

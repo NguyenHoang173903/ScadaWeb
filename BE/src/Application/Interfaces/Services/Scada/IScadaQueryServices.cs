@@ -158,6 +158,10 @@ public interface IScadaUserQueryService
     Task<Result<PaginationResult<ScadaUserDto>>> GetPagedAsync(ScadaUserQuery query, CancellationToken cancellationToken = default);
     Task<Result<ScadaUserDto>> GetByIdAsync(long id, CancellationToken cancellationToken = default);
 
+    Task<Result<bool>> IsUsernameAvailableAsync(
+        string username,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Tạo user SCADA (admin) — không phát JWT.</summary>
     Task<Result<ScadaUserDto>> CreateAsync(CreateScadaUserRequest request, CancellationToken cancellationToken = default);
 

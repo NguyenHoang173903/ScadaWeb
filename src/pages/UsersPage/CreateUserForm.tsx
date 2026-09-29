@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/common/Button'
 import { FormField } from '@/components/common/FormField'
@@ -7,6 +7,8 @@ import { TextAreaField } from '@/components/common/TextAreaField'
 import { TextField } from '@/components/common/TextField'
 import { PasswordRuleList } from '@/components/auth/PasswordRuleList'
 import { ToggleSwitch } from '@/components/common/ToggleSwitch'
+import { isApiError } from '@/services/api/http'
+import { isScadaUsernameAvailable } from '@/services/scadaUsers/scadaUsersApi'
 import { validatePassword } from '@/settings/passwordPolicy'
 import {
   firstError,
@@ -71,6 +73,8 @@ export function CreateUserForm({
   const [error, setError] = useState('')
   const [usernameTouched, setUsernameTouched] = useState(false)
   const [usernameError, setUsernameError] = useState('')
+  const [usernameChecking, setUsernameChecking] = useState(false)
+  const usernameCheckId = useRef(0)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
@@ -92,7 +96,31 @@ export function CreateUserForm({
     return check
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const checkUsernameAvailability = async (username: string) => {
+    const syntax = checkUsername(username)
+    if (!syntax.ok) return false
+
+    const checkId = ++usernameCheckId.current
+    setUsernameChecking(true)
+    try {
+      const available = await isScadaUsernameAvailable(username.trim())
+      if (checkId !== usernameCheckId.current) return false
+      setUsernameError(available ? '' : 'Tên đăng nhập đã tồn tại.')
+      return available
+    } catch (requestError) {
+      if (checkId !== usernameCheckId.current) return false
+      setUsernameError(
+        isApiError(requestError)
+          ? requestError.message
+          : 'Không kiểm tra được tên đăng nhập.',
+      )
+      return false
+    } finally {
+      if (checkId === usernameCheckId.current) setUsernameChecking(false)
+    }
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     if (mode === 'create') {
@@ -109,6 +137,10 @@ export function CreateUserForm({
       )
       if (!check.ok) {
         setError(check.message)
+        return
+      }
+      if (!(await checkUsernameAvailability(values.username))) {
+        setError('Vui lòng sử dụng tên đăng nhập khác.')
         return
       }
     } else {
@@ -137,13 +169,15 @@ export function CreateUserForm({
                 value={values.username}
                 onChange={(event) => {
                   const nextUsername = event.target.value
+                  usernameCheckId.current += 1
+                  setUsernameChecking(false)
                   updateField('username', nextUsername)
                   if (usernameTouched) checkUsername(nextUsername)
                 }}
                 onBlur={() => {
                   if (mode !== 'create') return
                   setUsernameTouched(true)
-                  checkUsername(values.username)
+                  void checkUsernameAvailability(values.username)
                 }}
                 aria-invalid={Boolean(usernameError)}
                 aria-describedby={usernameError ? 'username-error' : undefined}
@@ -154,6 +188,8 @@ export function CreateUserForm({
                 <span id="username-error" className={styles.fieldError} role="alert">
                   {usernameError}
                 </span>
+              ) : usernameChecking ? (
+                <span className={styles.fieldHint}>Đang kiểm tra tên đăng nhập...</span>
               ) : null}
             </FormField>
 
