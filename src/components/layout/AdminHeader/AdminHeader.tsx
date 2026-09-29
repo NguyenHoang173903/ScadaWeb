@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown, Clock3, KeyRound, LogOut, UserRound, Users } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
+import { APP_COMPANY } from '@/constants/config'
 import { ROUTES } from '@/constants/routes'
 import { logoutCurrentUser } from '@/services/auditLog'
 import {
@@ -62,6 +63,10 @@ export function AdminHeader({
         aria-label="Về Dashboard"
       >
         <img src={logoTlhn} alt="Logo thủy lợi Hà Nội" className={styles.logo} />
+        <span className={styles.brandText}>
+          <strong>HỆ THỐNG CƠ SỞ DỮ LIỆU SỐ</strong>
+          <small>{APP_COMPANY}</small>
+        </span>
       </button>
 
       <div className={styles.right}>

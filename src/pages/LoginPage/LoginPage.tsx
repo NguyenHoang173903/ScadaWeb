@@ -173,9 +173,11 @@ export function LoginPage() {
                   setLoginWarning('Đã đặt lại mật khẩu. Đăng nhập bằng mật khẩu mới.')
                   setLoginError('')
                 } catch (error) {
-                  setLoginError(
-                    isApiError(error) ? error.message : 'Không đặt lại được mật khẩu.',
-                  )
+                  const message = isApiError(error)
+                    ? error.message
+                    : 'Không đặt lại được mật khẩu.'
+                  setLoginError(message)
+                  throw new Error(message)
                 } finally {
                   setBusy(false)
                 }
@@ -185,6 +187,7 @@ export function LoginPage() {
             <ChangePasswordForm
               username={challenge.username}
               message={PASSWORD_CHALLENGE_COPY[challenge.reason]}
+              currentPassword={challenge.currentPassword}
               onCancel={() => {
                 setChallenge(null)
                 setLoginError('')
@@ -204,9 +207,11 @@ export function LoginPage() {
                   setLoginError('')
                   setLoginWarning('Đổi mật khẩu thành công. Vui lòng đăng nhập lại.')
                 } catch (error) {
-                  setLoginError(
-                    isApiError(error) ? error.message : 'Không đổi được mật khẩu. Thử lại.',
-                  )
+                  const message = isApiError(error)
+                    ? error.message
+                    : 'Không đổi được mật khẩu. Thử lại.'
+                  setLoginError(message)
+                  throw new Error(message)
                 } finally {
                   setBusy(false)
                 }

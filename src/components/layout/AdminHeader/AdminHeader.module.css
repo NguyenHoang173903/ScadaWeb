@@ -10,9 +10,15 @@
 }
 
 .logoButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
   border: 0;
   padding: 0;
   background: transparent;
+  color: #043d59;
+  text-align: center;
   cursor: pointer;
 }
 
@@ -21,6 +27,20 @@
   height: 80px;
   object-fit: contain;
   border-radius: 50%;
+}
+
+.brandText {
+  display: grid;
+  gap: 0.2rem;
+  font-family: Poppins, "Be Vietnam Pro", sans-serif;
+  line-height: 1.25;
+}
+
+.brandText strong,
+.brandText small {
+  font-size: 1rem;
+  font-weight: 650;
+  white-space: nowrap;
 }
 
 .right {
@@ -119,6 +139,10 @@
 }
 
 @media (max-width: 640px) {
+  .brandText {
+    display: none;
+  }
+
   .userMeta small {
     display: none;
   }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ChevronDown, Layers, UserRound } from 'lucide-react'
+import { ChevronDown, KeyRound, Layers, LogOut, UserRound, Users } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { DashboardMap, FeatureInfoPanel, LayerPanel, StationListPanel } from '@/components/map'
 import {
@@ -348,6 +348,7 @@ export function DashboardPage() {
                       navigate(ROUTES.users)
                     }}
                   >
+                    <Users size={16} />
                     Quản lý người dùng
                   </button>
                 ) : null}
@@ -360,6 +361,7 @@ export function DashboardPage() {
                     navigate(ROUTES.changePassword)
                   }}
                 >
+                  <KeyRound size={16} />
                   Đổi mật khẩu
                 </button>
                 <button
@@ -372,7 +374,8 @@ export function DashboardPage() {
                     navigate(ROUTES.login)
                   }}
                 >
-                  Logout
+                  <LogOut size={16} />
+                  Đăng xuất
                 </button>
               </div>
             ) : null}

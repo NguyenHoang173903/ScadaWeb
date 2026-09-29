@@ -1,32 +1,40 @@
 import { useState, type FormEvent } from 'react'
 import { Eye, EyeOff, Lock, KeyRound } from 'lucide-react'
 import { PasswordRuleList } from '@/components/auth/PasswordRuleList'
-import { DEFAULT_PASSWORD, validatePassword } from '@/settings/passwordPolicy'
+import { validatePassword } from '@/settings/passwordPolicy'
 import styles from './LoginPage.module.css'
 
 type Props = {
   username: string
   message: string
+  currentPassword?: string
   onSubmit: (password: string) => void | Promise<void>
   onCancel: () => void
 }
 
-export function ChangePasswordForm({ username, message, onSubmit, onCancel }: Props) {
+export function ChangePasswordForm({
+  username,
+  message,
+  currentPassword,
+  onSubmit,
+  onCancel,
+}: Props) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const check = validatePassword(password)
     if (!check.ok) {
       setError(check.message)
       return
     }
-    if (password === DEFAULT_PASSWORD) {
-      setError('Không được dùng lại mật khẩu mặc định.')
+    if (currentPassword && password === currentPassword) {
+      setError('Mật khẩu mới phải khác mật khẩu hiện tại.')
       return
     }
     if (password !== confirmPassword) {
@@ -34,9 +42,14 @@ export function ChangePasswordForm({ username, message, onSubmit, onCancel }: Pr
       return
     }
     setError('')
-    void Promise.resolve(onSubmit(password)).catch((err: unknown) => {
+    setSubmitting(true)
+    try {
+      await onSubmit(password)
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Không cập nhật được mật khẩu.')
-    })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -99,10 +112,10 @@ export function ChangePasswordForm({ username, message, onSubmit, onCancel }: Pr
 
         {error ? <p className={styles.formError}>{error}</p> : null}
 
-        <button type="submit" className={styles.primaryButton}>
-          CẬP NHẬT MẬT KHẨU
+        <button type="submit" className={styles.primaryButton} disabled={submitting}>
+          {submitting ? 'ĐANG CẬP NHẬT...' : 'CẬP NHẬT MẬT KHẨU'}
         </button>
-        <button type="button" className={styles.forgot} onClick={onCancel}>
+        <button type="button" className={styles.forgot} onClick={onCancel} disabled={submitting}>
           Quay lại đăng nhập
         </button>
       </form>

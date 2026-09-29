@@ -1756,10 +1756,12 @@ public class ScadaMetadataQueryService(
         CancellationToken cancellationToken = default) =>
         SafeAsync(async () =>
         {
-            if (!StationChartCatalog.TryGetSeries(chart ?? string.Empty, out var seriesDefs))
+            var normalizedChart = (chart ?? string.Empty).Trim().ToLowerInvariant();
+            if (!StationChartCatalog.TryGetSeries(normalizedChart, out var seriesDefs))
                 return Result<StationChartHistoryDto>.Failure(
                     ScadaErrorCodes.ChartUnknown,
                     $"Unknown chart '{chart}'. Use temperature, current, or water.");
+            var history1sOnly = normalizedChart == StationChartCatalog.Water;
 
             var stationExists = await db.Stations.AsNoTracking()
                 .AnyAsync(s => s.Id == stationId, cancellationToken);
@@ -1879,7 +1881,7 @@ public class ScadaMetadataQueryService(
 
                 // Water-level reports and some deployments persist samples in
                 // history_30s. Prefer it before the coarse history_30m fallback.
-                if (primary.Count == 0)
+                if (primary.Count == 0 && !history1sOnly)
                 {
                     var fallback30s = await db.History30s.AsNoTracking()
                         .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
@@ -1891,7 +1893,7 @@ public class ScadaMetadataQueryService(
                     sourceLabel = "30s";
                 }
 
-                if (primary.Count == 0)
+                if (primary.Count == 0 && !history1sOnly)
                 {
                     var fallback30m = await db.History30m.AsNoTracking()
                         .Where(h => measuredTagIds.Contains(h.TagId) && h.Time >= from && h.Time <= to)
@@ -1955,6 +1957,9 @@ public class ScadaMetadataQueryService(
 
             foreach (var tagId in measuredTagIds)
             {
+                if (history1sOnly)
+                    continue;
+
                 if (!liveByTag.TryGetValue(tagId, out var live))
                     continue;
                 if (live.Time < from)
@@ -2020,7 +2025,7 @@ public class ScadaMetadataQueryService(
             {
                 StationId = stationId,
                 DeviceId = deviceId,
-                Chart = chart.Trim().ToLowerInvariant(),
+                Chart = normalizedChart,
                 Interval = interval,
                 From = from,
                 To = to,
