@@ -304,10 +304,23 @@ public class AuthenticationService(
             var alive = await concurrentSessionService.ExtendAsync(sessionId, cancellationToken);
             if (!alive)
             {
-                var reacquired = await AcquireSessionAsync(stored.User, cancellationToken, sessionId);
-                if (reacquired.IsFailure)
-                    return Result<AuthTokenResponse>.Failure(reacquired.ErrorCode, reacquired.Errors);
-                sessionId = reacquired.Value!;
+                var active = await concurrentSessionService.IsActiveAsync(
+                    sessionId, stored.UserId.ToString(), cancellationToken);
+                if (active is null)
+                    return Result<AuthTokenResponse>.Failure(
+                        "Auth.ConcurrentUnavailable", ConcurrentSessionMessages.RedisUnavailable);
+
+                if (active == false)
+                {
+                    // Ended sessions are never revived: the user must log in again (new sid, new tokens).
+                    await db.ScadaRefreshTokens
+                        .Where(t => t.Id == stored.Id && t.RevokedAt == null)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(t => t.RevokedAt, now)
+                            .SetProperty(t => t.RevokedByIp, ipAddress)
+                            .SetProperty(t => t.UpdatedAt, now), cancellationToken);
+                    return Result<AuthTokenResponse>.Failure("Auth.SessionEnded", "Login session has ended. Please sign in again.");
+                }
             }
         }
 
@@ -593,12 +606,15 @@ public class AuthenticationService(
         return Result.Success();
     }
 
-    public Task<Result<ClaimsPrincipal>> ValidateTokenAsync(string accessToken, CancellationToken cancellationToken = default)
+    public async Task<Result<ClaimsPrincipal>> ValidateTokenAsync(string accessToken, CancellationToken cancellationToken = default)
     {
         var principal = tokenService.ValidateAccessToken(accessToken);
-        return Task.FromResult(principal is null
-            ? Result<ClaimsPrincipal>.Failure("Auth.InvalidToken", "Access token is invalid or expired.")
-            : Result<ClaimsPrincipal>.Success(principal));
+        if (principal is null
+            || await AccessTokenSessionValidator.ValidateAsync(principal, concurrentSessionService, cancellationToken)
+                != AccessTokenSessionState.Active)
+            return Result<ClaimsPrincipal>.Failure("Auth.InvalidToken", "Access token is invalid or expired.");
+
+        return Result<ClaimsPrincipal>.Success(principal);
     }
 
     private async Task<Result<AuthTokenResponse>> TryIssueTokensWithSessionAsync(

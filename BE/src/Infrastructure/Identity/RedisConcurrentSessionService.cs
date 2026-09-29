@@ -229,6 +229,28 @@ public class RedisConcurrentSessionService(
         }
     }
 
+    public async Task<bool?> IsActiveAsync(string sessionId, string? userId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+            return false;
+
+        try
+        {
+            var db = redis.GetDatabase();
+            var owner = await db.HashGetAsync($"{options.Value.RedisKeyPrefix}:session:{sessionId}", "userId");
+            if (owner.IsNull)
+                return false;
+
+            return string.IsNullOrWhiteSpace(userId)
+                || string.Equals(owner.ToString(), userId, StringComparison.Ordinal);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Redis error checking SessionId={SessionId}", sessionId);
+            return null;
+        }
+    }
+
     public async Task<Result<ConcurrentUsersStatusDto>> GetStatusAsync(CancellationToken cancellationToken = default)
     {
         var cfg = options.Value;

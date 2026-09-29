@@ -1,4 +1,5 @@
 using System.Text;
+using Backend.Application.Interfaces.Services;
 using Backend.Infrastructure.Identity;
 using Backend.Shared.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -58,6 +59,23 @@ public static class AuthenticationServiceExtensions
                         if (context.Exception is SecurityTokenExpiredException)
                             context.Response.Headers.Append("Token-Expired", "true");
                         return Task.CompletedTask;
+                    },
+                    OnTokenValidated = async context =>
+                    {
+                        var sessions = context.HttpContext.RequestServices.GetRequiredService<IConcurrentSessionService>();
+                        var state = await AccessTokenSessionValidator.ValidateAsync(
+                            context.Principal, sessions, context.HttpContext.RequestAborted);
+
+                        switch (state)
+                        {
+                            case AccessTokenSessionState.Ended:
+                                context.Response.Headers.Append(AccessTokenSessionValidator.SessionExpiredHeader, "true");
+                                context.Fail("Login session has ended.");
+                                break;
+                            case AccessTokenSessionState.Unavailable:
+                                context.Fail("Login session cannot be verified.");
+                                break;
+                        }
                     },
                     // SignalR WebSockets cannot set Authorization header → access_token query.
                     OnMessageReceived = context =>

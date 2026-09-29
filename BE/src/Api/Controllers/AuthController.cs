@@ -186,7 +186,7 @@ public class AuthController(
             "Auth.ConcurrentLimit" => StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(message, result.Errors)),
             "Auth.ConcurrentUnavailable" => StatusCode(StatusCodes.Status503ServiceUnavailable, ApiResponse<object>.Fail(message, result.Errors)),
             "Auth.AccountLocked" => LockedResponse(message, result.Errors),
-            "Auth.InvalidCredentials" or "Auth.InvalidRefreshToken" =>
+            "Auth.InvalidCredentials" or "Auth.InvalidRefreshToken" or "Auth.SessionEnded" =>
                 Unauthorized(ApiResponse<object>.Fail(message, result.Errors)),
             _ => BadRequest(ApiResponse<object>.Fail(message, result.Errors))
         };

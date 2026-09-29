@@ -70,5 +70,12 @@ public interface IConcurrentSessionService
 
     Task ReleaseAsync(string sessionId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// True when the session still exists in Redis and belongs to <paramref name="userId"/>;
+    /// false when it was released (logout/revocation), evicted or expired;
+    /// null when Redis cannot be reached.
+    /// </summary>
+    Task<bool?> IsActiveAsync(string sessionId, string? userId, CancellationToken cancellationToken = default);
+
     Task<Result<ConcurrentUsersStatusDto>> GetStatusAsync(CancellationToken cancellationToken = default);
 }
