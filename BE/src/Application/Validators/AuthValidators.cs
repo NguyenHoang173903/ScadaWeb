@@ -17,28 +17,31 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
         var max = opt.MaxLength > 0 ? opt.MaxLength : PasswordComplexity.DefaultMaxLength;
 
         RuleFor(x => x.Username).NotEmpty()
+            .WithMessage("Vui lòng nhập tên đăng nhập.")
             .MaximumLength(ValidationConstants.UsernameMaxLength)
+            .WithMessage($"Tên đăng nhập được phép có tối đa {ValidationConstants.UsernameMaxLength} ký tự.")
             .Must(u => u.IsSafeIdentifier())
-            .WithMessage("Username may only contain letters, digits, '.', '_' and '-'.");
+            .WithMessage("Tên đăng nhập chỉ được gồm chữ cái, chữ số, dấu chấm, dấu gạch dưới và dấu gạch ngang.");
         RuleFor(x => x.FullName)
             .Must((req, _) => !string.IsNullOrWhiteSpace(req.FullName) || !string.IsNullOrWhiteSpace(req.DisplayName))
-            .WithMessage("FullName is required.")
+            .WithMessage("Vui lòng nhập họ và tên.")
             .Must((req, _) =>
             {
                 var name = string.IsNullOrWhiteSpace(req.FullName) ? req.DisplayName : req.FullName;
                 return name.Length <= ValidationConstants.DisplayNameMaxLength;
             })
-            .WithMessage($"FullName must be at most {ValidationConstants.DisplayNameMaxLength} characters.")
+            .WithMessage($"Họ và tên được phép có tối đa {ValidationConstants.DisplayNameMaxLength} ký tự.")
             .Must((req, _) =>
             {
                 var name = string.IsNullOrWhiteSpace(req.FullName) ? req.DisplayName : req.FullName;
                 return string.IsNullOrEmpty(name) || !name.ContainsDisallowedControlChars();
             })
-            .WithMessage("FullName must not contain control characters.");
+            .WithMessage("Họ và tên chứa ký tự không hợp lệ.");
         RuleFor(x => x.Password).NotEmpty()
+            .WithMessage("Vui lòng nhập mật khẩu.")
             .Must(p => PasswordComplexity.TryValidate(
                 p, min, max, opt.RequireUppercase, opt.RequireLowercase, opt.RequireDigit, opt.RequireSpecial, out _))
-            .WithMessage($"Password must meet complexity policy (length {min}-{max}, character classes).");
+            .WithMessage($"Mật khẩu phải có từ {min} đến {max} ký tự và đáp ứng các yêu cầu về chữ hoa, chữ thường, chữ số, ký tự đặc biệt.");
     }
 }
 
@@ -48,10 +51,15 @@ public class LoginRequestValidator : AbstractValidator<LoginRequest>
     {
         // T4.4 §9 / T5 — bound username; NEVER trim/complexity the password.
         RuleFor(x => x.Username).NotEmpty()
+            .WithMessage("Vui lòng nhập tên đăng nhập.")
             .MaximumLength(ValidationConstants.UsernameMaxLength)
+            .WithMessage($"Tên đăng nhập được phép có tối đa {ValidationConstants.UsernameMaxLength} ký tự.")
             .Must(u => u.IsSafeIdentifier())
-            .WithMessage("Username may only contain letters, digits, '.', '_' and '-'.");
-        RuleFor(x => x.Password).NotEmpty().MaximumLength(SecurityConstants.PasswordMaxLength);
+            .WithMessage("Tên đăng nhập chỉ được gồm chữ cái, chữ số, dấu chấm, dấu gạch dưới và dấu gạch ngang.");
+        RuleFor(x => x.Password).NotEmpty()
+            .WithMessage("Vui lòng nhập mật khẩu.")
+            .MaximumLength(SecurityConstants.PasswordMaxLength)
+            .WithMessage($"Mật khẩu được phép có tối đa {SecurityConstants.PasswordMaxLength} ký tự.");
     }
 }
 
@@ -59,7 +67,10 @@ public class RefreshRequestValidator : AbstractValidator<RefreshRequest>
 {
     public RefreshRequestValidator()
     {
-        RuleFor(x => x.RefreshToken).NotEmpty().MaximumLength(ValidationConstants.TokenMaxLength);
+        RuleFor(x => x.RefreshToken).NotEmpty()
+            .WithMessage("Phiên đăng nhập không hợp lệ.")
+            .MaximumLength(ValidationConstants.TokenMaxLength)
+            .WithMessage("Phiên đăng nhập không hợp lệ.");
     }
 }
 
@@ -67,11 +78,14 @@ public class LogoutRequestValidator : AbstractValidator<LogoutRequest>
 {
     public LogoutRequestValidator()
     {
-        RuleFor(x => x.RefreshToken).NotEmpty().MaximumLength(ValidationConstants.TokenMaxLength);
+        RuleFor(x => x.RefreshToken).NotEmpty()
+            .WithMessage("Phiên đăng nhập không hợp lệ.")
+            .MaximumLength(ValidationConstants.TokenMaxLength)
+            .WithMessage("Phiên đăng nhập không hợp lệ.");
         RuleFor(x => x.SessionId)
             .MaximumLength(64)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("SessionId must not contain control characters.")
+            .WithMessage("Mã phiên đăng nhập chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.SessionId));
     }
 }
@@ -84,13 +98,17 @@ public class ChangePasswordRequestValidator : AbstractValidator<ChangePasswordRe
         var min = opt.MinLength > 0 ? opt.MinLength : PasswordComplexity.DefaultMinLength;
         var max = opt.MaxLength > 0 ? opt.MaxLength : PasswordComplexity.DefaultMaxLength;
 
-        RuleFor(x => x.CurrentPassword).NotEmpty().MaximumLength(SecurityConstants.PasswordMaxLength);
+        RuleFor(x => x.CurrentPassword).NotEmpty()
+            .WithMessage("Vui lòng nhập mật khẩu hiện tại.")
+            .MaximumLength(SecurityConstants.PasswordMaxLength)
+            .WithMessage($"Mật khẩu hiện tại được phép có tối đa {SecurityConstants.PasswordMaxLength} ký tự.");
         RuleFor(x => x.NewPassword).NotEmpty()
+            .WithMessage("Vui lòng nhập mật khẩu mới.")
             .Must(p => PasswordComplexity.TryValidate(
                 p, min, max, opt.RequireUppercase, opt.RequireLowercase, opt.RequireDigit, opt.RequireSpecial, out _))
-            .WithMessage($"Password must meet complexity policy (length {min}-{max}, character classes).")
+            .WithMessage($"Mật khẩu phải có từ {min} đến {max} ký tự và đáp ứng các yêu cầu về chữ hoa, chữ thường, chữ số, ký tự đặc biệt.")
             .NotEqual(x => x.CurrentPassword)
-            .WithMessage("New password must be different from the current password.");
+            .WithMessage("Mật khẩu mới phải khác mật khẩu hiện tại.");
     }
 }
 
@@ -99,9 +117,11 @@ public class ForgotPasswordRequestValidator : AbstractValidator<ForgotPasswordRe
     public ForgotPasswordRequestValidator()
     {
         RuleFor(x => x.Username).NotEmpty()
+            .WithMessage("Vui lòng nhập tên đăng nhập.")
             .MaximumLength(ValidationConstants.UsernameMaxLength)
+            .WithMessage($"Tên đăng nhập được phép có tối đa {ValidationConstants.UsernameMaxLength} ký tự.")
             .Must(u => u.IsSafeIdentifier())
-            .WithMessage("Username may only contain letters, digits, '.', '_' and '-'.");
+            .WithMessage("Tên đăng nhập chỉ được gồm chữ cái, chữ số, dấu chấm, dấu gạch dưới và dấu gạch ngang.");
     }
 }
 
@@ -113,11 +133,15 @@ public class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequ
         var min = opt.MinLength > 0 ? opt.MinLength : PasswordComplexity.DefaultMinLength;
         var max = opt.MaxLength > 0 ? opt.MaxLength : PasswordComplexity.DefaultMaxLength;
 
-        RuleFor(x => x.Token).NotEmpty().MaximumLength(ValidationConstants.TokenMaxLength);
+        RuleFor(x => x.Token).NotEmpty()
+            .WithMessage("Liên kết đặt lại mật khẩu không hợp lệ.")
+            .MaximumLength(ValidationConstants.TokenMaxLength)
+            .WithMessage("Liên kết đặt lại mật khẩu không hợp lệ.");
         RuleFor(x => x.NewPassword).NotEmpty()
+            .WithMessage("Vui lòng nhập mật khẩu mới.")
             .Must(p => PasswordComplexity.TryValidate(
                 p, min, max, opt.RequireUppercase, opt.RequireLowercase, opt.RequireDigit, opt.RequireSpecial, out _))
-            .WithMessage($"Password must meet complexity policy (length {min}-{max}, character classes).");
+            .WithMessage($"Mật khẩu phải có từ {min} đến {max} ký tự và đáp ứng các yêu cầu về chữ hoa, chữ thường, chữ số, ký tự đặc biệt.");
     }
 }
 
@@ -131,11 +155,11 @@ public class RegisterValidator : AbstractValidator<RegisterDto>
         RuleFor(x => x.FirstName).NotEmpty()
             .MaximumLength(ValidationConstants.NameMaxLength)
             .Must(v => !v.ContainsDisallowedControlChars())
-            .WithMessage("FirstName must not contain control characters.");
+            .WithMessage("Tên chứa ký tự không hợp lệ.");
         RuleFor(x => x.LastName).NotEmpty()
             .MaximumLength(ValidationConstants.NameMaxLength)
             .Must(v => !v.ContainsDisallowedControlChars())
-            .WithMessage("LastName must not contain control characters.");
+            .WithMessage("Họ chứa ký tự không hợp lệ.");
         RuleFor(x => x.Password).NotEmpty()
             .MinimumLength(SecurityConstants.PasswordMinLength)
             .MaximumLength(SecurityConstants.PasswordMaxLength);

@@ -12,11 +12,11 @@ public class CreateRoleValidator : AbstractValidator<CreateRoleDto>
         RuleFor(x => x.Name).NotEmpty()
             .MaximumLength(ValidationConstants.NameMaxLength)
             .Must(v => !v.ContainsDisallowedControlChars())
-            .WithMessage("Name must not contain control characters.");
+            .WithMessage("Tên vai trò chứa ký tự không hợp lệ.");
         RuleFor(x => x.Description)
             .MaximumLength(ValidationConstants.DescriptionMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars(allowNewLineAndTab: true))
-            .WithMessage("Description must not contain control characters.")
+            .WithMessage("Mô tả chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.Description));
     }
 }

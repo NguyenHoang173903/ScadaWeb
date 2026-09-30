@@ -22,37 +22,37 @@ public static class PasswordComplexity
     {
         if (string.IsNullOrEmpty(password) || password.Length < minLength)
         {
-            error = $"Password must be at least {minLength} characters.";
+            error = $"Mật khẩu phải có ít nhất {minLength} ký tự.";
             return false;
         }
 
         if (password.Length > maxLength)
         {
-            error = $"Password must be at most {maxLength} characters.";
+            error = $"Mật khẩu được phép có tối đa {maxLength} ký tự.";
             return false;
         }
 
         if (requireUppercase && !password.Any(char.IsUpper))
         {
-            error = "Password must contain at least one uppercase letter.";
+            error = "Mật khẩu phải có ít nhất một chữ cái viết hoa.";
             return false;
         }
 
         if (requireLowercase && !password.Any(char.IsLower))
         {
-            error = "Password must contain at least one lowercase letter.";
+            error = "Mật khẩu phải có ít nhất một chữ cái viết thường.";
             return false;
         }
 
         if (requireDigit && !password.Any(char.IsDigit))
         {
-            error = "Password must contain at least one digit.";
+            error = "Mật khẩu phải có ít nhất một chữ số.";
             return false;
         }
 
         if (requireSpecial && !password.Any(ch => !char.IsLetterOrDigit(ch)))
         {
-            error = "Password must contain at least one special character.";
+            error = "Mật khẩu phải có ít nhất một ký tự đặc biệt.";
             return false;
         }
 
@@ -80,7 +80,7 @@ public static class PasswordComplexity
         var pwd = password ?? string.Empty;
         if (CommonPasswords.Contains(pwd))
         {
-            error = "Password is too common. Choose a less predictable password.";
+            error = "Mật khẩu quá phổ biến. Vui lòng chọn mật khẩu khó đoán hơn.";
             return false;
         }
 
@@ -88,7 +88,7 @@ public static class PasswordComplexity
         if (!string.IsNullOrEmpty(user) && user.Length >= 3
             && pwd.Contains(user, StringComparison.OrdinalIgnoreCase))
         {
-            error = "Password must not contain the username.";
+            error = "Mật khẩu không được chứa tên đăng nhập.";
             return false;
         }
 

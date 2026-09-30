@@ -13,22 +13,22 @@ public class CreateUserValidator : AbstractValidator<CreateUserDto>
         RuleFor(x => x.FirstName).NotEmpty()
             .MaximumLength(ValidationConstants.NameMaxLength)
             .Must(v => !v.ContainsDisallowedControlChars())
-            .WithMessage("FirstName must not contain control characters.");
+            .WithMessage("Tên chứa ký tự không hợp lệ.");
         RuleFor(x => x.LastName).NotEmpty()
             .MaximumLength(ValidationConstants.NameMaxLength)
             .Must(v => !v.ContainsDisallowedControlChars())
-            .WithMessage("LastName must not contain control characters.");
+            .WithMessage("Họ chứa ký tự không hợp lệ.");
         RuleFor(x => x.Password)
             .NotEmpty()
             .MinimumLength(SecurityConstants.PasswordMinLength)
             .MaximumLength(SecurityConstants.PasswordMaxLength)
-            .Matches("[A-Z]").WithMessage("Password must contain at least one uppercase letter.")
-            .Matches("[a-z]").WithMessage("Password must contain at least one lowercase letter.")
-            .Matches("[0-9]").WithMessage("Password must contain at least one digit.");
+            .Matches("[A-Z]").WithMessage("Mật khẩu phải có ít nhất một chữ cái viết hoa.")
+            .Matches("[a-z]").WithMessage("Mật khẩu phải có ít nhất một chữ cái viết thường.")
+            .Matches("[0-9]").WithMessage("Mật khẩu phải có ít nhất một chữ số.");
         RuleFor(x => x.PhoneNumber)
             .MaximumLength(ValidationConstants.PhoneNumberMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("PhoneNumber must not contain control characters.")
+            .WithMessage("Số điện thoại chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.PhoneNumber));
     }
 }
@@ -40,15 +40,15 @@ public class UpdateUserValidator : AbstractValidator<UpdateUserDto>
         RuleFor(x => x.FirstName).NotEmpty()
             .MaximumLength(ValidationConstants.NameMaxLength)
             .Must(v => !v.ContainsDisallowedControlChars())
-            .WithMessage("FirstName must not contain control characters.");
+            .WithMessage("Tên chứa ký tự không hợp lệ.");
         RuleFor(x => x.LastName).NotEmpty()
             .MaximumLength(ValidationConstants.NameMaxLength)
             .Must(v => !v.ContainsDisallowedControlChars())
-            .WithMessage("LastName must not contain control characters.");
+            .WithMessage("Họ chứa ký tự không hợp lệ.");
         RuleFor(x => x.PhoneNumber)
             .MaximumLength(ValidationConstants.PhoneNumberMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("PhoneNumber must not contain control characters.")
+            .WithMessage("Số điện thoại chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.PhoneNumber));
     }
 }
@@ -62,7 +62,7 @@ public class ChangePasswordValidator : AbstractValidator<ChangePasswordDto>
             .NotEmpty()
             .MinimumLength(SecurityConstants.PasswordMinLength)
             .MaximumLength(SecurityConstants.PasswordMaxLength)
-            .NotEqual(x => x.CurrentPassword).WithMessage("New password must be different from the current password.");
+            .NotEqual(x => x.CurrentPassword).WithMessage("Mật khẩu mới phải khác mật khẩu hiện tại.");
     }
 }
 
@@ -73,7 +73,7 @@ public class UserSearchQueryValidator : AbstractValidator<UserSearchQuery>
         RuleFor(x => x.Keyword)
             .MaximumLength(ValidationConstants.KeywordMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("Keyword must not contain control characters.")
+            .WithMessage("Từ khóa chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.Keyword));
     }
 }
@@ -85,7 +85,7 @@ public class DeactivateUserQueryValidator : AbstractValidator<DeactivateUserQuer
         RuleFor(x => x.Reason)
             .MaximumLength(ValidationConstants.ReasonMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars(allowNewLineAndTab: true))
-            .WithMessage("Reason must not contain control characters.")
+            .WithMessage("Lý do chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.Reason));
     }
 }

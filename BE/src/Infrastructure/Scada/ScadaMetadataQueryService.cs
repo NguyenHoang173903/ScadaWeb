@@ -2795,7 +2795,7 @@ public class ScadaMetadataQueryService(
             .FirstOrDefaultAsync(cancellationToken);
 
         return dto is null
-            ? Result<ScadaUserDto>.Failure("ScadaUser.NotFound", $"SCADA user '{id}' was not found.")
+            ? Result<ScadaUserDto>.Failure("ScadaUser.NotFound", $"Không tìm thấy người dùng SCADA có mã '{id}'.")
             : Result<ScadaUserDto>.Success(dto);
     }
 
@@ -2806,11 +2806,11 @@ public class ScadaMetadataQueryService(
         {
             var normalized = (username ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(normalized))
-                return Result<bool>.Failure("ValidationError", "Username is required.");
+                return Result<bool>.Failure("ValidationError", "Vui lòng nhập tên đăng nhập.");
             if (!IsValidScadaUsername(normalized))
                 return Result<bool>.Failure(
                     "ValidationError",
-                    "Username must be 3-32 characters, start with a letter, and contain only letters, digits, '.', '_' or '-'.");
+                    "Tên đăng nhập phải có từ 3 đến 32 ký tự, bắt đầu bằng chữ cái và chỉ gồm chữ cái, chữ số, dấu chấm, dấu gạch dưới hoặc dấu gạch ngang.");
 
             var activeExists = await db.ScadaUsers.AsNoTracking()
                 .AnyAsync(
@@ -2826,19 +2826,19 @@ public class ScadaMetadataQueryService(
         {
             var username = (request.Username ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(username))
-                return Result<ScadaUserDto>.Failure("Auth.Validation", "Username is required.");
+                return Result<ScadaUserDto>.Failure("Auth.Validation", "Vui lòng nhập tên đăng nhập.");
 
             if (!IsValidScadaUsername(username))
                 return Result<ScadaUserDto>.Failure(
                     "Auth.Validation",
-                    "Username must be 3-32 characters, start with a letter, and contain only letters, digits, '.', '_' or '-'.");
+                    "Tên đăng nhập phải có từ 3 đến 32 ký tự, bắt đầu bằng chữ cái và chỉ gồm chữ cái, chữ số, dấu chấm, dấu gạch dưới hoặc dấu gạch ngang.");
 
             if (!username.IsSafeIdentifier())
-                return Result<ScadaUserDto>.Failure("Auth.Validation", "Username may only contain letters, digits, '.', '_' and '-'.");
+                return Result<ScadaUserDto>.Failure("Auth.Validation", "Tên đăng nhập chỉ được gồm chữ cái, chữ số, dấu chấm, dấu gạch dưới và dấu gạch ngang.");
 
             if (!string.IsNullOrEmpty(request.ConfirmPassword)
                 && !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
-                return Result<ScadaUserDto>.Failure("Auth.Validation", "Confirm password does not match.");
+                return Result<ScadaUserDto>.Failure("Auth.Validation", "Mật khẩu xác nhận không khớp.");
 
             if (!TryValidatePassword(request.Password, username, out var passwordError))
                 return Result<ScadaUserDto>.Failure("Auth.PasswordPolicy", passwordError);
@@ -2851,15 +2851,15 @@ public class ScadaMetadataQueryService(
             if (role is null)
                 return Result<ScadaUserDto>.Failure(
                     "Auth.Validation",
-                    "Role must be VIEW, OPERATOR, TECHNICAL, or ADMIN (legacy: viewer/operator/admin also accepted).");
+                    "Vai trò phải là Người xem, Vận hành, Kỹ thuật hoặc Quản trị viên.");
 
             if (request.Level is { } level && (level < 1 || level > 100))
-                return Result<ScadaUserDto>.Failure("Auth.Validation", "Level must be between 1 and 100.");
+                return Result<ScadaUserDto>.Failure("Auth.Validation", "Cấp độ phải nằm trong khoảng từ 1 đến 100.");
 
             var existingUser = await db.ScadaUsers
                 .FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
             if (existingUser?.IsActive == true)
-                return Result<ScadaUserDto>.Failure("Auth.UsernameTaken", "Username is already taken.");
+                return Result<ScadaUserDto>.Failure("Auth.UsernameTaken", "Tên đăng nhập đã tồn tại.");
 
             var now = DateTimeOffset.UtcNow;
             var actor = currentUser.Username;
@@ -2918,13 +2918,13 @@ public class ScadaMetadataQueryService(
         {
             var user = await db.ScadaUsers.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
             if (user is null)
-                return Result<ScadaUserDto>.Failure("ScadaUser.NotFound", $"SCADA user '{id}' was not found.");
+                return Result<ScadaUserDto>.Failure("ScadaUser.NotFound", $"Không tìm thấy người dùng SCADA có mã '{id}'.");
 
             if (request.FullName is not null)
             {
                 var fullName = request.FullName.Trim();
                 if (fullName.Length == 0)
-                    return Result<ScadaUserDto>.Failure("Auth.Validation", "Full name cannot be empty.");
+                    return Result<ScadaUserDto>.Failure("Auth.Validation", "Họ và tên không được để trống.");
                 user.FullName = fullName;
             }
 
@@ -2936,7 +2936,7 @@ public class ScadaMetadataQueryService(
                     var emailTaken = await db.ScadaUsers.AnyAsync(
                         u => u.Id != id && u.Email == email, cancellationToken);
                     if (emailTaken)
-                        return Result<ScadaUserDto>.Failure("Auth.Conflict", "Email is already in use.");
+                        return Result<ScadaUserDto>.Failure("Auth.Conflict", "Email đã được sử dụng.");
                 }
                 user.Email = email;
             }
@@ -2947,7 +2947,7 @@ public class ScadaMetadataQueryService(
                 if (role is null)
                     return Result<ScadaUserDto>.Failure(
                         "Auth.Validation",
-                        "Role must be VIEW, OPERATOR, TECHNICAL, or ADMIN (legacy: viewer/operator/admin also accepted).");
+                        "Vai trò phải là Người xem, Vận hành, Kỹ thuật hoặc Quản trị viên.");
                 if (!string.Equals(user.Role, role, StringComparison.Ordinal))
                 {
                     user.Role = role;
@@ -2962,7 +2962,7 @@ public class ScadaMetadataQueryService(
             if (request.Level is { } level)
             {
                 if (level < 1 || level > 100)
-                    return Result<ScadaUserDto>.Failure("Auth.Validation", "Level must be between 1 and 100.");
+                    return Result<ScadaUserDto>.Failure("Auth.Validation", "Cấp độ phải nằm trong khoảng từ 1 đến 100.");
                 user.Level = level;
             }
 
@@ -3006,10 +3006,10 @@ public class ScadaMetadataQueryService(
         {
             var user = await db.ScadaUsers.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
             if (user is null)
-                return Result.Failure("ScadaUser.NotFound", $"SCADA user '{id}' was not found.");
+                return Result.Failure("ScadaUser.NotFound", $"Không tìm thấy người dùng SCADA có mã '{id}'.");
 
             if (currentUser.OperatorUserId is { } selfId && selfId == id)
-                return Result.Failure("Auth.Forbidden", "Cannot deactivate your own account.");
+                return Result.Failure("Auth.Forbidden", "Bạn không thể vô hiệu hóa tài khoản của chính mình.");
 
             if (!user.IsActive)
                 return Result.Success();
@@ -3042,10 +3042,10 @@ public class ScadaMetadataQueryService(
         {
             var user = await db.ScadaUsers.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
             if (user is null)
-                return Result.Failure("ScadaUser.NotFound", $"SCADA user '{id}' was not found.");
+                return Result.Failure("ScadaUser.NotFound", $"Không tìm thấy người dùng SCADA có mã '{id}'.");
 
             if (currentUser.OperatorUserId is { } selfId && selfId == id)
-                return Result.Failure("Auth.Forbidden", "Cannot delete your own account.");
+                return Result.Failure("Auth.Forbidden", "Bạn không thể xóa tài khoản của chính mình.");
 
             if (ScadaRolePermissionResolver.TryNormalize(user.Role) == ScadaRoles.Admin && user.IsActive)
             {
@@ -3055,7 +3055,7 @@ public class ScadaMetadataQueryService(
                         .ToListAsync(cancellationToken))
                     .Count(r => ScadaRolePermissionResolver.TryNormalize(r) == ScadaRoles.Admin);
                 if (activeAdmins == 0)
-                    return Result.Failure("Auth.Forbidden", "Cannot delete the last active administrator.");
+                    return Result.Failure("Auth.Forbidden", "Không thể xóa quản trị viên đang hoạt động cuối cùng.");
             }
 
             await sessionRevocation.RevokeAllSessionsAsync(user.Id, cancellationToken);
@@ -3088,11 +3088,11 @@ public class ScadaMetadataQueryService(
         {
             var user = await db.ScadaUsers.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
             if (user is null)
-                return Result.Failure("ScadaUser.NotFound", $"SCADA user '{id}' was not found.");
+                return Result.Failure("ScadaUser.NotFound", $"Không tìm thấy người dùng SCADA có mã '{id}'.");
 
             if (!string.IsNullOrEmpty(request.ConfirmPassword)
                 && !string.Equals(request.NewPassword, request.ConfirmPassword, StringComparison.Ordinal))
-                return Result.Failure("Auth.Validation", "Confirm password does not match.");
+                return Result.Failure("Auth.Validation", "Mật khẩu xác nhận không khớp.");
 
             if (!TryValidatePassword(request.NewPassword, user.Username, out var passwordError))
                 return Result.Failure("Auth.PasswordPolicy", passwordError);
@@ -3405,11 +3405,11 @@ public class ScadaMetadataQueryService(
             if (request.ChangeIntervalDays < 1
                 || request.ValidityDays < request.ChangeIntervalDays
                 || request.ValidityDays > 3650)
-                return Result<PasswordPolicyDto>.Failure("ValidationError", "Password lifetime limits are invalid.");
+                return Result<PasswordPolicyDto>.Failure("ValidationError", "Giới hạn thời hạn mật khẩu không hợp lệ.");
             if (request.MaxFailedLogins is < 1 or > 50
                 || request.FailedLoginWindowMinutes is < 1 or > 1440
                 || request.LoginLockoutMinutes is < 1 or > 10080)
-                return Result<PasswordPolicyDto>.Failure("ValidationError", "Login lockout limits are invalid.");
+                return Result<PasswordPolicyDto>.Failure("ValidationError", "Giới hạn khóa đăng nhập không hợp lệ.");
 
             var policy = new PasswordPolicyDto
             {

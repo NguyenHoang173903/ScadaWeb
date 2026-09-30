@@ -57,17 +57,17 @@ public class AuthenticationService(
     {
         var username = request.Username.Trim();
         if (string.IsNullOrWhiteSpace(username))
-            return Result<AuthTokenResponse>.Failure("Auth.Validation", "Username is required.");
+            return Result<AuthTokenResponse>.Failure("Auth.Validation", "Vui lòng nhập tên đăng nhập.");
 
         if (!IsPasswordValid(request.Password, username, out var passwordError))
             return Result<AuthTokenResponse>.Failure("Auth.PasswordPolicy", passwordError);
 
         if (string.IsNullOrWhiteSpace(request.FullName) && string.IsNullOrWhiteSpace(request.DisplayName))
-            return Result<AuthTokenResponse>.Failure("Auth.Validation", "Full name is required.");
+            return Result<AuthTokenResponse>.Failure("Auth.Validation", "Vui lòng nhập họ và tên.");
 
         var exists = await db.ScadaUsers.AnyAsync(u => u.Username == username, cancellationToken);
         if (exists)
-            return Result<AuthTokenResponse>.Failure("Auth.UsernameTaken", "Username is already taken.");
+            return Result<AuthTokenResponse>.Failure("Auth.UsernameTaken", "Tên đăng nhập đã tồn tại.");
 
         var now = DateTimeOffset.UtcNow;
         var fullName = (string.IsNullOrWhiteSpace(request.FullName) ? request.DisplayName : request.FullName).Trim();
@@ -100,7 +100,7 @@ public class AuthenticationService(
     public async Task<Result<AuthTokenResponse>> LoginAsync(
         LoginRequest request, string? ipAddress, CancellationToken cancellationToken = default)
     {
-        const string invalid = "Invalid username or password.";
+        const string invalid = "Tên đăng nhập hoặc mật khẩu không chính xác.";
 
         var username = request.Username.Trim();
         var now = DateTimeOffset.UtcNow;
@@ -245,11 +245,11 @@ public class AuthenticationService(
 
         await AuditAuthAsync(AuditActionNames.LoginFailed, username, ipAddress, user?.Id, AuditStatus.Failed, invalid, cancellationToken);
         var remaining = LoginLockoutPolicy.RemainingAttempts(count, _login.MaxFailed);
-        return Result<AuthTokenResponse>.Failure("Auth.InvalidCredentials", $"{invalid} Remaining attempts: {remaining}.");
+        return Result<AuthTokenResponse>.Failure("Auth.InvalidCredentials", $"{invalid} Bạn còn {remaining} lần thử.");
     }
 
     private static Result<AuthTokenResponse> LockedFailure() =>
-        Result<AuthTokenResponse>.Failure("Auth.AccountLocked", "Account temporarily locked due to too many failed login attempts. Please try again later.");
+        Result<AuthTokenResponse>.Failure("Auth.AccountLocked", "Tài khoản tạm thời bị khóa do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau.");
 
     /// <summary>Lazily hashes a throwaway password once per process for timing parity.</summary>
     private string GetDecoyHash()
@@ -269,7 +269,7 @@ public class AuthenticationService(
         string refreshToken, string? ipAddress, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
-            return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Invalid refresh token.");
+            return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Phiên đăng nhập không hợp lệ.");
 
         var hash = HashToken(refreshToken);
         var stored = await db.ScadaRefreshTokens
@@ -277,7 +277,7 @@ public class AuthenticationService(
             .FirstOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
 
         if (stored is null)
-            return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Invalid refresh token.");
+            return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Phiên đăng nhập không hợp lệ.");
 
         var now = DateTimeOffset.UtcNow;
 
@@ -286,10 +286,10 @@ public class AuthenticationService(
             return await HandleRefreshReuseAsync(stored, ipAddress, cancellationToken);
 
         if (!stored.User.IsActive || RefreshTokenSecurityPolicy.IsExpired(stored.ExpiresAt, now))
-            return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Invalid refresh token.");
+            return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Phiên đăng nhập không hợp lệ.");
 
         if (LoginLockoutPolicy.IsLockedOut(stored.User.LockoutUntil, now))
-            return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Invalid refresh token.");
+            return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Phiên đăng nhập không hợp lệ.");
 
         var sessionId = stored.SessionId;
         if (string.IsNullOrWhiteSpace(sessionId))
@@ -319,7 +319,7 @@ public class AuthenticationService(
                             .SetProperty(t => t.RevokedAt, now)
                             .SetProperty(t => t.RevokedByIp, ipAddress)
                             .SetProperty(t => t.UpdatedAt, now), cancellationToken);
-                    return Result<AuthTokenResponse>.Failure("Auth.SessionEnded", "Login session has ended. Please sign in again.");
+                    return Result<AuthTokenResponse>.Failure("Auth.SessionEnded", "Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.");
                 }
             }
         }
@@ -333,7 +333,7 @@ public class AuthenticationService(
                 .SetProperty(t => t.UpdatedAt, now), cancellationToken);
 
         if (RefreshTokenSecurityPolicy.LostRotationRace(rows))
-            return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Invalid refresh token.");
+            return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Phiên đăng nhập không hợp lệ.");
 
         // Keep the tracked entity in sync so SaveChanges does not undo ExecuteUpdate.
         stored.RevokedAt = now;
@@ -367,7 +367,7 @@ public class AuthenticationService(
             "Refresh token reuse detected; sessions revoked",
             cancellationToken);
 
-        return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Invalid refresh token.");
+        return Result<AuthTokenResponse>.Failure("Auth.InvalidRefreshToken", "Phiên đăng nhập không hợp lệ.");
     }
 
     public async Task<Result> LogoutAsync(
@@ -447,14 +447,14 @@ public class AuthenticationService(
     {
         var userId = currentUser.OperatorUserId;
         if (userId is null)
-            return Result<CurrentUserResponse>.Failure("Auth.Unauthorized", "Authentication is required.");
+            return Result<CurrentUserResponse>.Failure("Auth.Unauthorized", "Vui lòng đăng nhập để tiếp tục.");
 
         var user = await db.ScadaUsers.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId.Value, cancellationToken);
         if (user is null)
-            return Result<CurrentUserResponse>.Failure("Auth.NotFound", "User was not found.");
+            return Result<CurrentUserResponse>.Failure("Auth.NotFound", "Không tìm thấy người dùng.");
 
         if (!user.IsActive)
-            return Result<CurrentUserResponse>.Failure("Auth.Unauthorized", "Account is disabled.");
+            return Result<CurrentUserResponse>.Failure("Auth.Unauthorized", "Tài khoản đã bị vô hiệu hóa.");
 
         var expiration = passwordExpiration.Evaluate(user.PasswordUpdatedAt, DateTimeOffset.UtcNow);
         if (expiration.IsExpired && !user.MustChangePassword)
@@ -493,20 +493,20 @@ public class AuthenticationService(
     {
         var userId = currentUser.OperatorUserId;
         if (userId is null)
-            return Result.Failure("Auth.Unauthorized", "Authentication is required.");
+            return Result.Failure("Auth.Unauthorized", "Vui lòng đăng nhập để tiếp tục.");
 
         var user = await db.ScadaUsers.FirstOrDefaultAsync(u => u.Id == userId.Value, cancellationToken);
         if (user is null)
-            return Result.Failure("Auth.NotFound", "User was not found.");
+            return Result.Failure("Auth.NotFound", "Không tìm thấy người dùng.");
 
         if (!IsPasswordValid(request.NewPassword, user.Username, out var passwordError))
             return Result.Failure("Auth.PasswordPolicy", passwordError);
 
         if (!user.IsActive)
-            return Result.Failure("Auth.Unauthorized", "Account is disabled.");
+            return Result.Failure("Auth.Unauthorized", "Tài khoản đã bị vô hiệu hóa.");
 
         if (!passwordHasher.Verify(request.CurrentPassword, user.PasswordHash))
-            return Result.Failure("Auth.InvalidPassword", "Current password is incorrect.");
+            return Result.Failure("Auth.InvalidPassword", "Mật khẩu hiện tại không chính xác.");
 
         var now = DateTimeOffset.UtcNow;
         // Atomic: password hash + clear "must change" + stamp update time, single SaveChanges.
@@ -526,7 +526,7 @@ public class AuthenticationService(
     public async Task<Result<ForgotPasswordResponse>> ForgotPasswordAsync(
         ForgotPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        const string generic = "If the account exists, a password reset request has been created.";
+        const string generic = "Nếu tài khoản tồn tại, yêu cầu đặt lại mật khẩu đã được tạo.";
         var response = new ForgotPasswordResponse { Message = generic };
 
         var username = request.Username.Trim();
@@ -575,7 +575,7 @@ public class AuthenticationService(
     public async Task<Result> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Token))
-            return Result.Failure("Auth.InvalidResetToken", "Invalid or expired reset token.");
+            return Result.Failure("Auth.InvalidResetToken", "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
 
         var hash = HashToken(request.Token);
         var stored = await db.ScadaPasswordResetTokens
@@ -583,7 +583,7 @@ public class AuthenticationService(
             .FirstOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
 
         if (stored is null || !stored.IsUsable || !stored.User.IsActive)
-            return Result.Failure("Auth.InvalidResetToken", "Invalid or expired reset token.");
+            return Result.Failure("Auth.InvalidResetToken", "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
 
         if (!IsPasswordValid(request.NewPassword, stored.User.Username, out var passwordError))
             return Result.Failure("Auth.PasswordPolicy", passwordError);
@@ -612,7 +612,7 @@ public class AuthenticationService(
         if (principal is null
             || await AccessTokenSessionValidator.ValidateAsync(principal, concurrentSessionService, cancellationToken)
                 != AccessTokenSessionState.Active)
-            return Result<ClaimsPrincipal>.Failure("Auth.InvalidToken", "Access token is invalid or expired.");
+            return Result<ClaimsPrincipal>.Failure("Auth.InvalidToken", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
 
         return Result<ClaimsPrincipal>.Success(principal);
     }

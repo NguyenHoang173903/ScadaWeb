@@ -27,8 +27,8 @@ public class ValidationFilter(IServiceProvider serviceProvider) : IAsyncActionFi
 
             if (!result.IsValid)
             {
-                var errors = result.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}");
-                context.Result = new BadRequestObjectResult(ApiResponse.Fail("Validation failed.", errors));
+                var errors = result.Errors.Select(e => e.ErrorMessage);
+                context.Result = new BadRequestObjectResult(ApiResponse.Fail("Dữ liệu không hợp lệ.", errors));
                 return;
             }
         }

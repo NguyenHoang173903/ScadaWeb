@@ -17,24 +17,24 @@ public class SystemAuditLogQueryValidator : AbstractValidator<SystemAuditLogQuer
         RuleFor(x => x.ToUtc)
             .GreaterThanOrEqualTo(x => x.FromUtc!.Value)
             .When(x => x.FromUtc.HasValue && x.ToUtc.HasValue)
-            .WithMessage("ToUtc must be greater than or equal to FromUtc.");
+            .WithMessage("Thời gian kết thúc phải lớn hơn hoặc bằng thời gian bắt đầu.");
 
         RuleFor(x => x.UserName)
             .MaximumLength(ValidationConstants.UsernameMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("UserName must not contain control characters.")
+            .WithMessage("Tên người dùng chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.UserName));
 
         RuleFor(x => x.Action)
             .MaximumLength(100)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("Action must not contain control characters.")
+            .WithMessage("Hành động chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.Action));
 
         RuleFor(x => x.Keyword)
             .MaximumLength(ValidationConstants.KeywordMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("Keyword must not contain control characters.")
+            .WithMessage("Từ khóa chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.Keyword));
     }
 }
@@ -47,30 +47,30 @@ public class AuditLogQueryValidator : AbstractValidator<AuditLogQuery>
         RuleFor(x => x.ToUtc)
             .GreaterThanOrEqualTo(x => x.FromUtc!.Value)
             .When(x => x.FromUtc.HasValue && x.ToUtc.HasValue)
-            .WithMessage("ToUtc must be greater than or equal to FromUtc.");
+            .WithMessage("Thời gian kết thúc phải lớn hơn hoặc bằng thời gian bắt đầu.");
 
         RuleFor(x => x.EntityName)
             .MaximumLength(ValidationConstants.NameMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("EntityName must not contain control characters.")
+            .WithMessage("Tên đối tượng chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.EntityName));
 
         RuleFor(x => x.EntityId)
             .MaximumLength(ValidationConstants.NameMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("EntityId must not contain control characters.")
+            .WithMessage("Mã đối tượng chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.EntityId));
 
         RuleFor(x => x.UserId)
             .MaximumLength(ValidationConstants.AuditUserMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("UserId must not contain control characters.")
+            .WithMessage("Mã người dùng chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.UserId));
 
         RuleFor(x => x.Keyword)
             .MaximumLength(ValidationConstants.KeywordMaxLength)
             .Must(v => v is null || !v.ContainsDisallowedControlChars())
-            .WithMessage("Keyword must not contain control characters.")
+            .WithMessage("Từ khóa chứa ký tự không hợp lệ.")
             .When(x => !string.IsNullOrEmpty(x.Keyword));
     }
 }

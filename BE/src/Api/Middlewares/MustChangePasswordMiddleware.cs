@@ -71,7 +71,7 @@ public sealed class MustChangePasswordMiddleware(RequestDelegate next)
 
         var body = new ErrorResponse
         {
-            Message = "You must change your password before continuing.",
+            Message = "Bạn phải đổi mật khẩu trước khi tiếp tục.",
             ErrorCode = AuthErrorCodes.PasswordChangeRequired,
             TraceId = correlationId,
             StatusCode = StatusCodes.Status403Forbidden,

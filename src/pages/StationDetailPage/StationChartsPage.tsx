@@ -47,6 +47,28 @@ function formatAxisTime(iso: string) {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
+function getWaterLevelDomain(data: LineChartPoint[]): [number, number] {
+  const values = data.flatMap((point) =>
+    WATER_LEVEL_SERIES.map((item) => point[item.key]).filter(
+      (value): value is number => typeof value === 'number' && Number.isFinite(value),
+    ),
+  )
+  if (!values.length) return [0, 1]
+
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = Math.max(max - min, Math.abs(max) * 0.1, 0.1)
+  const lower = min >= 0 ? 0 : min - range * 0.1
+  const upper = max + range * 0.1
+  const magnitude = 10 ** Math.floor(Math.log10(Math.max(Math.abs(lower), Math.abs(upper), 0.1)))
+  const step = magnitude / 10
+
+  return [
+    lower === 0 ? 0 : Math.floor(lower / step) * step,
+    Math.ceil(upper / step) * step,
+  ]
+}
+
 export function StationChartsPage() {
   const { stationId = '', chartType } = useParams()
   const numericStation = /^\d+$/.test(stationId)
@@ -155,6 +177,7 @@ export function StationChartsPage() {
           : TEMPERATURE_SERIES,
     [chartType],
   )
+  const waterLevelDomain = useMemo(() => getWaterLevelDomain(chartData), [chartData])
 
   if (!chartType) {
     return <Navigate to={`/stations/${stationId}/charts/temperature`} replace />
@@ -217,7 +240,7 @@ export function StationChartsPage() {
           xLabel="Thời gian"
           data={chartData}
           series={series}
-          yDomain={[0, 40]}
+          yDomain={waterLevelDomain}
           height={540}
         />
       )}

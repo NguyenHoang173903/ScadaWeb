@@ -114,11 +114,11 @@ public class AuthController(
         var result = await authenticationService.GetCurrentUserAsync(cancellationToken);
 
         if (result.IsFailure && result.ErrorCode is "Auth.Unauthorized")
-            return Unauthorized(ApiResponse<CurrentUserResponse>.Fail(result.Errors.FirstOrDefault() ?? "Unauthorized.", result.Errors));
+            return Unauthorized(ApiResponse<CurrentUserResponse>.Fail(result.Errors.FirstOrDefault() ?? "Bạn chưa đăng nhập.", result.Errors));
 
         return result.IsSuccess
             ? Ok(ApiResponse<CurrentUserResponse>.Ok(result.Value!))
-            : NotFound(ApiResponse<CurrentUserResponse>.Fail(result.Errors.FirstOrDefault() ?? "User not found.", result.Errors));
+            : NotFound(ApiResponse<CurrentUserResponse>.Fail(result.Errors.FirstOrDefault() ?? "Không tìm thấy người dùng.", result.Errors));
     }
 
     [HttpPost("change-password")]
@@ -132,11 +132,11 @@ public class AuthController(
         var result = await authenticationService.ChangePasswordAsync(request, cancellationToken);
 
         if (result.IsFailure && result.ErrorCode is "Auth.Unauthorized")
-            return Unauthorized(ApiResponse.Fail(result.Errors.FirstOrDefault() ?? "Unauthorized.", result.Errors));
+            return Unauthorized(ApiResponse.Fail(result.Errors.FirstOrDefault() ?? "Bạn chưa đăng nhập.", result.Errors));
 
         return result.IsSuccess
-            ? Ok(ApiResponse.Ok("Password changed."))
-            : BadRequest(ApiResponse.Fail(result.Errors.FirstOrDefault() ?? "Password change failed.", result.Errors));
+            ? Ok(ApiResponse.Ok("Đổi mật khẩu thành công."))
+            : BadRequest(ApiResponse.Fail(result.Errors.FirstOrDefault() ?? "Đổi mật khẩu thất bại.", result.Errors));
     }
 
     [HttpPost("forgot-password")]
@@ -157,8 +157,8 @@ public class AuthController(
         var result = await authenticationService.ResetPasswordAsync(request, cancellationToken);
 
         return result.IsSuccess
-            ? Ok(ApiResponse.Ok("Password has been reset."))
-            : BadRequest(ApiResponse.Fail(result.Errors.FirstOrDefault() ?? "Password reset failed.", result.Errors));
+            ? Ok(ApiResponse.Ok("Đặt lại mật khẩu thành công."))
+            : BadRequest(ApiResponse.Fail(result.Errors.FirstOrDefault() ?? "Đặt lại mật khẩu thất bại.", result.Errors));
     }
 
     private async Task<Result<ConcurrentUsersStatusDto>> BuildStatusAsync(CancellationToken cancellationToken)
@@ -180,7 +180,7 @@ public class AuthController(
 
     private IActionResult MapAuthFailure(Backend.Shared.Results.Result result)
     {
-        var message = result.Errors.FirstOrDefault() ?? "Request failed.";
+        var message = result.Errors.FirstOrDefault() ?? "Yêu cầu không thành công.";
         return result.ErrorCode switch
         {
             "Auth.ConcurrentLimit" => StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(message, result.Errors)),

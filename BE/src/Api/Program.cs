@@ -1,3 +1,4 @@
+using System.Globalization;
 using Backend.Api.Configuration;
 using Backend.Api.Extensions;
 using Backend.Api.Middlewares;
@@ -7,11 +8,16 @@ using Backend.Infrastructure;
 using Backend.Infrastructure.Identity;
 using Backend.Infrastructure.Logging;
 using Backend.Infrastructure.Persistence.Context;
+using FluentValidation;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// FluentValidation's built-in messages (NotEmpty, MaximumLength, EmailAddress, ...)
+// are returned to the UI, so keep them consistent with the Vietnamese interface.
+ValidatorOptions.Global.LanguageManager.Culture = CultureInfo.GetCultureInfo("vi");
 
 if (!builder.Environment.IsDevelopment()
     && JwtSettings.IsDevelopmentOnlySigningKey(builder.Configuration[$"{JwtSettings.SectionName}:SigningKey"]))
