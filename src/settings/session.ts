@@ -120,10 +120,22 @@ export function isAdminRole(role?: string | null) {
   return r === 'admin' || r === 'administrator' || r === 'superadmin'
 }
 
-/** Operator hoặc Admin — được export Excel theo BE */
+/** View / Viewer */
+export function isViewerRole(role?: string | null) {
+  const r = normalizeRole(role)
+  return r === 'view' || r === 'viewer'
+}
+
+/** Technical / Technician / Engineer */
+export function isTechnicalRole(role?: string | null) {
+  const r = normalizeRole(role)
+  return r === 'technical' || r === 'technician' || r === 'engineer'
+}
+
+/** Operator, Technical hoặc Admin — được export Excel theo BE */
 export function canExportExcel(role?: string | null) {
   const r = normalizeRole(role)
-  return isAdminRole(role) || r === 'operator'
+  return isAdminRole(role) || isTechnicalRole(role) || r === 'operator'
 }
 
 export function getSessionRole() {
@@ -132,6 +144,14 @@ export function getSessionRole() {
 
 export function isSessionAdmin() {
   return isAdminRole(getSessionRole())
+}
+
+export function isSessionViewer() {
+  return isViewerRole(getSessionRole())
+}
+
+export function isSessionTechnical() {
+  return isTechnicalRole(getSessionRole())
 }
 
 export function canSessionExportExcel() {

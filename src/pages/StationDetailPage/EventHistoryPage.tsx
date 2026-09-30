@@ -11,7 +11,7 @@ import { Pagination } from '@/components/common/Pagination'
 import { TabNav } from '@/components/common/TabNav'
 import { fetchLoginHistory } from '@/services/auditLog'
 import { isApiError } from '@/services/api/http'
-import { canSessionExportExcel, isSessionAdmin } from '@/settings/session'
+import { canSessionExportExcel, isSessionAdmin, isSessionTechnical } from '@/settings/session'
 import {
   exportEventHistoryExcel,
 } from '@/services/stations/stationsApi'
@@ -138,15 +138,19 @@ export function EventHistoryPage() {
   const [deviceOptions, setDeviceOptions] = useState(EVENT_DEVICE_OPTIONS)
   const [refreshTick, setRefreshTick] = useState(0)
   const canExport = canSessionExportExcel()
-  const showLoginTab = isSessionAdmin()
+  const showSystemTabs = isSessionAdmin() || isSessionTechnical()
   const eventDevices = useQuery({
     ...stationEventDevicesQuery(stationNumber ?? 0),
     enabled: stationNumber != null,
   })
 
   const historyTabs = useMemo(
-    () => (showLoginTab ? [...HISTORY_TABS] : HISTORY_TABS.filter((t) => t.id !== 'login')),
-    [showLoginTab],
+    () =>
+      HISTORY_TABS.filter(
+        (tab) =>
+          showSystemTabs || (tab.id !== 'system' && tab.id !== 'login'),
+      ),
+    [showSystemTabs],
   )
 
   useEffect(() => {
@@ -159,10 +163,10 @@ export function EventHistoryPage() {
   }, [eventDevices.data])
 
   useEffect(() => {
-    if (activeTab === 'login' && !showLoginTab) {
+    if (!historyTabs.some((tab) => tab.id === activeTab)) {
       setActiveTab('status')
     }
-  }, [activeTab, showLoginTab])
+  }, [activeTab, historyTabs])
 
   const filterDeviceId = applied.deviceId.startsWith('device-')
     ? Number(applied.deviceId.replace('device-', ''))
@@ -192,7 +196,7 @@ export function EventHistoryPage() {
           to: applied.toDate || undefined,
           keyword: applied.keyword.trim() || undefined,
       }),
-    enabled: activeTab === 'login' && showLoginTab,
+    enabled: activeTab === 'login' && showSystemTabs,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
     gcTime: 15 * 60_000,
@@ -246,7 +250,7 @@ export function EventHistoryPage() {
   const apiDataError = isApiError(dataError) ? dataError : null
   const dataErrorMessage = dataError
     ? apiDataError?.status === 403
-      ? 'Chỉ Admin được xem nhật ký đăng nhập.'
+      ? 'Bạn không có quyền xem nhật ký đăng nhập.'
       : apiDataError
         ? apiDataError.message
         : 'Không tải được lịch sử sự kiện.'

@@ -35,7 +35,8 @@ public static class ScadaRolePermissionResolver
         Permissions.Technical.View,
         Permissions.Technical.Edit,
         Permissions.Configuration.View,
-        Permissions.Configuration.Edit
+        Permissions.Configuration.Edit,
+        Permissions.SystemAdministration.View
     ];
 
     private static readonly string[] AdminPermissions =

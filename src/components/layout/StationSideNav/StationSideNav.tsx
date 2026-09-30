@@ -4,6 +4,7 @@ import { ChevronDown } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { ROUTES } from '@/constants/routes'
 import { STATION_NAV_ITEMS, type StationNavItem } from '@/constants/stationNav'
+import { isSessionViewer } from '@/settings/session'
 import styles from './StationSideNav.module.css'
 
 function defaultChildPath(item: StationNavItem) {
@@ -19,6 +20,9 @@ export function StationSideNav() {
   const { stationId = '' } = useParams()
   const location = useLocation()
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const navItems = isSessionViewer()
+    ? STATION_NAV_ITEMS.filter((item) => item.id !== 'reports')
+    : STATION_NAV_ITEMS
 
   useEffect(() => {
     setOpenGroups((prev) => {
@@ -44,7 +48,7 @@ export function StationSideNav() {
       </button>
 
       <nav className={styles.nav} aria-label="Menu trạm bơm">
-        {STATION_NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon
           const to = `/stations/${stationId}/${item.path}`
           const hasChildren = Boolean(item.children?.length)
