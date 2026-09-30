@@ -39,17 +39,13 @@ const WATER_LEVEL_COLUMNS: DataTableColumn<ReportRow>[] = [
     align: 'center',
     render: (row) => row.riverLevel ?? '',
   },
-  ...Array.from({ length: 10 }, (_, index) => {
-    const n = index + 1
-    const key = `discharge${n}`
-    return {
-      key,
-      header: `Mức xả ${n}`,
-      width: 110,
-      align: 'center' as const,
-      render: (row: ReportRow) => row[key] ?? '',
-    }
-  }),
+  {
+    key: 'basinLevel',
+    header: 'Mức bể xả',
+    width: 140,
+    align: 'center',
+    render: (row) => row.basinLevel ?? '',
+  },
 ]
 
 const PUMP_TEMP_COLUMNS: DataTableColumn<ReportRow>[] = [
@@ -175,7 +171,7 @@ export function getReportColumns(deviceId: string): DataTableColumn<ReportRow>[]
 export function getReportMinTableWidth(deviceId: string): number {
   if (deviceId === 'input-meter') return 1280
   if (deviceId.startsWith('pump-temp-')) return 980
-  if (deviceId === 'water-level' || deviceId.startsWith('device-')) return 1400
+  if (deviceId === 'water-level' || deviceId.startsWith('device-')) return 520
   return 520
 }
 

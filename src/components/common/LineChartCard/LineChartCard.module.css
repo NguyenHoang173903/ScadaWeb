@@ -62,8 +62,8 @@
 }
 
 .legendSwatch {
-  width: 10px;
-  height: 10px;
+  width: 22px;
+  height: 3px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 999px;
 }

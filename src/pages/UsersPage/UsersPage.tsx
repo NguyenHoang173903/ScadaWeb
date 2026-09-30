@@ -49,6 +49,9 @@ function mapRoleLabel(role: string): UserAccount['role'] {
     return 'Administrator'
   }
   if (normalized === 'view' || normalized === 'viewer') return 'Viewer'
+  if (normalized === 'technical' || normalized === 'technician' || normalized === 'engineer') {
+    return 'Technical'
+  }
   return 'Operator'
 }
 
@@ -58,6 +61,9 @@ function mapRoleForApi(role: string): string {
     return 'ADMIN'
   }
   if (normalized === 'view' || normalized === 'viewer') return 'VIEW'
+  if (normalized === 'technical' || normalized === 'technician' || normalized === 'engineer') {
+    return 'TECHNICAL'
+  }
   return 'OPERATOR'
 }
 

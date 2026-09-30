@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown } from 'lucide-react'
+import { ArrowLeft, ChevronDown } from 'lucide-react'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { ROUTES } from '@/constants/routes'
 import { STATION_NAV_ITEMS, type StationNavItem } from '@/constants/stationNav'
@@ -21,7 +21,9 @@ export function StationSideNav() {
   const location = useLocation()
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const navItems = isSessionViewer()
-    ? STATION_NAV_ITEMS.filter((item) => item.id !== 'reports')
+    ? STATION_NAV_ITEMS.filter(
+        (item) => item.id !== 'charts' && item.id !== 'reports' && item.id !== 'events',
+      )
     : STATION_NAV_ITEMS
 
   useEffect(() => {
@@ -116,6 +118,16 @@ export function StationSideNav() {
           )
         })}
       </nav>
+
+      <button
+        type="button"
+        className={`${styles.navItem} ${styles.dashboardShortcut}`}
+        onClick={() => navigate(ROUTES.dashboard)}
+        title="Trở về Dashboard"
+      >
+        <ArrowLeft size={22} />
+        <span>Dashboard</span>
+      </button>
     </aside>
   )
 }

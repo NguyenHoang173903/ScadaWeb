@@ -4,7 +4,7 @@ export type UserAccount = {
   fullName: string
   department: string
   position: string
-  role: 'Operator' | 'Administrator' | 'Viewer'
+  role: 'Operator' | 'Technical' | 'Administrator' | 'Viewer'
   level: number
   status:
     | 'Đang hoạt động'

@@ -42,6 +42,7 @@ type CreateUserFormProps = {
 const ROLE_OPTIONS = [
   { value: 'VIEW', label: 'Viewer' },
   { value: 'OPERATOR', label: 'Operator' },
+  { value: 'TECHNICAL', label: 'Technical' },
   { value: 'ADMIN', label: 'Administrator' },
 ]
 

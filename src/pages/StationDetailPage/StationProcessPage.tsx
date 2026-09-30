@@ -40,6 +40,12 @@ export function StationProcessPage() {
     )?.waterLevel.river
     return typeof value === 'number' && Number.isFinite(value) ? value : null
   }, [monitor.data])
+  const basinLevel = useMemo<number | null>(() => {
+    const value = monitor.data?.items.find(
+      (item) => typeof item.waterLevel?.basin === 'number',
+    )?.waterLevel.basin
+    return typeof value === 'number' && Number.isFinite(value) ? value : null
+  }, [monitor.data])
   const ready = Boolean(schematic.data && monitor.data)
   const queryError = schematic.error ?? monitor.error
   const error = queryError
@@ -70,7 +76,11 @@ export function StationProcessPage() {
         {ready ? (
           <div className={styles.diagramStage}>
             <div className={`${styles.diagramInner} ${styles.processInner}`}>
-              <ProcessDiagram pumps={pumps} riverLevel={riverLevel} />
+              <ProcessDiagram
+                pumps={pumps}
+                riverLevel={riverLevel}
+                basinLevel={basinLevel}
+              />
             </div>
           </div>
         ) : (

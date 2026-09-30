@@ -250,7 +250,7 @@ export function EventHistoryPage() {
   const apiDataError = isApiError(dataError) ? dataError : null
   const dataErrorMessage = dataError
     ? apiDataError?.status === 403
-      ? 'Bạn không có quyền xem nhật ký đăng nhập.'
+      ? ''
       : apiDataError
         ? apiDataError.message
         : 'Không tải được lịch sử sự kiện.'
@@ -339,11 +339,7 @@ export function EventHistoryPage() {
           minRows={8}
           totalCount={totalRecords}
           emptyText={emptyText}
-          updateHint={
-            activeTab === 'login'
-              ? 'Nhật ký đăng nhập đồng bộ từ system-audit-logs'
-              : 'Dữ liệu cập nhật 30 phút 1 lần'
-          }
+          updateHint="Dữ liệu cập nhật 30 phút 1 lần"
           footer={
             <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
           }

@@ -136,32 +136,32 @@ export function SchematicDiagram({
               <div
                 key={`m-${pump.id}`}
                 className={styles.measureBox}
-                style={{ left }}
+                style={{ left: pump.id === 2 ? `calc(${left} + 0.4%)` : left }}
                 aria-label={`Thông số ${pump.label}`}
               >
                 <div>
                   <span>I1:</span>
-                  <strong>{formatOne(pump.i1)}</strong>
+                  <strong>{formatOne(pump.i1)} <em>(A)</em></strong>
                 </div>
                 <div>
                   <span>I2:</span>
-                  <strong>{formatOne(pump.i2)}</strong>
+                  <strong>{formatOne(pump.i2)} <em>(A)</em></strong>
                 </div>
                 <div>
                   <span>I3:</span>
-                  <strong>{formatOne(pump.i3)}</strong>
+                  <strong>{formatOne(pump.i3)} <em>(A)</em></strong>
                 </div>
                 <div>
                   <span>V1:</span>
-                  <strong>{formatOne(pump.v1)}</strong>
+                  <strong>{formatOne(pump.v1)} <em>(V)</em></strong>
                 </div>
                 <div>
                   <span>V2:</span>
-                  <strong>{formatOne(pump.v2)}</strong>
+                  <strong>{formatOne(pump.v2)} <em>(V)</em></strong>
                 </div>
                 <div>
                   <span>V3:</span>
-                  <strong>{formatOne(pump.v3)}</strong>
+                  <strong>{formatOne(pump.v3)} <em>(V)</em></strong>
                 </div>
               </div>
             )

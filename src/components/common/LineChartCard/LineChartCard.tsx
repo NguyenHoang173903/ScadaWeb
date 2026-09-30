@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   CartesianGrid,
   Legend,
@@ -9,7 +9,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import type { LegendPayload } from 'recharts'
 import styles from './LineChartCard.module.css'
 import type { LineChartCardProps, LineChartSeries } from './types'
 
@@ -31,6 +30,35 @@ export function LineChartCard({
   const actualSeries = series.filter((item) => !isAllowedSeries(item))
   const allowedSeries = series.filter(isAllowedSeries)
   const useTwoRowLegend = actualSeries.length > 0 && allowedSeries.length > 0
+  const normalizedData = useMemo(() => {
+    const rows = data.map((point) => ({ ...point }))
+
+    for (const item of series.filter(isAllowedSeries)) {
+      let lastValue: string | number | null | undefined
+      for (const row of rows) {
+        if (row[item.key] != null) lastValue = row[item.key]
+        else if (lastValue != null) row[item.key] = lastValue
+      }
+
+      let nextValue: string | number | null | undefined
+      for (let index = rows.length - 1; index >= 0; index -= 1) {
+        const row = rows[index]
+        if (row[item.key] != null) nextValue = row[item.key]
+        else if (nextValue != null) row[item.key] = nextValue
+      }
+    }
+
+    return rows
+  }, [data, series])
+  const xTicks = useMemo(() => {
+    const maxTicks = 7
+    if (data.length <= maxTicks) return data.map((point) => point.time)
+
+    return Array.from({ length: maxTicks }, (_, index) => {
+      const dataIndex = Math.round((index * (data.length - 1)) / (maxTicks - 1))
+      return data[dataIndex].time
+    })
+  }, [data])
 
   const toggleSeries = (dataKey: string) => {
     setHiddenKeys((prev) => {
@@ -63,12 +91,13 @@ export function LineChartCard({
       <div className={styles.chartWrap} style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={data}
+            data={normalizedData}
             margin={{ top: 12, right: 24, left: 8, bottom: useTwoRowLegend ? 64 : 40 }}
           >
             <CartesianGrid strokeDasharray="4 4" stroke="#d1d5db" />
             <XAxis
               dataKey="time"
+              ticks={xTicks}
               tick={{ fill: '#4b5563', fontSize: 12 }}
               tickMargin={8}
               label={{
@@ -99,53 +128,19 @@ export function LineChartCard({
                 fontSize: 13,
               }}
             />
-            {useTwoRowLegend ? (
-              <Legend
-                verticalAlign="bottom"
-                align="left"
-                wrapperStyle={{ paddingTop: 28 }}
-                content={() => (
-                  <div className={styles.legend}>
-                    <div className={styles.legendRow}>{actualSeries.map(renderLegendItem)}</div>
+            <Legend
+              verticalAlign="bottom"
+              align="left"
+              wrapperStyle={{ paddingTop: 28 }}
+              content={() => (
+                <div className={styles.legend}>
+                  <div className={styles.legendRow}>{actualSeries.map(renderLegendItem)}</div>
+                  {allowedSeries.length > 0 ? (
                     <div className={styles.legendRow}>{allowedSeries.map(renderLegendItem)}</div>
-                  </div>
-                )}
-              />
-            ) : (
-              <Legend
-                verticalAlign="bottom"
-                align="left"
-                wrapperStyle={{ paddingTop: 28 }}
-                iconType="circle"
-                onClick={(entry) => {
-                  const key = String(
-                    (entry as LegendPayload & { dataKey?: string | number }).dataKey ?? '',
-                  )
-                  if (key) toggleSeries(key)
-                }}
-                formatter={(value, entry) => {
-                  const key = String(
-                    (entry as LegendPayload & { dataKey?: string | number }).dataKey ?? '',
-                  )
-                  const isHidden = hiddenKeys.has(key)
-                  return (
-                    <span
-                      className={isHidden ? styles.legendItemHidden : styles.legendItem}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          if (key) toggleSeries(key)
-                        }
-                      }}
-                    >
-                      {value}
-                    </span>
-                  )
-                }}
-              />
-            )}
+                  ) : null}
+                </div>
+              )}
+            />
             {series.map((item) => (
               <Line
                 key={item.key}

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { SessionGuard } from '@/components/auth/SessionGuard'
 import { ROUTES } from '@/constants/routes'
 import { StationIndexRedirect, StationLayout } from '@/layouts/StationLayout'
@@ -17,10 +17,17 @@ import {
 } from '@/pages/StationDetailPage'
 import { StationDataUpdatePage } from '@/pages/StationDataUpdatePage'
 import { UsersPage } from '@/pages/UsersPage'
-import { isSessionAdmin } from '@/settings/session'
+import { isSessionAdmin, isSessionViewer } from '@/settings/session'
 
 function AdminRoute({ children }: { children: ReactNode }) {
   return isSessionAdmin() ? children : <Navigate to={ROUTES.dashboard} replace />
+}
+
+function NonViewerStationRoute({ children }: { children: ReactNode }) {
+  const { stationId = '' } = useParams()
+  return isSessionViewer()
+    ? <Navigate to={`/stations/${stationId}/schematic`} replace />
+    : children
 }
 
 function App() {
@@ -46,11 +53,46 @@ function App() {
             <Route path="process" element={<StationProcessPage />} />
             <Route path="devices" element={<StationDevicesPage />} />
             <Route path="devices/:group" element={<StationDevicesPage />} />
-            <Route path="charts" element={<StationChartsPage />} />
-            <Route path="charts/:chartType" element={<StationChartsPage />} />
-            <Route path="reports" element={<StationReportsPage />} />
-            <Route path="events" element={<StationEventsPage />} />
-            <Route path="events/:eventType" element={<StationEventsPage />} />
+            <Route
+              path="charts"
+              element={
+                <NonViewerStationRoute>
+                  <StationChartsPage />
+                </NonViewerStationRoute>
+              }
+            />
+            <Route
+              path="charts/:chartType"
+              element={
+                <NonViewerStationRoute>
+                  <StationChartsPage />
+                </NonViewerStationRoute>
+              }
+            />
+            <Route
+              path="reports"
+              element={
+                <NonViewerStationRoute>
+                  <StationReportsPage />
+                </NonViewerStationRoute>
+              }
+            />
+            <Route
+              path="events"
+              element={
+                <NonViewerStationRoute>
+                  <StationEventsPage />
+                </NonViewerStationRoute>
+              }
+            />
+            <Route
+              path="events/:eventType"
+              element={
+                <NonViewerStationRoute>
+                  <StationEventsPage />
+                </NonViewerStationRoute>
+              }
+            />
             <Route path="team" element={<StationTeamPage />} />
           </Route>
         </Route>

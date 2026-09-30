@@ -20,11 +20,13 @@ type ProcessDiagramProps = {
   /** Trạng thái runtime từng bơm — đổi màu fill phần vàng */
   pumps?: ProcessPumpCard[]
   riverLevel?: number | null
+  basinLevel?: number | null
 }
 
 export function ProcessDiagram({
   pumps = PROCESS_PUMPS,
   riverLevel,
+  basinLevel,
 }: ProcessDiagramProps) {
   const svgHostRef = useRef<HTMLDivElement>(null)
   const [svgHtml] = useState(() => prepareInlineSvg(processDiagramSvg))
@@ -52,7 +54,17 @@ export function ProcessDiagram({
         dangerouslySetInnerHTML={svgMarkup}
       />
 
-      <div className={styles.processBasinLabel}>Bể Xả</div>
+      <div className={styles.processBasinRow}>
+        <span className={styles.processBasinLabel}>Bể Xả</span>
+        <div className={`${styles.processWaterBox} ${styles.processBasinWaterBox}`}>
+          <span>Mực nước:</span>
+          <strong>
+            {typeof basinLevel === 'number' && Number.isFinite(basinLevel)
+              ? `${formatOne(basinLevel)}m`
+              : '—'}
+          </strong>
+        </div>
+      </div>
 
       <div className={styles.processRiverRow}>
         <span className={styles.processRiverLabel}>Sông Hồng</span>

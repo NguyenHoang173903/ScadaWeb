@@ -56,7 +56,9 @@
 
 /* sdnl_3 schematic: shrink a bit so topbar + diagram + taller legend fit */
 .schematicInner {
-  width: 92%;
+  width: 95%;
+  min-width: 0;
+  max-width: 100%;
   margin-inline: auto;
 }
 
@@ -181,9 +183,15 @@
 }
 
 .measureBox span,
-.measureBox strong {
+.measureBox strong,
+.measureBox em {
   font-family: inherit;
   font-weight: 500;
+}
+
+.measureBox em {
+  color: #4b5563;
+  font-style: normal;
 }
 
 .pumpCard {
@@ -385,19 +393,25 @@
 }
 
 /* —— Process diagram labels: Bể Xả / Sông Hồng / mực nước —— */
-.processBasinLabel {
+.processBasinRow {
   position: absolute;
   top: 9.5%;
   left: 50%;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
   transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.processBasinLabel {
   color: #1f2937;
   font-family: Poppins, "Be Vietnam Pro", sans-serif;
   font-size: clamp(1.15rem, 2vw, 1.65rem);
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  pointer-events: none;
   text-shadow: 0 1px 0 rgb(255 255 255 / 55%);
 }
 
@@ -440,6 +454,10 @@
 
 .processWaterBox strong {
   font-weight: 600;
+}
+
+.processBasinWaterBox {
+  border-color: #9ca3af;
 }
 
 /* —— Legend —— */

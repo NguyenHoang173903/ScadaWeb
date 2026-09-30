@@ -119,3 +119,14 @@
   color: #ffffff;
   box-shadow: inset 3px 0 0 #7ee8c6;
 }
+
+.dashboardShortcut {
+  flex-shrink: 0;
+  margin-top: 0.65rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0;
+}
+
+.dashboardShortcut:hover {
+  border-radius: 8px;
+}

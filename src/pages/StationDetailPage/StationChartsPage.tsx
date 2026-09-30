@@ -5,7 +5,11 @@ import {
   ChartFilterBar,
   type ChartFilterValues,
 } from '@/components/common/ChartFilterBar'
-import { LineChartCard, type LineChartPoint } from '@/components/common/LineChartCard'
+import {
+  LineChartCard,
+  type LineChartPoint,
+  type LineChartSeries,
+} from '@/components/common/LineChartCard'
 import { isApiError } from '@/services/api/http'
 import { useScadaRealtime } from '@/services/realtime'
 import {
@@ -47,9 +51,12 @@ function formatAxisTime(iso: string) {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
-function getWaterLevelDomain(data: LineChartPoint[]): [number, number] {
+function getChartDomain(
+  data: LineChartPoint[],
+  series: LineChartSeries[],
+): [number, number] {
   const values = data.flatMap((point) =>
-    WATER_LEVEL_SERIES.map((item) => point[item.key]).filter(
+    series.map((item) => point[item.key]).filter(
       (value): value is number => typeof value === 'number' && Number.isFinite(value),
     ),
   )
@@ -62,10 +69,12 @@ function getWaterLevelDomain(data: LineChartPoint[]): [number, number] {
   const upper = max + range * 0.1
   const magnitude = 10 ** Math.floor(Math.log10(Math.max(Math.abs(lower), Math.abs(upper), 0.1)))
   const step = magnitude / 10
+  const precision = Math.max(0, -Math.floor(Math.log10(step)))
+  const round = (value: number) => Number(value.toFixed(precision))
 
   return [
-    lower === 0 ? 0 : Math.floor(lower / step) * step,
-    Math.ceil(upper / step) * step,
+    lower === 0 ? 0 : round(Math.floor(lower / step) * step),
+    round(Math.ceil(upper / step) * step),
   ]
 }
 
@@ -177,7 +186,10 @@ export function StationChartsPage() {
           : TEMPERATURE_SERIES,
     [chartType],
   )
-  const waterLevelDomain = useMemo(() => getWaterLevelDomain(chartData), [chartData])
+  const yDomain = useMemo(
+    () => getChartDomain(chartData, series),
+    [chartData, series],
+  )
 
   if (!chartType) {
     return <Navigate to={`/stations/${stationId}/charts/temperature`} replace />
@@ -220,7 +232,7 @@ export function StationChartsPage() {
           xLabel="Thời gian"
           data={chartData}
           series={series}
-          yDomain={[0, 40]}
+          yDomain={yDomain}
           height={540}
         />
       ) : chartType === 'current' ? (
@@ -230,7 +242,7 @@ export function StationChartsPage() {
           xLabel="Thời gian"
           data={chartData}
           series={series}
-          yDomain={[0, 40]}
+          yDomain={yDomain}
           height={540}
         />
       ) : (
@@ -240,7 +252,7 @@ export function StationChartsPage() {
           xLabel="Thời gian"
           data={chartData}
           series={series}
-          yDomain={waterLevelDomain}
+          yDomain={yDomain}
           height={540}
         />
       )}
