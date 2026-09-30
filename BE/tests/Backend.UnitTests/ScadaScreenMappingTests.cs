@@ -9,6 +9,20 @@ namespace Backend.UnitTests;
 public class ScadaScreenMappingTests
 {
     [Theory]
+    [InlineData("v1", "Meter2_U12", true)]
+    [InlineData("v2", "Meter2_U23", true)]
+    [InlineData("v3", "Meter2_U31", true)]
+    [InlineData("v1", "Meter2_U1", false)]
+    [InlineData("v2", "Meter2_U2", false)]
+    [InlineData("v3", "Meter2_U3", false)]
+    [InlineData("v1", "Meter2_U_Ph", false)]
+    public void Schematic_V1_V2_V3_Use_Line_Voltages(string key, string tag, bool expected)
+    {
+        var def = Backend.Application.DTOs.Scada.SchematicParameterCatalog.MeasureDefinitions.First(d => d.Key == key);
+        Assert.Equal(expected, Backend.Application.DTOs.Scada.SchematicParameterCatalog.Matches(def, tag));
+    }
+
+    [Theory]
     [InlineData("nguyen-ly", ScadaScreenType.NguyenLy)]
     [InlineData("cong-nghe", ScadaScreenType.CongNghe)]
     [InlineData("chi-tiet-bom", ScadaScreenType.ChiTietBom)]
