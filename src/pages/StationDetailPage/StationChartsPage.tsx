@@ -16,6 +16,7 @@ import {
   getLatestCachedChart,
   stationChartDevicesQuery,
   stationChartHistoryQuery,
+  stationQueryKeys,
   stationReportDevicesQuery,
 } from '@/services/stations/stationQueries'
 import {
@@ -88,6 +89,7 @@ export function StationChartsPage() {
   const [applied, setApplied] = useState<ChartFilterValues>(createDefaultChartFilter)
   const [deviceOptions, setDeviceOptions] = useState(CHART_DEVICE_OPTIONS)
   const [liveTo, setLiveTo] = useState(() => new Date())
+  const [followCurrentTime, setFollowCurrentTime] = useState(true)
   const chartDevices = useQuery({
     ...stationChartDevicesQuery(stationNumber ?? 0),
     enabled: stationNumber != null && validChartType !== 'water',
@@ -116,8 +118,12 @@ export function StationChartsPage() {
 
   const deviceId = Number(applied.deviceId)
   const range = useMemo(
-    () => toIsoRange(applied, validChartType === 'water' ? liveTo : undefined),
-    [applied, liveTo, validChartType],
+    () =>
+      toIsoRange(
+        applied,
+        validChartType === 'water' && followCurrentTime ? liveTo : undefined,
+      ),
+    [applied, followCurrentTime, liveTo, validChartType],
   )
   const cachedChart =
     stationNumber != null && Number.isFinite(deviceId) && validChartType
@@ -145,7 +151,15 @@ export function StationChartsPage() {
     enabled: validChartType === 'water' && deviceId > 0,
     throttleMs: 5_000,
     pollIntervalMs: 10_000,
-    onInvalidate: () => setLiveTo(new Date()),
+    onInvalidate: () => {
+      if (followCurrentTime) {
+        setLiveTo(new Date())
+      } else if (stationNumber != null && validChartType) {
+        void queryClient.invalidateQueries({
+          queryKey: stationQueryKeys.chartType(stationNumber, deviceId, validChartType),
+        })
+      }
+    },
   })
 
   const chartData = useMemo<LineChartPoint[]>(() => {
@@ -204,21 +218,24 @@ export function StationChartsPage() {
       <ChartFilterBar
         values={draft}
         deviceOptions={deviceOptions}
-        onChange={setDraft}
-        onFilter={() => {
-          const current = createDefaultChartFilter()
-          const next = {
-            ...draft,
-            toDate: current.toDate,
-            toTime: current.toTime,
+        onChange={(next) => {
+          if (next.fromDate !== draft.fromDate || next.fromTime !== draft.fromTime) {
+            setFollowCurrentTime(false)
           }
           setDraft(next)
+        }}
+        onFilter={() => {
+          const next = followCurrentTime ? createDefaultChartFilter() : draft
+          setDraft(next)
           setApplied(next)
+          if (followCurrentTime) setLiveTo(new Date())
         }}
         onReset={() => {
           const defaultFilter = createDefaultChartFilter()
           setDraft(defaultFilter)
           setApplied(defaultFilter)
+          setLiveTo(new Date())
+          setFollowCurrentTime(true)
         }}
         lockEndToNow
       />

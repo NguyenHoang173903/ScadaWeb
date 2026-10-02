@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
 import { Button } from '@/components/common/Button'
 import { SelectField } from '@/components/common/SelectField'
 import { TextField } from '@/components/common/TextField'
+import { Time24Field } from '@/components/common/Time24Field'
 import styles from './ChartFilterBar.module.css'
 
 export type ChartFilterValues = {
@@ -21,12 +21,14 @@ type ChartFilterBarProps = {
   lockEndToNow?: boolean
 }
 
-function currentEnd() {
-  const now = new Date()
+function oneHourAfter(fromDate: string, fromTime: string) {
+  const from = new Date(`${fromDate}T${fromTime || '00:00:00'}`)
+  if (Number.isNaN(from.getTime())) return null
+  const end = new Date(from.getTime() + 60 * 60 * 1000)
   const pad = (value: number) => String(value).padStart(2, '0')
   return {
-    date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
-    time: `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`,
+    date: `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`,
+    time: `${pad(end.getHours())}:${pad(end.getMinutes())}:${pad(end.getSeconds())}`,
   }
 }
 
@@ -38,17 +40,17 @@ export function ChartFilterBar({
   onReset,
   lockEndToNow = false,
 }: ChartFilterBarProps) {
-  const [lockedEnd, setLockedEnd] = useState(currentEnd)
-
-  useEffect(() => {
-    if (!lockEndToNow) return
-    setLockedEnd(currentEnd())
-    const timer = window.setInterval(() => setLockedEnd(currentEnd()), 1000)
-    return () => window.clearInterval(timer)
-  }, [lockEndToNow])
-
   const patch = (partial: Partial<ChartFilterValues>) => {
     onChange({ ...values, ...partial })
+  }
+
+  const patchStart = (partial: Pick<Partial<ChartFilterValues>, 'fromDate' | 'fromTime'>) => {
+    const next = { ...values, ...partial }
+    const end = oneHourAfter(next.fromDate, next.fromTime)
+    onChange({
+      ...next,
+      ...(end ? { toDate: end.date, toTime: end.time } : {}),
+    })
   }
 
   return (
@@ -67,15 +69,13 @@ export function ChartFilterBar({
           className={styles.dateField}
           type="date"
           value={values.fromDate}
-          onChange={(event) => patch({ fromDate: event.target.value })}
+          onChange={(event) => patchStart({ fromDate: event.target.value })}
           aria-label="Từ ngày"
         />
-        <TextField
+        <Time24Field
           className={styles.timeField}
-          type="time"
-          step={1}
           value={values.fromTime}
-          onChange={(event) => patch({ fromTime: event.target.value })}
+          onValueChange={(value) => patchStart({ fromTime: value })}
           aria-label="Từ giờ"
         />
       </div>
@@ -85,17 +85,15 @@ export function ChartFilterBar({
         <TextField
           className={`${styles.dateField} ${lockEndToNow ? styles.lockedField : ''}`}
           type="date"
-          value={lockEndToNow ? lockedEnd.date : values.toDate}
+          value={values.toDate}
           onChange={(event) => patch({ toDate: event.target.value })}
           aria-label="Đến ngày"
           disabled={lockEndToNow}
         />
-        <TextField
+        <Time24Field
           className={`${styles.timeField} ${lockEndToNow ? styles.lockedField : ''}`}
-          type="time"
-          step={1}
-          value={lockEndToNow ? lockedEnd.time : values.toTime}
-          onChange={(event) => patch({ toTime: event.target.value })}
+          value={values.toTime}
+          onValueChange={(value) => patch({ toTime: value })}
           aria-label="Đến giờ"
           disabled={lockEndToNow}
         />

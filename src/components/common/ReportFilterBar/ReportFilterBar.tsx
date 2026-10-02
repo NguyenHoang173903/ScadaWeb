@@ -2,6 +2,7 @@ import { Button } from '@/components/common/Button'
 import { FormField } from '@/components/common/FormField'
 import { SelectField } from '@/components/common/SelectField'
 import { TextField } from '@/components/common/TextField'
+import { Time24Field } from '@/components/common/Time24Field'
 import styles from './ReportFilterBar.module.css'
 
 export type ReportFilterValues = {
@@ -46,22 +47,18 @@ export function ReportFilterBar({
       </FormField>
 
       <FormField label="Giờ bắt đầu" htmlFor="report-start-time">
-        <TextField
+        <Time24Field
           id="report-start-time"
-          type="time"
-          step={1}
           value={values.startTime}
-          onChange={(event) => patch({ startTime: event.target.value })}
+          onValueChange={(value) => patch({ startTime: value })}
         />
       </FormField>
 
       <FormField label="Giờ kết thúc" htmlFor="report-end-time">
-        <TextField
+        <Time24Field
           id="report-end-time"
-          type="time"
-          step={1}
           value={values.endTime}
-          onChange={(event) => patch({ endTime: event.target.value })}
+          onValueChange={(value) => patch({ endTime: value })}
         />
       </FormField>
 
