@@ -131,4 +131,42 @@ public class StationSnapshotRealtimeDataStoreTests
         if (viaHelper && helperModel is not null)
             Assert.True(helperModel.PLCs.Count == 0 || helperModel.PLCs.Count == viaSnapshot.PLCs.Count);
     }
+
+    [Fact]
+    public void ParsePayloadForEntity_reads_station_level_alarm_array()
+    {
+        const string json = """
+            {
+              "Alarms": [
+                { "Id": 500001, "DeviceName": "Pump 01", "State": "ACTIVE", "Severity": "HIGH" },
+                { "Id": 500002, "DeviceName": "Pump 02", "State": "ACTIVE", "Severity": "WARNING" }
+              ]
+            }
+            """;
+
+        var items = ScadaRealtimeEntityStore.ParsePayloadForEntity<RealtimeAlarmRedisModel>(json, "Alarms");
+
+        Assert.Equal(2, items.Count);
+        Assert.Equal(500001, items[0].Id);
+        Assert.Equal("Pump 01", items[0].DeviceName);
+    }
+
+    [Fact]
+    public void ParsePayloadForEntity_reads_station_level_operator_array()
+    {
+        const string json = """
+            {
+              "Operators": [
+                { "ID": 1001, "HoTen": "Nguyễn Văn B", "ChucVu": "Nhân viên vận hành" },
+                { "ID": 1002, "HoTen": "Trần Thị C", "ChucVu": "Tổ trưởng ca" }
+              ]
+            }
+            """;
+
+        var items = ScadaRealtimeEntityStore.ParsePayloadForEntity<RealtimeOperatorRedisModel>(json, "Operators");
+
+        Assert.Equal(2, items.Count);
+        Assert.Equal(1001, items[0].ID);
+        Assert.Equal("Nguyễn Văn B", items[0].HoTen);
+    }
 }
