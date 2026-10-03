@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Navigate, useParams } from 'react-router-dom'
-import { StationAlertBar } from '@/components/common/StationAlertBar'
+import { StationActiveAlertBar } from '@/components/common/StationAlertBar'
 import { isApiError } from '@/services/api/http'
 import { useScadaRealtime } from '@/services/realtime'
 import { mapDeviceMonitorItem } from '@/services/stations/mappers'
@@ -55,6 +55,9 @@ export function StationDevicesPage() {
       void queryClient.invalidateQueries({
         queryKey: stationQueryKeys.monitor(stationNumber),
       })
+      void queryClient.invalidateQueries({
+        queryKey: stationQueryKeys.activeAlarms(stationNumber),
+      })
     },
   })
 
@@ -85,7 +88,7 @@ export function StationDevicesPage() {
         <div className={styles.devicesLoading}>Đang tải dữ liệu vận hành...</div>
       )}
 
-      <StationAlertBar count={0} alerts={[]} />
+      <StationActiveAlertBar stationId={stationNumber} />
     </div>
   )
 }

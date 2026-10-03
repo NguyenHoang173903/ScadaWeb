@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
-import { StationAlertBar } from '@/components/common/StationAlertBar'
+import { StationActiveAlertBar } from '@/components/common/StationAlertBar'
 import { isApiError } from '@/services/api/http'
 import { useScadaRealtime } from '@/services/realtime'
 import { mapProcessPumps } from '@/services/stations/mappers'
@@ -66,6 +66,9 @@ export function StationProcessPage() {
       void queryClient.invalidateQueries({
         queryKey: stationQueryKeys.monitor(stationNumber),
       })
+      void queryClient.invalidateQueries({
+        queryKey: stationQueryKeys.activeAlarms(stationNumber),
+      })
     },
   })
 
@@ -88,7 +91,7 @@ export function StationProcessPage() {
         )}
       </section>
 
-      <StationAlertBar count={0} alerts={[]} />
+      <StationActiveAlertBar stationId={stationNumber} />
     </div>
   )
 }

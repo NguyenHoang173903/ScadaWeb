@@ -1,14 +1,14 @@
 .alert {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 44px;
-  padding: 0.55rem 0.9rem;
-  border: 1px solid #f1a7a7;
-  border-radius: 8px;
-  background: #fff1f1;
+  gap: 0.6rem;
+  min-height: 32px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ff6b6b;
+  border-radius: 6px;
+  background: #ffffff;
   color: #991b1b;
+  overflow: hidden;
 }
 
 .left {
@@ -16,32 +16,84 @@
   align-items: center;
   gap: 0.45rem;
   flex-shrink: 0;
+  font-size: 0.82rem;
 }
 
 .details {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
   flex: 1;
   min-width: 0;
-  font-size: 0.92rem;
-  font-weight: 600;
+  overflow: hidden;
+  color: #111827;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.ticker {
+  display: flex;
+  width: max-content;
+}
+
+.tickerAnimated {
+  animation: marqueeRight 16s linear infinite;
+}
+
+.tickerAnimated:hover {
+  animation-play-state: paused;
+}
+
+.tickerStatic {
+  width: 100%;
+}
+
+.tickerGroup {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding-right: 1.2rem;
+}
+
+.tickerStatic .tickerGroup {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
+  padding-right: 0;
+}
+
+.item {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.tickerStatic .item {
+  flex-wrap: wrap;
 }
 
 .divider {
   width: 1px;
   height: 1rem;
-  background: #f1a7a7;
+  background: #d1d5db;
+  flex-shrink: 0;
 }
 
 .dot {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #ef4444;
   box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55);
   animation: pulse 1.4s infinite;
   flex-shrink: 0;
+}
+
+@keyframes marqueeRight {
+  from {
+    transform: translateX(-50%);
+  }
+  to { transform: translateX(0); }
 }
 
 @keyframes pulse {
@@ -58,11 +110,12 @@
 
 @media (max-width: 800px) {
   .alert {
-    flex-wrap: wrap;
+    gap: 0.4rem;
   }
+}
 
-  .details {
-    width: 100%;
-    flex-wrap: wrap;
+@media (prefers-reduced-motion: reduce) {
+  .tickerAnimated {
+    animation: none;
   }
 }

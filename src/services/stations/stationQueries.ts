@@ -247,6 +247,41 @@ export function stationActiveAlarmsQuery(
   })
 }
 
+export function stationActiveAlarmCarouselQuery(stationId: number) {
+  const pageSize = 100
+
+  return queryOptions({
+    queryKey: [...stationQueryKeys.activeAlarms(stationId), 'carousel'],
+    queryFn: async () => {
+      const firstPage = await getActiveAlarms(stationId, {
+        pageNumber: 1,
+        pageSize,
+      })
+      const itemsById = new Map(firstPage.items.map((item) => [item.id, item]))
+      let pageNumber = 2
+
+      while (itemsById.size < firstPage.totalCount && pageNumber <= firstPage.totalCount + 1) {
+        const page = await getActiveAlarms(stationId, { pageNumber, pageSize })
+        const previousSize = itemsById.size
+        page.items.forEach((item) => itemsById.set(item.id, item))
+        if (itemsById.size === previousSize) {
+          throw new Error('Không thể tải đầy đủ lỗi đang tồn tại.')
+        }
+        pageNumber += 1
+      }
+
+      if (itemsById.size < firstPage.totalCount) {
+        throw new Error('Không thể tải đầy đủ lỗi đang tồn tại.')
+      }
+
+      return { ...firstPage, items: [...itemsById.values()] }
+    },
+    staleTime: 10_000,
+    gcTime: CACHE_TIME,
+    refetchInterval: 10_000,
+  })
+}
+
 export function stationChartHistoryQuery(
   stationId: number,
   deviceId: number,
