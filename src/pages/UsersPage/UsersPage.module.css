@@ -34,6 +34,10 @@
   cursor: pointer;
 }
 
+.backLabel {
+  display: none;
+}
+
 .backButton:hover {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -44,8 +48,89 @@
   font-size: 0.9rem;
 }
 
-@media (max-width: 720px) {
-  .main {
-    padding: 0.85rem;
+@media (max-width: 900px) {
+  .page {
+    position: relative;
+    overflow-x: clip;
   }
+
+  .main {
+    padding: 0.75rem;
+  }
+
+  .backButton {
+    position: absolute;
+    z-index: 3;
+    top: calc(0.45rem + 44px + 0.3rem);
+    right: 0.65rem;
+    left: auto;
+    display: inline-flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 0.2rem;
+    width: auto;
+    height: 44px;
+    padding: 0 0.15rem 0 0.45rem;
+    color: #043d59;
+  }
+
+  .backLabel {
+    display: inline;
+    font-size: 0.95rem;
+    font-weight: 650;
+    line-height: 1;
+  }
+
+  .backButton svg {
+    transform: none !important;
+  }
+
+  .backButton:hover {
+    background: #e4eaee;
+  }
+
+  .header {
+    align-items: flex-start;
+    box-sizing: border-box;
+    min-height: calc(0.45rem + 44px + 0.3rem + 44px + 0.5rem);
+    padding: 0.45rem 0.65rem 0.5rem 0.55rem;
+    gap: 0.4rem;
+  }
+
+  .header > button {
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-left: 0;
+    gap: 0.55rem;
+  }
+
+  .header button {
+    min-height: 44px;
+  }
+
+  .header > button img {
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+  }
+
+  .header > button span {
+    display: none;
+  }
+
+  .header > div {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .header > div strong,
+  .header > div small {
+    display: none;
+  }
+
+  .header > div > div:first-child {
+    display: none;
+  }
+
 }

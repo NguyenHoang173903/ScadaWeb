@@ -1,6 +1,6 @@
 import { Button } from '@/components/common/Button'
 import { SelectField } from '@/components/common/SelectField'
-import { TextField } from '@/components/common/TextField'
+import { EventDateField } from '@/components/common/EventFilterBar/EventDateField'
 import { Time24Field } from '@/components/common/Time24Field'
 import styles from './ChartFilterBar.module.css'
 
@@ -65,12 +65,11 @@ export function ChartFilterBar({
 
       <div className={styles.rangeGroup}>
         <span className={styles.rangeLabel}>Từ</span>
-        <TextField
+        <EventDateField
           className={styles.dateField}
-          type="date"
           value={values.fromDate}
-          onChange={(event) => patchStart({ fromDate: event.target.value })}
-          aria-label="Từ ngày"
+          onChange={(fromDate) => patchStart({ fromDate })}
+          ariaLabel="Từ ngày"
         />
         <Time24Field
           className={styles.timeField}
@@ -82,12 +81,11 @@ export function ChartFilterBar({
 
       <div className={styles.rangeGroup}>
         <span className={styles.rangeLabel}>đến</span>
-        <TextField
+        <EventDateField
           className={`${styles.dateField} ${lockEndToNow ? styles.lockedField : ''}`}
-          type="date"
           value={values.toDate}
-          onChange={(event) => patch({ toDate: event.target.value })}
-          aria-label="Đến ngày"
+          onChange={(toDate) => patch({ toDate })}
+          ariaLabel="Đến ngày"
           disabled={lockEndToNow}
         />
         <Time24Field

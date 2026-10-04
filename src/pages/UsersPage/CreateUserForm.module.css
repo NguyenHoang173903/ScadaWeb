@@ -94,6 +94,13 @@
   gap: 1rem;
 }
 
+.actionButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .error {
   margin: 0;
   color: #b42318;
@@ -106,7 +113,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .panel {
     padding: 1rem;
   }
@@ -115,8 +122,33 @@
     grid-template-columns: 1fr;
   }
 
+  .statusRow {
+    align-items: flex-start;
+  }
+
+  .statusLabel {
+    min-width: 0;
+    flex: 1;
+    line-height: 1.35;
+  }
+
+  .passwordToggle {
+    width: 44px;
+    height: 44px;
+  }
+
   .actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .actionButtons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .actionButtons :global(button) {
+    width: 100%;
+    min-height: 44px;
   }
 }

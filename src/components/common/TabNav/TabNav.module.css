@@ -52,3 +52,47 @@
   align-items: center;
   color: #ffffff;
 }
+
+@media (max-width: 720px) {
+  .bar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+  }
+
+  .tabs {
+    width: 100%;
+  }
+
+  .tab {
+    min-height: 44px;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .trailing {
+    padding: 0.35rem 0.7rem 0.55rem;
+  }
+}
+
+
+
+.field {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .menuBar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .menuBar .trailing {
+    padding: 0;
+  }
+}

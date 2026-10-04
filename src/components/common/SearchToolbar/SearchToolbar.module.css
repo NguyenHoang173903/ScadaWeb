@@ -37,3 +37,32 @@
 .actions .resetButton:hover:not(:disabled) {
   background: #e4eaee;
 }
+
+@media (max-width: 900px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .input {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .actions > :global(button) {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .actions > :global(button):first-child {
+    grid-column: 1 / -1;
+  }
+}

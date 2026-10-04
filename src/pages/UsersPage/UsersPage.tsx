@@ -270,14 +270,16 @@ export function UsersPage() {
 
   return (
     <div className={styles.page}>
-      <AdminHeader />
+      <AdminHeader className={styles.header} />
 
       <main className={styles.main}>
         <button type="button" className={styles.backButton} onClick={handleBack} aria-label="Quay lại">
           <ChevronRight size={18} style={{ transform: 'rotate(180deg)' }} />
+          <span className={styles.backLabel}>Trở về</span>
         </button>
 
         <TabNav
+          className={styles.tabNav}
           items={tabItems}
           activeId={activeTab}
           onChange={(id) => {

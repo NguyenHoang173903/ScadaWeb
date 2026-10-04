@@ -11,6 +11,7 @@ import {
   type ElectricalParams,
   type PumpBranch,
 } from './schematicMock'
+import { DiagramFit } from './DiagramFit'
 import styles from './StationPage.module.css'
 
 function prepareInlineSvg(raw: string) {
@@ -69,6 +70,7 @@ export function SchematicDiagram({
 
   return (
     <div className={styles.diagramStage}>
+      <DiagramFit designWidth={1100}>
       <div className={`${styles.diagramInner} ${styles.schematicInner}`}>
         <div className={styles.diagramLayer}>
           <div
@@ -199,6 +201,7 @@ export function SchematicDiagram({
           })}
         </div>
       </div>
+      </DiagramFit>
 
       <ul className={styles.schematicLegend} aria-label="Chú thích trạng thái">
         <li>

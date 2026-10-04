@@ -24,6 +24,11 @@ export function StationLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
+  const [navOpen, setNavOpen] = useState(false)
+
+  useEffect(() => {
+    setNavOpen(false)
+  }, [location.pathname])
   const [station, setStation] = useState<PumpStation | undefined>(() =>
     getPumpStationById(stationId),
   )
@@ -149,7 +154,16 @@ export function StationLayout() {
   return (
     <div className={styles.shell}>
       <div className={styles.body}>
-        <StationSideNav />
+        <StationSideNav mobileOpen={navOpen} onNavigate={() => setNavOpen(false)} />
+
+        {navOpen ? (
+          <button
+            type="button"
+            className={styles.backdrop}
+            aria-label="Đóng menu"
+            onClick={() => setNavOpen(false)}
+          />
+        ) : null}
 
         <div className={styles.mainColumn}>
           <StationTopNav
@@ -157,6 +171,7 @@ export function StationLayout() {
             address={station.address}
             subtitle={pageSubtitle?.text}
             subtitleIcon={pageSubtitle?.icon}
+            onOpenMenu={() => setNavOpen(true)}
           />
           <div className={styles.content}>
             <Outlet context={{ station }} />

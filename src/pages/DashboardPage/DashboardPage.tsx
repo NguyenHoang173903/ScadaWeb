@@ -332,7 +332,7 @@ export function DashboardPage() {
               <span className={styles.avatar}>
                 <UserRound size={16} />
               </span>
-              <span>{userName}</span>
+              <span className={styles.userName}>{userName}</span>
               <ChevronDown size={16} className={menuOpen ? styles.chevronOpen : undefined} />
             </button>
 

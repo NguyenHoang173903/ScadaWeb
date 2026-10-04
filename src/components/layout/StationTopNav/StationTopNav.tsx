@@ -6,6 +6,7 @@ import {
   KeyRound,
   LogOut,
   MapPin,
+  Menu,
   UserRound,
   Users,
 } from 'lucide-react'
@@ -29,6 +30,7 @@ type StationTopNavProps = {
   subtitleIcon?: AppIcon
   userName?: string
   userRole?: string
+  onOpenMenu?: () => void
 }
 
 function formatDateTime(date: Date) {
@@ -43,6 +45,7 @@ export function StationTopNav({
   subtitleIcon: SubtitleIcon = SchemaIcon,
   userName,
   userRole,
+  onOpenMenu,
 }: StationTopNavProps) {
   const navigate = useNavigate()
   const resolvedName = userName ?? getSessionUsername() ?? 'Admin'
@@ -73,6 +76,16 @@ export function StationTopNav({
 
   return (
     <header className={styles.header}>
+      {onOpenMenu ? (
+        <button
+          type="button"
+          className={styles.menuButton}
+          onClick={onOpenMenu}
+          aria-label="Mở menu"
+        >
+          <Menu size={22} />
+        </button>
+      ) : null}
       <div className={styles.left}>
         <h1>{title}</h1>
         <p className={styles.address}>
@@ -103,7 +116,7 @@ export function StationTopNav({
             <span className={styles.avatar}>
               <UserRound size={16} />
             </span>
-            <span className={styles.userMeta}>
+            <span className={`${styles.userMeta} ${styles.userMetaDesktop}`}>
               <strong>{resolvedName}</strong>
               <small>{resolvedRole}</small>
             </span>

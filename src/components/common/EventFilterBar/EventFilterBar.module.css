@@ -83,11 +83,53 @@
 }
 
 @media (max-width: 900px) {
+  .bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end;
+  }
+
+  .deviceSelect {
+    grid-column: 1 / -1;
+    width: 100%;
+    flex: none;
+  }
+
+  .rangeGroup {
+    flex-wrap: nowrap;
+    min-width: 0;
+    gap: 0.3rem;
+  }
+
+  .rangeLabel {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+  }
+
+  .rangeGroup .dateButton {
+    width: auto;
+    min-height: 40px;
+    padding: 0.35rem 0.3rem;
+  }
+
+  .dateField {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 0;
+    min-height: 40px;
+    padding: 0.35rem 0.3rem;
+    font-size: 0.75rem;
+  }
+
   .searchField {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
     max-width: none;
   }
 
   .actions {
+    grid-column: 1 / -1;
     margin-left: 0;
     width: 100%;
   }
@@ -95,4 +137,89 @@
   .actions :global(button) {
     flex: 1 1 auto;
   }
+}
+
+.bareAnchor,
+.bareAnchorFill {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bareAnchorFill {
+  width: 100%;
+}
+
+.dateButton {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0.7rem 0.95rem;
+  box-sizing: border-box;
+  border: 1px solid #c5d6de;
+  border-radius: 8px;
+  background: #e8f4f8;
+  color: #111827;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.calendar {
+  position: fixed;
+  z-index: 80;
+  box-sizing: border-box;
+  max-width: calc(100vw - 16px);
+  padding: 0.55rem;
+  border: 1px solid #c5d6de;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.calendarHead,
+.calendarWeek,
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.15rem;
+}
+
+.calendarHead {
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  margin-bottom: 0.35rem;
+  color: #043d59;
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.calendarNav,
+.calendarDay {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #111827;
+  font: inherit;
+  cursor: pointer;
+}
+
+.calendarNav:hover,
+.calendarDay:hover {
+  background: #e8f4f8;
+}
+
+.calendarWeek {
+  margin-bottom: 0.15rem;
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.calendarDaySelected,
+.calendarDaySelected:hover {
+  background: #043d59;
+  color: #ffffff;
 }

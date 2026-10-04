@@ -3,6 +3,7 @@ import { Button } from '@/components/common/Button'
 import { SelectField } from '@/components/common/SelectField'
 import { TextField } from '@/components/common/TextField'
 import { firstError, validateDateRange, validateKeyword } from '@/validation'
+import { EventDateField } from './EventDateField'
 import styles from './EventFilterBar.module.css'
 
 export type EventFilterValues = {
@@ -65,27 +66,19 @@ export function EventFilterBar({
         aria-label="Thiết bị"
       />
 
-      <div className={styles.rangeGroup}>
-        <span className={styles.rangeLabel}>Từ</span>
-        <TextField
-          className={styles.dateField}
-          type="date"
-          value={values.fromDate}
-          onChange={(event) => patch({ fromDate: event.target.value })}
-          aria-label="Từ ngày"
-        />
-      </div>
+      <EventDateField
+        label="Từ"
+        value={values.fromDate}
+        ariaLabel="Từ ngày"
+        onChange={(fromDate) => patch({ fromDate })}
+      />
 
-      <div className={styles.rangeGroup}>
-        <span className={styles.rangeLabel}>đến</span>
-        <TextField
-          className={styles.dateField}
-          type="date"
-          value={values.toDate}
-          onChange={(event) => patch({ toDate: event.target.value })}
-          aria-label="Đến ngày"
-        />
-      </div>
+      <EventDateField
+        label="đến"
+        value={values.toDate}
+        ariaLabel="Đến ngày"
+        onChange={(toDate) => patch({ toDate })}
+      />
 
       {showKeyword ? (
         <TextField

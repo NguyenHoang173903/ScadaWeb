@@ -335,7 +335,7 @@ export function CreateUserForm({
 
       <div className={styles.actions}>
         {error ? <p className={styles.error}>{error}</p> : <span />}
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div className={styles.actionButtons}>
           {onCancel ? (
             <Button type="button" variant="secondary" onClick={onCancel}>
               Hủy

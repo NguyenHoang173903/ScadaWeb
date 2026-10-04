@@ -16,6 +16,7 @@ import styles from './AdminHeader.module.css'
 type AdminHeaderProps = {
   userName?: string
   userRole?: string
+  className?: string
 }
 
 function formatDateTime(date: Date) {
@@ -26,6 +27,7 @@ function formatDateTime(date: Date) {
 export function AdminHeader({
   userName,
   userRole,
+  className,
 }: AdminHeaderProps) {
   const navigate = useNavigate()
   const resolvedName = userName ?? getSessionUsername() ?? 'Admin'
@@ -55,7 +57,7 @@ export function AdminHeader({
   }, [])
 
   return (
-    <header className={styles.header}>
+    <header className={[styles.header, className].filter(Boolean).join(" ")}>
       <button
         type="button"
         className={styles.logoButton}

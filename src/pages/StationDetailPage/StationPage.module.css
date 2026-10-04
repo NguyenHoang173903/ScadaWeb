@@ -489,3 +489,106 @@
   border-radius: 50%;
   border: 1px solid rgb(0 0 0 / 25%);
 }
+
+.fitFrame,
+.fitScaler,
+.fitContent {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.fitTools {
+  display: none;
+}
+
+.fitButton {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #c5ced6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #043d59;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fitButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .panel {
+    overflow-x: hidden;
+  }
+
+  .fitFrame {
+    max-width: 100%;
+    max-height: calc(100vh - 168px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .processPage .fitFrame {
+    height: 100%;
+    max-height: none;
+  }
+
+  .fitScaler,
+  .fitContent {
+    max-width: none;
+  }
+
+  .fitScaler {
+    overflow: hidden;
+  }
+
+  .fitTools {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    gap: 0.4rem;
+    align-items: center;
+    width: 100%;
+    padding: 0.35rem 0.2rem 0.5rem;
+    background: rgba(255, 255, 255, 0.96);
+  }
+
+  .fitContent .diagramInner,
+  .fitContent .schematicInner,
+  .fitContent .processInner {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .electricalBox {
+    top: 0.2%;
+  }
+
+  .page:not(.processPage) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .page:not(.processPage) .panel {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .page:not(.processPage) .fitFrame {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+}

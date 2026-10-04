@@ -79,7 +79,7 @@ export function DataTable<T>({
           <tbody>
             {data.length === 0 && placeholderCount === 0 ? (
               <tr>
-                <td className={styles.empty} colSpan={columns.length}>
+                <td className={styles.empty} colSpan={columns.length} data-label="">
                   {emptyText}
                 </td>
               </tr>
@@ -98,9 +98,10 @@ export function DataTable<T>({
                   {columns.map((column) => (
                     <td
                       key={column.key}
+                      data-label={column.header}
                       style={{ textAlign: column.align ?? 'left' }}
                     >
-                      {column.render(row, index)}
+                      <span className={styles.cellValue}>{column.render(row, index)}</span>
                     </td>
                   ))}
                 </tr>
@@ -110,7 +111,7 @@ export function DataTable<T>({
             {Array.from({ length: placeholderCount }).map((_, index) => (
               <tr key={`empty-${index}`} className={styles.placeholder}>
                 {columns.map((column) => (
-                  <td key={column.key}>&nbsp;</td>
+                  <td key={column.key} data-label="">&nbsp;</td>
                 ))}
               </tr>
             ))}

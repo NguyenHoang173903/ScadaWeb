@@ -1,6 +1,26 @@
 .page {
   display: grid;
-  gap: 0.85rem;
   min-width: 0;
   max-width: 100%;
+}
+
+.scroll {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .page {
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scroll {
+    width: 1200px;
+    min-width: 1200px;
+  }
 }

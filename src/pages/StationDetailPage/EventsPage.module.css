@@ -8,7 +8,6 @@
 }
 
 .tabsWrap {
-  border-radius: 10px;
   overflow: hidden;
   width: 100%;
   min-width: 0;
@@ -39,4 +38,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .tabsWrap {
+    overflow: visible;
+  }
 }

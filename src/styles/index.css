@@ -40,3 +40,9 @@ textarea,
 select {
   font: inherit;
 }
+
+@media (max-width: 720px) {
+  body {
+    min-width: 0;
+  }
+}

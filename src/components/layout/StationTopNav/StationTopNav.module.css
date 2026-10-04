@@ -146,13 +146,80 @@
   background: #f3f4f6;
 }
 
+.menuButton {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .header {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.6rem;
+    min-height: 56px;
+    padding: 0.45rem 0.7rem;
+  }
+
+  .menuButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 10px;
+    background: #eef2f4;
+    color: #043d59;
+    cursor: pointer;
+  }
+
+  .menuButton:hover {
+    background: #e4eaee;
+  }
+
+  .left {
+    flex: 1 1 160px;
   }
 
   .left h1 {
-    font-size: 1.05rem;
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    line-height: 1.25;
+  }
+
+  .address,
+  .subtitle {
+    font-size: 0.75rem;
+  }
+
+  .right {
+    align-self: flex-start;
+    margin-left: auto;
+    gap: 0.35rem;
+  }
+
+  .clock {
+    display: none;
+  }
+
+  .userMetaDesktop {
+    display: none;
+  }
+
+  .userMeta {
+    min-width: 0;
+    max-width: min(38vw, 8.5rem);
+  }
+
+  .userMeta strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .userButton {
+    min-height: 44px;
+    padding-right: 0.45rem;
   }
 }

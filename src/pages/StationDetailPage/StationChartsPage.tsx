@@ -215,6 +215,7 @@ export function StationChartsPage() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.scroll}>
       <ChartFilterBar
         values={draft}
         deviceOptions={deviceOptions}
@@ -273,6 +274,7 @@ export function StationChartsPage() {
           height={540}
         />
       )}
+      </div>
     </div>
   )
 }

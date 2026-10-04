@@ -10,6 +10,7 @@ import {
   stationQueryKeys,
   stationSchematicQuery,
 } from '@/services/stations/stationQueries'
+import { DiagramFit } from './DiagramFit'
 import { ProcessDiagram } from './ProcessDiagram'
 import { PROCESS_PUMPS, type ProcessPumpCard } from './processMock'
 import styles from './StationPage.module.css'
@@ -78,13 +79,15 @@ export function StationProcessPage() {
       <section className={styles.panel}>
         {ready ? (
           <div className={styles.diagramStage}>
-            <div className={`${styles.diagramInner} ${styles.processInner}`}>
-              <ProcessDiagram
-                pumps={pumps}
-                riverLevel={riverLevel}
-                basinLevel={basinLevel}
-              />
-            </div>
+            <DiagramFit designWidth={1100}>
+              <div className={`${styles.diagramInner} ${styles.processInner}`}>
+                <ProcessDiagram
+                  pumps={pumps}
+                  riverLevel={riverLevel}
+                  basinLevel={basinLevel}
+                />
+              </div>
+            </DiagramFit>
           </div>
         ) : (
           <div className={styles.diagramLoading}>Đang tải dữ liệu vận hành...</div>

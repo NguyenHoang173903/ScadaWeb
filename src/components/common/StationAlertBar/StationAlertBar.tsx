@@ -13,9 +13,27 @@ type StationAlertBarProps = {
   alerts: StationAlert[]
 }
 
+function useMobileTicker() {
+  const query = "(max-width: 900px)"
+  const [mobile, setMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches,
+  )
+
+  useEffect(() => {
+    const media = window.matchMedia(query)
+    const onChange = () => setMobile(media.matches)
+    onChange()
+    media.addEventListener("change", onChange)
+    return () => media.removeEventListener("change", onChange)
+  }, [])
+
+  return mobile
+}
+
 export function StationAlertBar({ count, alerts }: StationAlertBarProps) {
   const tickerRef = useRef<HTMLDivElement>(null)
   const [tickerWidth, setTickerWidth] = useState(0)
+  const mobileTicker = useMobileTicker()
   const hasAlerts = alerts.length > 0
 
   useEffect(() => {
@@ -37,7 +55,7 @@ export function StationAlertBar({ count, alerts }: StationAlertBarProps) {
   const alertSignature = alerts
     .map((alert) => `${alert.time}\u0000${alert.device}\u0000${alert.message}`)
     .join('\u0001')
-  const shouldAnimate = count > 3
+  const shouldAnimate = mobileTicker || count > 3
 
   return (
     <div className={styles.alert} role="status">

@@ -15,7 +15,12 @@ function isGroupActive(pathname: string, item: StationNavItem) {
   return pathname.includes(`/${item.path}`)
 }
 
-export function StationSideNav() {
+type StationSideNavProps = {
+  mobileOpen?: boolean
+  onNavigate?: () => void
+}
+
+export function StationSideNav({ mobileOpen = false, onNavigate }: StationSideNavProps) {
   const navigate = useNavigate()
   const { stationId = '' } = useParams()
   const location = useLocation()
@@ -39,7 +44,7 @@ export function StationSideNav() {
   }, [location.pathname])
 
   return (
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ''}`}>
       <button
         type="button"
         className={styles.logoButton}
@@ -93,6 +98,7 @@ export function StationSideNav() {
                         className={({ isActive }) =>
                           `${styles.subNavItem} ${isActive ? styles.subActive : ''}`
                         }
+                        onClick={onNavigate}
                       >
                         {child.label}
                       </NavLink>
@@ -111,6 +117,7 @@ export function StationSideNav() {
                 `${styles.navItem} ${isActive ? styles.active : ''}`
               }
               title={item.label}
+              onClick={onNavigate}
             >
               <Icon size={22} />
               <span>{item.label}</span>

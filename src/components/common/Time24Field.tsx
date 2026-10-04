@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type InputHTMLAttributes } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type InputHTMLAttributes } from 'react'
 import { ChevronDown, Clock3 } from 'lucide-react'
 import { TextField } from '@/components/common/TextField'
 import styles from './Time24Field.module.css'
@@ -90,9 +90,47 @@ export function Time24Field({
   ...props
 }: Time24FieldProps) {
   const wrapperRef = useRef<HTMLSpanElement>(null)
+  const panelRef = useRef<HTMLSpanElement>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [openPart, setOpenPart] = useState<TimePart | null>(null)
+  const [narrow, setNarrow] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches,
+  )
+  const [panelBox, setPanelBox] = useState<{ top: number; left: number; width: number } | null>(null)
   const [hours = '00', minutes = '00', seconds = '00'] = value.split(':')
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 900px)')
+    const onChange = () => setNarrow(media.matches)
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!narrow || !pickerOpen) return
+    const anchor = wrapperRef.current
+    const panel = panelRef.current
+    if (!anchor || !panel) return
+
+    const place = () => {
+      const rect = anchor.getBoundingClientRect()
+      const margin = 8
+      const width = Math.min(panel.scrollWidth, window.innerWidth - margin * 2)
+      let left = rect.left
+      if (left + width > window.innerWidth - margin) left = window.innerWidth - margin - width
+      left = Math.max(margin, left)
+      const height = panel.offsetHeight
+      let top = rect.bottom + 6
+      if (top + height > window.innerHeight - margin) top = rect.top - height - 6
+      top = Math.max(margin, Math.min(top, window.innerHeight - margin - height))
+      setPanelBox({ top, left, width })
+    }
+
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [narrow, pickerOpen, openPart])
 
   useEffect(() => {
     const closePicker = (event: MouseEvent) => {
@@ -142,7 +180,15 @@ export function Time24Field({
         <Clock3 size={17} />
       </button>
       {pickerOpen && !disabled ? (
-        <span className={styles.pickerPanel}>
+        <span
+          ref={panelRef}
+          className={styles.pickerPanel}
+          style={
+            narrow && panelBox
+              ? { position: 'fixed', top: panelBox.top, left: panelBox.left, width: panelBox.width, right: 'auto' }
+              : undefined
+          }
+        >
           <TimePartPicker
             label="Giờ"
             value={hours.padStart(2, '0')}

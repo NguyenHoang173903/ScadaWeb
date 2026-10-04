@@ -1,7 +1,7 @@
 import { Button } from '@/components/common/Button'
 import { FormField } from '@/components/common/FormField'
 import { SelectField } from '@/components/common/SelectField'
-import { TextField } from '@/components/common/TextField'
+import { EventDateField } from '@/components/common/EventFilterBar/EventDateField'
 import { Time24Field } from '@/components/common/Time24Field'
 import styles from './ReportFilterBar.module.css'
 
@@ -38,11 +38,13 @@ export function ReportFilterBar({
   return (
     <div className={styles.bar}>
       <FormField label="Ngày báo cáo" htmlFor="report-date">
-        <TextField
+        <EventDateField
           id="report-date"
-          type="date"
+          block
+          className={styles.dateControl}
           value={values.reportDate}
-          onChange={(event) => patch({ reportDate: event.target.value })}
+          onChange={(reportDate) => patch({ reportDate })}
+          ariaLabel="Ngày báo cáo"
         />
       </FormField>
 

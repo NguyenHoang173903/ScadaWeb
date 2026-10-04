@@ -60,3 +60,24 @@
     grid-template-columns: 1fr;
   }
 }
+
+.backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .content {
+    padding: 10px;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: 0;
+    padding: 0;
+    background: rgba(4, 20, 32, 0.45);
+    cursor: pointer;
+  }
+}

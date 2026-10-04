@@ -38,3 +38,10 @@
   font-size: 0.9rem;
   font-weight: 700;
 }
+
+@media (max-width: 720px) {
+  .navButton {
+    width: 40px;
+    height: 40px;
+  }
+}

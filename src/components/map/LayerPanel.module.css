@@ -265,3 +265,13 @@
     bottom: 0.75rem;
   }
 }
+
+@media (max-width: 720px) {
+  .panel {
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    bottom: 0.75rem;
+    max-height: 38vh;
+  }
+}
