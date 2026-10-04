@@ -22,20 +22,39 @@
   box-sizing: border-box;
 }
 
+.tabBarRow {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  background: #043d59;
+}
+
+.tabNav {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .backButton {
-  display: grid;
-  place-items: center;
-  width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  gap: 0.35rem;
+  min-width: 34px;
   height: 34px;
+  padding: 0 0.6rem;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: #ffffff;
+  font-family: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .backLabel {
-  display: none;
+  display: inline;
 }
 
 .backButton:hover {
@@ -58,6 +77,10 @@
     padding: 0.75rem;
   }
 
+  .tabBarRow {
+    display: contents;
+  }
+
   .backButton {
     position: absolute;
     z-index: 3;
@@ -72,6 +95,8 @@
     height: 44px;
     padding: 0 0.15rem 0 0.45rem;
     color: #043d59;
+    font-size: 0.95rem;
+    font-weight: 650;
   }
 
   .backLabel {
