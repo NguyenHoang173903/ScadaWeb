@@ -20,6 +20,7 @@ import {
   getSessionUsername,
   isSessionAdmin,
 } from '@/settings/session'
+import { TabularDigits } from '@/components/common/TabularDigits'
 import styles from './StationTopNav.module.css'
 
 type StationTopNavProps = {
@@ -103,7 +104,7 @@ export function StationTopNav({
       <div className={styles.right}>
         <div className={styles.clock}>
           <Clock3 size={16} />
-          <span>{now}</span>
+          <TabularDigits value={now} />
         </div>
 
         <div className={styles.userMenu} ref={menuRef}>

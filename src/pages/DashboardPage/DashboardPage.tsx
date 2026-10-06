@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown, KeyRound, Layers, LogOut, UserRound, Users } from 'lucide-react'
@@ -26,6 +26,7 @@ import {
   updateMapLayerMeta,
   uploadMapLayer,
 } from '@/services/mapLayers'
+import { TabularDigits } from '@/components/common/TabularDigits'
 import styles from './DashboardPage.module.css'
 
 const LEGEND_ITEMS = [
@@ -55,6 +56,20 @@ export function DashboardPage() {
   const [now, setNow] = useState(() => formatNow(new Date()))
   const [stationCatalogVersion, setStationCatalogVersion] = useState(0)
   const menuRef = useRef<HTMLDivElement>(null)
+  const pageRef = useRef<HTMLDivElement>(null)
+  const topBarRef = useRef<HTMLElement>(null)
+
+  // Tablet: the header can wrap to two rows; panels below it read this height.
+  useLayoutEffect(() => {
+    const page = pageRef.current
+    const bar = topBarRef.current
+    if (!page || !bar) return
+    const sync = () => page.style.setProperty('--dashboard-topbar-height', `${bar.offsetHeight}px`)
+    sync()
+    const observer = new ResizeObserver(sync)
+    observer.observe(bar)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -243,7 +258,7 @@ export function DashboardPage() {
   }, [listType, pumpStations, rainStations, levelStations])
 
   return (
-    <div className={styles.page}>
+    <div ref={pageRef} className={styles.page}>
       {MAP_ENABLED ? (
         <DashboardMap
           layers={layers}
@@ -254,7 +269,7 @@ export function DashboardPage() {
         />
       ) : null}
 
-      <header className={styles.topBar}>
+      <header ref={topBarRef} className={styles.topBar}>
         <div className={styles.brand}>
           <img src={logoTlhn} alt="Logo thủy lợi Hà Nội" className={styles.logo} />
           <div className={styles.brandText}>
@@ -319,7 +334,7 @@ export function DashboardPage() {
           </div>
 
           <time className={styles.clock} dateTime={new Date().toISOString()}>
-            {now}
+            <TabularDigits value={now} />
           </time>
 
           <div className={styles.userMenu} ref={menuRef}>

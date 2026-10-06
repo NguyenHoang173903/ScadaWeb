@@ -203,3 +203,23 @@
     box-shadow: inset 3px 0 0 #0983bf;
   }
 }
+
+/*
+  tablet-table-headers (721-1199px, both orientations): fixed column widths + nowrap
+  clipped long headers ("Dòng trung bình", "Đăng nhập lần cuối"). Let header text wrap
+  at spaces (two lines) instead; the table still scrolls inside its frame if needed.
+*/
+@media (min-width: 721px) and (max-width: 1199px) {
+  .table thead th {
+    /* single-line header rows keep their previous 50px height */
+    height: 50px;
+    padding-block: 0.6rem;
+    overflow: visible;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    text-overflow: clip;
+    line-height: 1.25;
+    vertical-align: middle;
+  }
+}

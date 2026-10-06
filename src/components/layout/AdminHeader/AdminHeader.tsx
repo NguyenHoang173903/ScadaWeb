@@ -11,6 +11,7 @@ import {
   getSessionUsername,
   isSessionAdmin,
 } from '@/settings/session'
+import { TabularDigits } from '@/components/common/TabularDigits'
 import styles from './AdminHeader.module.css'
 
 type AdminHeaderProps = {
@@ -74,7 +75,7 @@ export function AdminHeader({
       <div className={styles.right}>
         <div className={styles.clock}>
           <Clock3 size={16} />
-          <span>{now}</span>
+          <TabularDigits value={now} />
         </div>
 
         <div className={styles.userMenu} ref={menuRef}>

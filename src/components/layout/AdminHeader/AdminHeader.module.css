@@ -56,6 +56,9 @@
   color: #374151;
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .userMenu {
@@ -172,5 +175,36 @@
 @media (max-width: 640px) {
   .userMeta {
     display: none;
+  }
+}
+
+/* tablet-admin-header */
+@media (min-width: 721px) and (max-width: 900px) {
+  .clock {
+    display: none;
+  }
+
+  .brandText strong,
+  .brandText small {
+    font-size: 0.9rem;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1199px) {
+  .userButton {
+    min-height: 44px;
+  }
+}
+
+/* tablet-portrait-clock */
+@media (min-width: 721px) and (max-width: 1199px) and (orientation: portrait) {
+  .clock {
+    gap: 0.3rem;
+    font-size: 0.82rem;
+  }
+
+  .clock svg {
+    width: 14px;
+    height: 14px;
   }
 }

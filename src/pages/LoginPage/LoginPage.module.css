@@ -482,3 +482,49 @@
     box-shadow: none;
   }
 }
+
+/* tablet-login: centered card; map pane (map disabled) and service row hidden */
+@media (min-width: 721px) and (max-width: 1199px) {
+  .page {
+    height: auto;
+    max-height: none;
+    min-height: max(100vh, 100dvh);
+    overflow: auto;
+    background: #f4f5f9;
+  }
+
+  .mapPane,
+  .services {
+    display: none;
+  }
+
+  .shell {
+    flex: 1 1 auto;
+    justify-content: center;
+    width: 100%;
+    margin: 0;
+    padding: 2rem 1.5rem;
+    box-sizing: border-box;
+  }
+
+  .workspace {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .loginCard {
+    flex: 0 0 auto;
+    width: min(480px, 100%);
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    gap: 1.5rem;
+    padding: 2.25rem 2rem 2rem;
+    border-radius: 18px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+  }
+}

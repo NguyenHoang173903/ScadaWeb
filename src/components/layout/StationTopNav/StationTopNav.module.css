@@ -61,6 +61,9 @@
   color: #043d59;
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .userMenu {
@@ -221,5 +224,18 @@
   .userButton {
     min-height: 44px;
     padding-right: 0.45rem;
+  }
+}
+
+/* tablet-portrait-clock: clock matches the subtitle size in portrait tablets */
+@media (min-width: 721px) and (max-width: 1199px) and (orientation: portrait) {
+  .clock {
+    gap: 0.3rem;
+    font-size: 0.82rem;
+  }
+
+  .clock svg {
+    width: 14px;
+    height: 14px;
   }
 }

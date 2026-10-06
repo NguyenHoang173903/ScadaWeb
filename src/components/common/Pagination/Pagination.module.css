@@ -45,3 +45,15 @@
     height: 40px;
   }
 }
+
+/* tablet-pagination */
+@media (min-width: 721px) and (max-width: 1199px) {
+  .navButton {
+    width: 40px;
+    height: 40px;
+  }
+
+  .pageBadge {
+    height: 40px;
+  }
+}

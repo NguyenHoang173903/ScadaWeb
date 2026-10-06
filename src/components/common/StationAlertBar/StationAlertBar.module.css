@@ -35,6 +35,9 @@
 
 .tickerAnimated {
   animation: marqueeRight 16s linear infinite;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .tickerAnimated:hover {
@@ -80,32 +83,61 @@
 }
 
 .dot {
+  position: relative;
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: #ef4444;
-  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55);
-  animation: pulse 1.4s infinite;
   flex-shrink: 0;
+}
+
+/* Same look as the old box-shadow pulse (0 -> 8px spread, fading out by 70%),
+   but animated with transform/opacity so the moving track is never repainted. */
+.dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgb(239, 68, 68);
+  opacity: 0;
+  animation: pulseRing 1.4s infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
 }
 
 @keyframes marqueeRight {
   from {
-    transform: translateX(-50%);
+    transform: translate3d(-50%, 0, 0);
   }
-  to { transform: translateX(0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
-@keyframes pulse {
+@keyframes pulseRing {
   0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+    transform: scale(1);
+    opacity: 0.5;
   }
   70% {
-    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    transform: scale(3.667);
+    opacity: 0;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    transform: scale(1);
+    opacity: 0;
   }
+}
+
+/* Running marquee: fixed 32px bar, 20px line -> track sits on whole pixels (5px down). */
+.alertAnimated {
+  box-sizing: border-box;
+  height: 32px;
+}
+
+.alertAnimated .details,
+.alertAnimated .tickerGroup,
+.alertAnimated .item {
+  height: 20px;
+  line-height: 20px;
 }
 
 @media (max-width: 800px) {
@@ -117,5 +149,12 @@
 @media (prefers-reduced-motion: reduce) {
   .tickerAnimated {
     animation: none;
+  }
+}
+
+/* tablet-portrait-alert: same compact single-line bar as mobile */
+@media (min-width: 801px) and (max-width: 1199px) and (orientation: portrait) {
+  .alert {
+    gap: 0.4rem;
   }
 }

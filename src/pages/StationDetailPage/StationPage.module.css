@@ -592,3 +592,176 @@
     max-height: none;
   }
 }
+
+/* tablet-diagram: landscape tablets scale the 1100px diagram to fit, same as <=900px */
+@media (min-width: 901px) and (max-width: 1199px) {
+  .panel {
+    overflow-x: hidden;
+  }
+
+  .fitFrame {
+    max-width: 100%;
+    max-height: calc(100vh - 190px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .fitScaler,
+  .fitContent {
+    max-width: none;
+  }
+
+  .fitScaler {
+    overflow: hidden;
+  }
+
+  .fitTools {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    gap: 0.4rem;
+    align-items: center;
+    width: 100%;
+    padding: 0.35rem 0.2rem 0.5rem;
+    background: rgba(255, 255, 255, 0.96);
+  }
+
+  .fitContent .diagramInner,
+  .fitContent .schematicInner,
+  .fitContent .processInner {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .electricalBox {
+    top: 0.2%;
+  }
+}
+
+/*
+  alert-under-diagram: the error bar sits directly under the diagram card on every
+  station page and size; content stacks top-down and leftover space stays below the bar.
+*/
+.processPage {
+  flex: 0 0 auto;
+  height: auto;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 0.85rem;
+  overflow: visible;
+}
+
+.processPage .panel {
+  height: auto;
+}
+
+.processPage .diagramStage {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 900px) {
+  .processPage .fitFrame {
+    height: auto;
+  }
+
+  .page:not(.processPage) {
+    flex: 0 0 auto;
+    height: auto;
+  }
+
+  .page:not(.processPage) .panel,
+  .page:not(.processPage) .fitFrame {
+    flex: 0 0 auto;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1199px) {
+  .page:not(.processPage) .panel {
+    min-height: 0;
+  }
+}
+
+/*
+  diagram-fit-height (desktop + landscape tablet): process/schematic pages fill the
+  content column with no vertical scroll; DiagramFit scales the diagram down
+  (contain) so diagram + alert bar fit, bar directly under, spare space below.
+  <=900px and portrait tablets keep the stacked behaviour above.
+*/
+@media (min-width: 1200px), (min-width: 901px) and (orientation: landscape) {
+  .diagramPage {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    /* rows keep their content height (never squeezed/clipped); DiagramFit shrinks the diagram instead */
+    grid-template-rows: none;
+    grid-auto-rows: max-content;
+    align-content: start;
+    /* one centred column: DiagramFit sets --diagram-col to the scaled diagram width */
+    grid-template-columns: min(100%, var(--diagram-col, 100%));
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .diagramPage .panel {
+    min-height: 0;
+  }
+}
+
+/*
+  zoom-toolbar-bg (<=1199px, where DiagramFit shows - / Vua man hinh / +): the toolbar sits on
+  the content background; only the diagram (+ schematic legend) is on the white card.
+*/
+@media (max-width: 1199px) {
+  .diagramStage {
+    --fit-tools-h: 48px;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .fitTools {
+    box-sizing: border-box;
+    height: var(--fit-tools-h);
+    padding: 0 0 8px;
+    background: var(--content-bg, #eef2f4);
+  }
+
+  .diagramPage .panel:has(.fitFrame) {
+    background: transparent;
+  }
+
+  /* white card for the schematic: starts under the toolbar, rounded on all corners */
+  .page:not(.processPage) .diagramStage::before {
+    content: "";
+    position: absolute;
+    inset: var(--fit-tools-h) 0 0;
+    z-index: -1;
+    border-radius: 12px;
+    background: #ffffff;
+    pointer-events: none;
+  }
+}
+
+/* Short desktop/landscape windows: reclaim vertical space so the diagram shrinks less. */
+@media (min-width: 1200px) and (max-height: 820px), (min-width: 901px) and (orientation: landscape) and (max-height: 820px) {
+  .diagramPage {
+    gap: 0.5rem;
+  }
+
+  .diagramPage .schematicLegend {
+    row-gap: 0.5rem;
+    min-height: 2rem;
+    margin: 0.15rem 0 0 1.25rem;
+    padding: 0.3rem 0.25rem 0.3rem 0;
+  }
+
+  .diagramPage .diagramStage {
+    --fit-tools-h: 44px;
+  }
+
+  .diagramPage .fitTools {
+    padding: 0 0 4px;
+  }
+}
+

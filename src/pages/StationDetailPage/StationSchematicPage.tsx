@@ -73,7 +73,7 @@ export function StationSchematicPage() {
   })
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${styles.diagramPage}`} data-diagram-page="">
       {error ? <p style={{ color: '#b91c1c', margin: '0 0 12px' }}>{error}</p> : null}
       <section className={styles.panel}>
         {ready ? (

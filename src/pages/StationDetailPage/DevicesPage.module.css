@@ -222,3 +222,21 @@
     min-width: 0;
   }
 }
+
+/* tablet-devices */
+@media (min-width: 721px) and (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1199px) {
+  .page {
+    overflow-x: hidden;
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0;
+  }
+}

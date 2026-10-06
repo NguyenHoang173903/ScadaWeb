@@ -74,7 +74,10 @@ export function StationProcessPage() {
   })
 
   return (
-    <div className={`${styles.page} ${styles.processPage}`}>
+    <div
+      className={`${styles.page} ${styles.processPage} ${styles.diagramPage}`}
+      data-diagram-page=""
+    >
       {error ? <p style={{ color: '#b91c1c', margin: '0 0 12px' }}>{error}</p> : null}
       <section className={styles.panel}>
         {ready ? (

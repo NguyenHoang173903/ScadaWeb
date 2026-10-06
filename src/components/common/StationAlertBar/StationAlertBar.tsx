@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import styles from './StationAlertBar.module.css'
 
@@ -14,7 +14,8 @@ type StationAlertBarProps = {
 }
 
 function useMobileTicker() {
-  const query = "(max-width: 900px)"
+  // Phones + all portrait tablets (incl. 901-1199px portrait such as iPad Pro 12.9").
+  const query = "(max-width: 900px), (max-width: 1199px) and (orientation: portrait)"
   const [mobile, setMobile] = useState(
     () => typeof window !== "undefined" && window.matchMedia(query).matches,
   )
@@ -30,7 +31,13 @@ function useMobileTicker() {
   return mobile
 }
 
-export function StationAlertBar({ count, alerts }: StationAlertBarProps) {
+function alertsSignature(alerts: StationAlert[]) {
+  return alerts
+    .map((alert) => `${alert.time}\u0000${alert.device}\u0000${alert.message}`)
+    .join('\u0001')
+}
+
+function StationAlertBarView({ count, alerts }: StationAlertBarProps) {
   const tickerRef = useRef<HTMLDivElement>(null)
   const [tickerWidth, setTickerWidth] = useState(0)
   const mobileTicker = useMobileTicker()
@@ -52,13 +59,14 @@ export function StationAlertBar({ count, alerts }: StationAlertBarProps) {
     return null
   }
 
-  const alertSignature = alerts
-    .map((alert) => `${alert.time}\u0000${alert.device}\u0000${alert.message}`)
-    .join('\u0001')
+  const alertSignature = alertsSignature(alerts)
   const shouldAnimate = mobileTicker || count > 3
 
   return (
-    <div className={styles.alert} role="status">
+    <div
+      className={shouldAnimate ? `${styles.alert} ${styles.alertAnimated}` : styles.alert}
+      role="status"
+    >
       <div className={styles.left}>
         <TriangleAlert size={18} />
         <strong>Lỗi ({count})</strong>
@@ -96,3 +104,13 @@ export function StationAlertBar({ count, alerts }: StationAlertBarProps) {
     </div>
   )
 }
+
+/**
+ * Periodic refetches return new arrays with the same errors; skip re-rendering
+ * (and touching the running marquee) unless the visible content changed.
+ */
+export const StationAlertBar = memo(
+  StationAlertBarView,
+  (prev, next) =>
+    prev.count === next.count && alertsSignature(prev.alerts) === alertsSignature(next.alerts),
+)

@@ -202,3 +202,15 @@
     box-shadow: none;
   }
 }
+
+/* Tablet: start below the (possibly two-row) dashboard header */
+@media (min-width: 721px) and (max-width: 1199px) {
+  .panel {
+    top: var(--dashboard-topbar-height, 100px);
+  }
+
+  .closeButton {
+    width: 40px;
+    height: 40px;
+  }
+}

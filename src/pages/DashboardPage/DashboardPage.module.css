@@ -184,7 +184,9 @@
   font-size: 0.82rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .userMenu {
@@ -535,5 +537,49 @@
 
   .dropdown::before {
     opacity: 1;
+  }
+}
+
+/* tablet-landscape-header: same wrap as <=1100px so the brand never overlaps the chips */
+@media (min-width: 1101px) and (max-width: 1199px) {
+  .topBar {
+    flex-wrap: wrap;
+    align-items: center;
+    height: auto;
+    min-height: 100px;
+    padding: 0.75rem 1rem;
+  }
+
+  .brand,
+  .topRight {
+    flex: 1 1 auto;
+  }
+
+  .topRight {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .stats {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .brandTitle,
+  .brandSubtitle {
+    font-size: 18px;
+    white-space: normal;
+  }
+}
+
+/* tablet touch targets */
+@media (min-width: 721px) and (max-width: 1199px) {
+  .statBadge,
+  .layersButton {
+    min-height: 40px;
+  }
+
+  .userButton {
+    min-height: 44px;
   }
 }

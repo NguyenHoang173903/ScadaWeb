@@ -4,7 +4,9 @@
   height: 100vh;
   max-height: 100vh;
   overflow: hidden;
-  background: #eef2f4;
+  /* content-area background, reused by station pages (e.g. zoom toolbar) */
+  --content-bg: #eef2f4;
+  background: var(--content-bg);
   color: #111827;
   font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
 }
@@ -81,3 +83,11 @@
     cursor: pointer;
   }
 }
+
+/* Short desktop/landscape windows on diagram pages: thinner top/bottom padding (no scroll, less shrink). */
+@media (min-width: 1200px) and (max-height: 820px), (min-width: 901px) and (orientation: landscape) and (max-height: 820px) {
+  .content:has(> [data-diagram-page]) {
+    padding-block: 6px;
+  }
+}
+
