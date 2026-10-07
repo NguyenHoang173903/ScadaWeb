@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import { logoutCurrentUser } from '@/services/auditLog'
 import { fetchSessionPolicy } from '@/services/sessionPolicy/sessionPolicyApi'
@@ -21,10 +21,8 @@ export function SessionGuard() {
 
   useEffect(() => {
     if (location.pathname === ROUTES.login) return
-    if (!hasActiveSession() || !getRefreshToken()) {
-      navigate(ROUTES.login, { replace: true })
-      return
-    }
+    // Unauthenticated: the render below already redirects to login.
+    if (!hasActiveSession() || !getRefreshToken()) return
     touchSession()
     void fetchSessionPolicy()
       .then((policy) => setSessionPolicy({ idleTimeoutMinutes: policy.idleTimeoutMinutes }))
@@ -34,6 +32,7 @@ export function SessionGuard() {
   }, [location.pathname, navigate])
 
   useEffect(() => {
+    // 401 / failed refresh (http.ts cleared tokens): back to login.
     const handleUnauthorized = () => {
       setExpired(false)
       navigate(ROUTES.login, { replace: true })
@@ -79,6 +78,11 @@ export function SessionGuard() {
 
   if (location.pathname === ROUTES.login) {
     return <Outlet />
+  }
+
+  // Deep link without a session: redirect before any protected page renders or fetches.
+  if (!hasActiveSession() || !getRefreshToken()) {
+    return <Navigate to={ROUTES.login} replace />
   }
 
   return (

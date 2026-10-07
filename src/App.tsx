@@ -17,7 +17,8 @@ import {
 } from '@/pages/StationDetailPage'
 import { StationDataUpdatePage } from '@/pages/StationDataUpdatePage'
 import { UsersPage } from '@/pages/UsersPage'
-import { isSessionAdmin, isSessionViewer } from '@/settings/session'
+import { getRefreshToken } from '@/settings/authToken'
+import { hasActiveSession, isSessionAdmin, isSessionViewer } from '@/settings/session'
 
 function AdminRoute({ children }: { children: ReactNode }) {
   return isSessionAdmin() ? children : <Navigate to={ROUTES.dashboard} replace />
@@ -28,6 +29,12 @@ function NonViewerStationRoute({ children }: { children: ReactNode }) {
   return isSessionViewer()
     ? <Navigate to={`/stations/${stationId}/schematic`} replace />
     : children
+}
+
+/** Unknown URL: dashboard when signed in, login otherwise. */
+function UnknownRoute() {
+  const signedIn = hasActiveSession() && Boolean(getRefreshToken())
+  return <Navigate to={signedIn ? ROUTES.dashboard : ROUTES.login} replace />
 }
 
 function App() {
@@ -96,7 +103,7 @@ function App() {
             <Route path="team" element={<StationTeamPage />} />
           </Route>
         </Route>
-        <Route path="*" element={<Navigate to={ROUTES.login} replace />} />
+        <Route path="*" element={<UnknownRoute />} />
       </Routes>
     </BrowserRouter>
   )

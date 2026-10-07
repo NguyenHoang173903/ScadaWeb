@@ -1,0 +1,13 @@
+.root {
+  display: inline-block;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* 1ch = width of "0"; every digit gets the same box regardless of glyph width. */
+.digit {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
+}
