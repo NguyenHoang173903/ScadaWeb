@@ -94,8 +94,8 @@
   width: 16.4%;
   min-width: 150px;
   max-width: 230px;
-  font-size: clamp(0.52rem, 0.78vw, 0.7rem);
-  line-height: 1.4;
+  font-size: clamp(0.5rem, 0.65vw, 0.62rem);
+  line-height: 1.25;
   pointer-events: none;
   border-radius: 10px;
   overflow: hidden;
@@ -498,8 +498,147 @@
   max-width: 100%;
 }
 
+.fitFrameAdaptive {
+  max-width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fitFrameAdaptive .fitScaler,
+.fitFrameAdaptive .fitContent {
+  max-width: none;
+}
+
+.fitFrameAdaptive .fitScaler {
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.fitFrameAdaptive .fitContent .diagramInner,
+.fitFrameAdaptive .fitContent .processInner {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.fitFrameAdaptive .fitContent .schematicInner {
+  width: 95%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Keep fixed desktop coordinates, but compact overlay cards on scrollable tablet/mobile canvases. */
+.fitFrameAdaptive .measureBox {
+  width: 5%;
+  min-width: 54px;
+  max-width: 64px;
+  gap: 0.15em;
+  padding: 0.2em 0.25em;
+  font-size: 0.4rem;
+  transform: translateX(-100%);
+}
+
+.fitFrameAdaptive .measureBox > div {
+  gap: 0.15em;
+}
+
+.fitFrameAdaptive .schematicPumpCard {
+  width: 7.3%;
+  min-width: 80px;
+  max-width: 100px;
+  font-size: 0.42rem;
+}
+
+.fitFrameAdaptive .schematicPumpCard .pumpCardHead {
+  padding: 0.52em 0.2em;
+}
+
+.fitFrameAdaptive .schematicPumpCard .pumpCardBody {
+  min-height: 6em;
+  padding: 0.55em 0.2em 0.6em;
+}
+
+.fitFrameAdaptive .schematicPumpCard .pumpCardBody > div {
+  gap: 0.1em;
+}
+
+.fitFrameAdaptive .electricalBox {
+  top: 2%;
+  width: 16%;
+  min-width: 170px;
+  max-width: 185px;
+  font-size: 0.44rem;
+  line-height: 1.22;
+}
+
+.fitFrameAdaptive .electricalHead {
+  padding: 0.25em 0.35em;
+}
+
+.fitFrameAdaptive .electricalBody {
+  padding: 0.25em 0.35em 0.3em;
+}
+
+.fitFrameAdaptive .electricalBody li {
+  gap: 0.25em;
+  padding: 0.02em 0;
+}
+
+/* Tablet overlays are intentionally larger than phone overlays for readability. */
+@media (min-width: 768px) and (max-width: 1279px),
+  (min-width: 1280px) and (hover: none) and (pointer: coarse) {
+  .fitFrameAdaptive .measureBox {
+    width: 4.4%;
+    min-width: 60px;
+    max-width: 68px;
+    margin-left: -0.4%;
+    padding: 0.2em 0.25em;
+    font-size: 0.48rem;
+  }
+
+  .fitFrameAdaptive .schematicPumpCard {
+    width: 6.6%;
+    min-width: 96px;
+    max-width: 112px;
+    font-size: 0.52rem;
+  }
+
+  .fitFrameAdaptive .schematicPumpCard .pumpCardBody {
+    min-height: 5.8em;
+    padding: 0.5em 0.2em 0.55em;
+  }
+
+  .fitFrameAdaptive .electricalBox {
+    width: 16%;
+    min-width: 238px;
+    max-width: 259px;
+    font-size: 0.616rem;
+    line-height: 1.22;
+  }
+}
+
+.page:not(.processPage) .diagramStage:has(.fitFrameAdaptive)::before {
+  display: none;
+}
+
 .fitTools {
   display: none;
+}
+
+.fitToolsVisible {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  gap: 0.4rem;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.35rem 0.2rem 0.5rem;
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .fitButton {
@@ -521,7 +660,7 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .panel {
     overflow-x: hidden;
   }
@@ -593,8 +732,8 @@
   }
 }
 
-/* tablet-diagram: landscape tablets scale the 1100px diagram to fit, same as <=900px */
-@media (min-width: 901px) and (max-width: 1199px) {
+/* tablet landscape: scale the 1100px diagram to fit */
+@media (min-width: 1024px) and (max-width: 1279px) {
   .panel {
     overflow-x: hidden;
   }
@@ -661,7 +800,7 @@
   flex: 0 0 auto;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .processPage .fitFrame {
     height: auto;
   }
@@ -677,7 +816,7 @@
   }
 }
 
-@media (min-width: 901px) and (max-width: 1199px) {
+@media (min-width: 1024px) and (max-width: 1279px) {
   .page:not(.processPage) .panel {
     min-height: 0;
   }
@@ -687,9 +826,9 @@
   diagram-fit-height (desktop + landscape tablet): process/schematic pages fill the
   content column with no vertical scroll; DiagramFit scales the diagram down
   (contain) so diagram + alert bar fit, bar directly under, spare space below.
-  <=900px and portrait tablets keep the stacked behaviour above.
+  <=1023px keeps the stacked behaviour above.
 */
-@media (min-width: 1200px), (min-width: 901px) and (orientation: landscape) {
+@media (min-width: 1024px) {
   .diagramPage {
     flex: 1 1 auto;
     min-height: 0;
@@ -710,10 +849,10 @@
 }
 
 /*
-  zoom-toolbar-bg (<=1199px, where DiagramFit shows - / Vua man hinh / +): the toolbar sits on
+  zoom-toolbar-bg (<=1279px, where DiagramFit shows - / Vua man hinh / +): the toolbar sits on
   the content background; only the diagram (+ schematic legend) is on the white card.
 */
-@media (max-width: 1199px) {
+@media (max-width: 1279px) {
   .diagramStage {
     --fit-tools-h: 48px;
     position: relative;
@@ -744,7 +883,7 @@
 }
 
 /* Short desktop/landscape windows: reclaim vertical space so the diagram shrinks less. */
-@media (min-width: 1200px) and (max-height: 820px), (min-width: 901px) and (orientation: landscape) and (max-height: 820px) {
+@media (min-width: 1024px) and (max-height: 820px) {
   .diagramPage {
     gap: 0.5rem;
   }

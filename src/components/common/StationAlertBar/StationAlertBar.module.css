@@ -140,7 +140,7 @@
   line-height: 20px;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 1023px) {
   .alert {
     gap: 0.4rem;
   }
@@ -149,12 +149,5 @@
 @media (prefers-reduced-motion: reduce) {
   .tickerAnimated {
     animation: none;
-  }
-}
-
-/* tablet-portrait-alert: same compact single-line bar as mobile */
-@media (min-width: 801px) and (max-width: 1199px) and (orientation: portrait) {
-  .alert {
-    gap: 0.4rem;
   }
 }

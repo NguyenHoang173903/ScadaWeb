@@ -80,3 +80,86 @@
 .actions .resetButton:hover:not(:disabled) {
   background: #e4eaee;
 }
+
+@media (max-width: 1279px) {
+  .bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+    gap: 0.65rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .deviceSelect {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    flex: none;
+  }
+
+  .rangeGroup {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .rangeLabel {
+    padding-bottom: 0.75rem;
+  }
+
+  .dateField,
+  .timeField {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    margin-left: 0;
+  }
+
+  .actions :global(button) {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 767px) {
+  .bar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+
+  .rangeGroup {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0.35rem;
+  }
+
+  .rangeLabel {
+    grid-row: auto;
+    align-self: start;
+    min-width: 0;
+    padding-bottom: 0;
+  }
+
+  .dateField,
+  .timeField {
+    grid-column: 1;
+  }
+
+  .actions {
+    grid-column: 1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .actions :global(button) {
+    width: 100%;
+  }
+}

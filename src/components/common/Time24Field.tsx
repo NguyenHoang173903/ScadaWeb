@@ -94,13 +94,13 @@ export function Time24Field({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [openPart, setOpenPart] = useState<TimePart | null>(null)
   const [narrow, setNarrow] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches,
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches,
   )
   const [panelBox, setPanelBox] = useState<{ top: number; left: number; width: number } | null>(null)
   const [hours = '00', minutes = '00', seconds = '00'] = value.split(':')
 
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 900px)')
+    const media = window.matchMedia('(max-width: 1023px)')
     const onChange = () => setNarrow(media.matches)
     onChange()
     media.addEventListener('change', onChange)

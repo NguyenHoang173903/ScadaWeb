@@ -259,14 +259,14 @@
   background: rgba(239, 68, 68, 0.22);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
   .panel {
     right: 0.75rem;
     bottom: 0.75rem;
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
   .panel {
     left: 0.5rem;
     right: 0.5rem;

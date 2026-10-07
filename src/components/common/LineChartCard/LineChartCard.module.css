@@ -1,8 +1,14 @@
 .card {
+  min-width: 0;
   padding: 1rem 1.15rem 1.1rem;
   border: 1px solid #cfd8dc;
   border-radius: 12px;
   background: #ffffff;
+}
+
+.header {
+  display: grid;
+  gap: 0.55rem;
 }
 
 .title {
@@ -13,12 +19,56 @@
   text-align: center;
 }
 
-.chartWrap {
+.chartViewport {
   width: 100%;
   min-height: 320px;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
-.chartWrap :global(.recharts-legend-item) {
+.chartCanvas {
+  min-width: 100%;
+}
+
+.zoomControls {
+  display: inline-flex;
+  justify-self: end;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.zoomControls button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #c5ced6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #043d59;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.zoomControls button:hover:not(:disabled) {
+  background: #e8f4f8;
+}
+
+.zoomControls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.zoomControls .fitButton {
+  min-width: 92px;
+}
+
+.chartViewport :global(.recharts-legend-item) {
   cursor: pointer;
   user-select: none;
 }
@@ -66,4 +116,76 @@
   height: 3px;
   flex-shrink: 0;
   border-radius: 999px;
+}
+
+@media (max-width: 1279px) {
+  .card {
+    padding: 0.85rem;
+  }
+
+  .title {
+    font-size: 1.05rem;
+  }
+
+  .legend {
+    padding-left: 1.25rem;
+  }
+
+  .legendItem,
+  .legendItemHidden {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .card {
+    padding: 0.7rem 0.55rem 0.8rem;
+  }
+
+  .header {
+    gap: 0.45rem;
+  }
+
+  .title {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .zoomControls {
+    justify-self: stretch;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+  }
+
+  .zoomControls button {
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: 0.45rem;
+  }
+
+  .zoomControls .fitButton {
+    min-width: 0;
+  }
+
+  .chartViewport {
+    margin-top: 1rem;
+  }
+
+  .legend {
+    gap: 0.3rem;
+    padding-left: 0.5rem;
+  }
+
+  .legendRow {
+    gap: 0.25rem 0.65rem;
+  }
+
+  .legendItem,
+  .legendItemHidden {
+    font-size: 0.72rem;
+  }
+
+  .legendSwatch {
+    width: 16px;
+  }
 }

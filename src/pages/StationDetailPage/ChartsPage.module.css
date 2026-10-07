@@ -10,38 +10,22 @@
   min-width: 0;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1279px) {
   .page {
-    flex: 1 1 auto;
-    height: 100%;
-    min-height: 0;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .scroll {
-    width: 1200px;
-    min-width: 1200px;
-  }
-}
-
-/* tablet-charts: landscape keeps the desktop-size canvas and scrolls, like <=900px */
-@media (min-width: 901px) and (max-width: 1199px) {
-  .page {
-    flex: 1 1 auto;
-    height: 100%;
+    width: 100%;
     min-height: 0;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .scroll {
-    width: 1200px;
-    min-width: 1200px;
+    min-width: 0;
+    max-width: 100%;
   }
 }
 
-@media (min-width: 721px) and (max-width: 1199px) {
+@media (min-width: 768px) and (max-width: 1279px) {
   .page,
   .scroll {
     align-content: start;

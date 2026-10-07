@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CartesianGrid,
   Legend,
@@ -16,6 +16,15 @@ function isAllowedSeries(item: LineChartSeries) {
   return item.showDot === false
 }
 
+type ChartLayout = 'desktop' | 'tablet' | 'mobile'
+
+function getChartLayout(): ChartLayout {
+  if (typeof window === 'undefined') return 'desktop'
+  if (window.matchMedia('(max-width: 767px)').matches) return 'mobile'
+  if (window.matchMedia('(max-width: 1279px)').matches) return 'tablet'
+  return 'desktop'
+}
+
 export function LineChartCard({
   title,
   xLabel = 'Thời gian',
@@ -26,6 +35,25 @@ export function LineChartCard({
   height = 520,
 }: LineChartCardProps) {
   const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(() => new Set())
+  const [layout, setLayout] = useState<ChartLayout>(getChartLayout)
+  const [zoom, setZoom] = useState(1)
+
+  useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 767px)')
+    const tablet = window.matchMedia('(max-width: 1279px)')
+    const onChange = () => {
+      const next = getChartLayout()
+      setLayout(next)
+      if (next === 'desktop') setZoom(1)
+    }
+    onChange()
+    mobile.addEventListener('change', onChange)
+    tablet.addEventListener('change', onChange)
+    return () => {
+      mobile.removeEventListener('change', onChange)
+      tablet.removeEventListener('change', onChange)
+    }
+  }, [])
 
   const actualSeries = series.filter((item) => !isAllowedSeries(item))
   const allowedSeries = series.filter(isAllowedSeries)
@@ -51,14 +79,20 @@ export function LineChartCard({
     return rows
   }, [data, series])
   const xTicks = useMemo(() => {
-    const maxTicks = 7
+    const maxTicks = layout === 'mobile' ? 5 : layout === 'tablet' ? 6 : 7
     if (data.length <= maxTicks) return data.map((point) => point.time)
 
     return Array.from({ length: maxTicks }, (_, index) => {
       const dataIndex = Math.round((index * (data.length - 1)) / (maxTicks - 1))
       return data[dataIndex].time
     })
-  }, [data])
+  }, [data, layout])
+
+  const compact = layout !== 'desktop'
+  const fittedHeight = layout === 'mobile' ? 460 : layout === 'tablet' ? 520 : height
+  const tickFontSize = layout === 'mobile' ? 10 : layout === 'tablet' ? 11 : 12
+  const zoomOut = () => setZoom((value) => Math.max(1, Number((value - 0.25).toFixed(2))))
+  const zoomIn = () => setZoom((value) => Math.min(2.5, Number((value + 0.25).toFixed(2))))
 
   const toggleSeries = (dataKey: string) => {
     setHiddenKeys((prev) => {
@@ -86,31 +120,58 @@ export function LineChartCard({
 
   return (
     <section className={styles.card}>
-      <h2 className={styles.title}>{title}</h2>
+      <div className={styles.header}>
+        <h2 className={styles.title}>{title}</h2>
+        {compact ? (
+          <div className={styles.zoomControls} aria-label="Điều khiển kích thước đồ thị">
+            <button type="button" onClick={zoomOut} disabled={zoom <= 1} aria-label="Thu nhỏ đồ thị">
+              −
+            </button>
+            <button type="button" onClick={() => setZoom(1)} className={styles.fitButton}>
+              Vừa khung
+            </button>
+            <button type="button" onClick={zoomIn} disabled={zoom >= 2.5} aria-label="Phóng to đồ thị">
+              +
+            </button>
+          </div>
+        ) : null}
+      </div>
 
-      <div className={styles.chartWrap} style={{ height }}>
-        <ResponsiveContainer width="100%" height="100%">
+      <div className={styles.chartViewport}>
+        <div
+          className={styles.chartCanvas}
+          style={{
+            width: compact ? `${zoom * 100}%` : '100%',
+            height: compact ? fittedHeight * zoom : fittedHeight,
+          }}
+        >
+          <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={normalizedData}
-            margin={{ top: 12, right: 24, left: 8, bottom: useTwoRowLegend ? 64 : 40 }}
+            margin={{
+              top: 12,
+              right: compact ? 14 : 24,
+              left: compact ? 0 : 8,
+              bottom: useTwoRowLegend ? 64 : 40,
+            }}
           >
             <CartesianGrid strokeDasharray="4 4" stroke="#d1d5db" />
             <XAxis
               dataKey="time"
               ticks={xTicks}
-              tick={{ fill: '#4b5563', fontSize: 12 }}
+              tick={{ fill: '#4b5563', fontSize: tickFontSize }}
               tickMargin={8}
               label={{
                 value: xLabel,
                 position: 'insideBottom',
                 offset: -18,
                 fill: '#374151',
-                fontSize: 13,
+                fontSize: tickFontSize + 1,
               }}
             />
             <YAxis
               domain={yDomain}
-              tick={{ fill: '#4b5563', fontSize: 12 }}
+              tick={{ fill: '#4b5563', fontSize: tickFontSize }}
               tickMargin={6}
               label={{
                 value: yLabel,
@@ -118,7 +179,7 @@ export function LineChartCard({
                 position: 'insideLeft',
                 offset: 10,
                 fill: '#374151',
-                fontSize: 13,
+                fontSize: tickFontSize + 1,
               }}
             />
             <Tooltip
@@ -156,7 +217,8 @@ export function LineChartCard({
               />
             ))}
           </LineChart>
-        </ResponsiveContainer>
+          </ResponsiveContainer>
+        </div>
       </div>
     </section>
   )

@@ -376,7 +376,7 @@
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1279px) {
   .topBar {
     flex-wrap: wrap;
     align-items: center;
@@ -411,7 +411,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
   .topBar {
     padding: 0.7rem 0.85rem;
   }
@@ -438,7 +438,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
   .page {
     display: flex;
     flex-direction: column;
@@ -530,7 +530,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
   .userName {
     display: none;
   }
@@ -540,40 +540,8 @@
   }
 }
 
-/* tablet-landscape-header: same wrap as <=1100px so the brand never overlaps the chips */
-@media (min-width: 1101px) and (max-width: 1199px) {
-  .topBar {
-    flex-wrap: wrap;
-    align-items: center;
-    height: auto;
-    min-height: 100px;
-    padding: 0.75rem 1rem;
-  }
-
-  .brand,
-  .topRight {
-    flex: 1 1 auto;
-  }
-
-  .topRight {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .stats {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .brandTitle,
-  .brandSubtitle {
-    font-size: 18px;
-    white-space: normal;
-  }
-}
-
 /* tablet touch targets */
-@media (min-width: 721px) and (max-width: 1199px) {
+@media (min-width: 768px) and (max-width: 1279px) {
   .statBadge,
   .layersButton {
     min-height: 40px;

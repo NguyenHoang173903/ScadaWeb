@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import { flushSync } from "react-dom"
 import styles from "./StationPage.module.css"
 
@@ -8,7 +8,10 @@ type DiagramFitProps = {
 }
 
 /* Desktop + landscape tablet: the diagram page must fit the viewport (no vertical scroll). */
-const FIT_HEIGHT_QUERY = "(min-width: 1200px), (min-width: 901px) and (orientation: landscape)"
+const FIT_HEIGHT_QUERY = "(min-width: 1024px)"
+const TOUCH_QUERY = "(hover: none), (pointer: coarse)"
+const TABLET_CANVAS_QUERY =
+  "(min-width: 768px) and (max-width: 1279px), (min-width: 1280px) and (hover: none) and (pointer: coarse)"
 /* Page column width shared by the diagram card, legend and alert bar when the diagram shrinks. */
 const COLUMN_VAR = "--diagram-col"
 
@@ -18,33 +21,18 @@ function pageInnerWidth(page: HTMLElement) {
   return page.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
 }
 
-const MIN_ZOOM = 1
-const MAX_ZOOM = 4
-
-function clampZoom(value: number) {
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value))
-}
-
 export function DiagramFit({ designWidth, children }: DiagramFitProps) {
   const frameRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const scalerRef = useRef<HTMLDivElement>(null)
-  const zoomRef = useRef(1)
-  const [narrow, setNarrow] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(max-width: 1199px)").matches,
-  )
-  const [fit, setFit] = useState(1)
-  const [userZoom, setUserZoom] = useState(1)
+  const [adaptive, setAdaptive] = useState(false)
+  const [canvasWidth, setCanvasWidth] = useState(designWidth)
   const [contentHeight, setContentHeight] = useState(0)
   /* Fit-height mode (desktop/landscape): scale cap so diagram + alert bar fit the page. */
   const [fitHeightMode, setFitHeightMode] = useState(false)
   const [heightScale, setHeightScale] = useState(1)
   const [naturalWidth, setNaturalWidth] = useState(0)
   const [frameMax, setFrameMax] = useState<number | null>(null)
-
-  useEffect(() => {
-    zoomRef.current = userZoom
-  }, [userZoom])
 
   useLayoutEffect(() => {
     const frame = frameRef.current
@@ -82,45 +70,44 @@ export function DiagramFit({ designWidth, children }: DiagramFitProps) {
     }
 
     const measure = () => {
-      const isNarrow = window.matchMedia("(max-width: 1199px)").matches
+      const nextCanvasWidth = window.matchMedia(TABLET_CANVAS_QUERY).matches
+        ? designWidth * 1.4
+        : designWidth
+      /*
+        Fit by the diagram's actual container, not by the viewport. A wide touch device can
+        still have little room after the sidebar, while a narrow window may have more.
+      */
+      const useAdaptiveFit =
+        frame.clientWidth < nextCanvasWidth || window.matchMedia(TOUCH_QUERY).matches
       const fitPage = page && window.matchMedia(FIT_HEIGHT_QUERY).matches ? page : null
       const naturalHeight = content.offsetHeight
-      setNarrow(isNarrow)
-      setFitHeightMode(Boolean(fitPage))
+      setAdaptive(useAdaptiveFit)
+      setCanvasWidth(nextCanvasWidth)
       setContentHeight(naturalHeight)
+      setFitHeightMode(Boolean(fitPage))
 
       let maxScalerHeight = Number.POSITIVE_INFINITY
       if (fitPage) {
         const budget = scalerBudget(fitPage)
         maxScalerHeight = budget.maxScalerHeight
-        setFrameMax(isNarrow ? budget.nextFrameMax : null)
+        setFrameMax(useAdaptiveFit ? budget.nextFrameMax : null)
       } else {
         setFrameMax(null)
       }
 
-      if (!isNarrow) {
-        const width = fitPage ? pageInnerWidth(fitPage) : frame.clientWidth
-        const nextScale =
-          fitPage && naturalHeight > 0 ? Math.min(1, maxScalerHeight / naturalHeight) : 1
-        setFit(1)
-        setNaturalWidth(width)
-        setHeightScale(nextScale)
-        setColumn(fitPage && nextScale < 0.999 ? width * nextScale : null)
-        return
-      }
-      setHeightScale(1)
-      if (zoomRef.current > 1.02) {
+      if (useAdaptiveFit) {
+        setNaturalWidth(nextCanvasWidth)
+        setHeightScale(1)
         setColumn(null)
         return
       }
-      const avail = fitPage ? pageInnerWidth(fitPage) : frame.clientWidth
-      if (avail > 1) {
-        const widthFit = (avail - 1) / designWidth
-        const heightFit = fitPage && naturalHeight > 0 ? maxScalerHeight / naturalHeight : widthFit
-        const nextFit = Math.max(0.05, Math.min(widthFit, heightFit))
-        setFit(nextFit)
-        setColumn(fitPage && heightFit < widthFit ? designWidth * nextFit : null)
-      }
+
+      const width = fitPage ? pageInnerWidth(fitPage) : frame.clientWidth
+      const nextScale =
+        fitPage && naturalHeight > 0 ? Math.min(1, maxScalerHeight / naturalHeight) : 1
+      setNaturalWidth(width)
+      setHeightScale(nextScale)
+      setColumn(fitPage && nextScale < 0.999 ? width * nextScale : null)
     }
 
     /* Observer callbacks: commit scale + column together before the next paint (no misaligned flash). */
@@ -147,99 +134,24 @@ export function DiagramFit({ designWidth, children }: DiagramFitProps) {
       mutations?.disconnect()
       setColumn(null)
     }
-  }, [designWidth, userZoom])
+  }, [designWidth])
 
-  useEffect(() => {
-    const frame = frameRef.current
-    if (!frame) return
-    let startDist = 0
-    let startZoom = 1
-
-    const distance = (touches: TouchList) => {
-      const dx = touches[0].clientX - touches[1].clientX
-      const dy = touches[0].clientY - touches[1].clientY
-      return Math.hypot(dx, dy)
-    }
-
-    const onStart = (event: TouchEvent) => {
-      if (event.touches.length !== 2) return
-      startDist = distance(event.touches)
-      startZoom = zoomRef.current
-    }
-
-    const onMove = (event: TouchEvent) => {
-      if (event.touches.length !== 2 || startDist <= 0) return
-      event.preventDefault()
-      const next = clampZoom(startZoom * (distance(event.touches) / startDist))
-      setUserZoom(next)
-    }
-
-    const onEnd = () => {
-      startDist = 0
-    }
-
-    frame.addEventListener("touchstart", onStart, { passive: true })
-    frame.addEventListener("touchmove", onMove, { passive: false })
-    frame.addEventListener("touchend", onEnd)
-    frame.addEventListener("touchcancel", onEnd)
-    return () => {
-      frame.removeEventListener("touchstart", onStart)
-      frame.removeEventListener("touchmove", onMove)
-      frame.removeEventListener("touchend", onEnd)
-      frame.removeEventListener("touchcancel", onEnd)
-    }
-  }, [])
-
-  const scale = narrow ? fit * userZoom : 1
-  const fitted = userZoom <= 1.02
   /* Desktop only: shrink (contain) when the diagram is taller than the room left. */
-  const desktopShrink = !narrow && fitHeightMode && heightScale < 0.999 && naturalWidth > 0
+  const desktopShrink = !adaptive && fitHeightMode && heightScale < 0.999 && naturalWidth > 0
 
   return (
     <div
       ref={frameRef}
-      className={styles.fitFrame}
+      className={`${styles.fitFrame} ${adaptive ? styles.fitFrameAdaptive : ""}`}
       style={frameMax != null ? { maxHeight: frameMax } : undefined}
     >
-      {narrow ? (
-        <div className={styles.fitTools}>
-          <button
-            type="button"
-            className={styles.fitButton}
-            onClick={() => setUserZoom((zoom) => clampZoom(zoom / 1.25))}
-            disabled={fitted}
-            aria-label="Thu nhỏ"
-          >
-            -
-          </button>
-          <button
-            type="button"
-            className={styles.fitButton}
-            onClick={() => setUserZoom(1)}
-            aria-label="Vừa màn hình"
-          >
-            Vừa màn hình
-          </button>
-          <button
-            type="button"
-            className={styles.fitButton}
-            onClick={() => setUserZoom((zoom) => clampZoom(zoom * 1.25))}
-            disabled={userZoom >= MAX_ZOOM - 0.01}
-            aria-label="Phóng to"
-          >
-            +
-          </button>
-        </div>
-      ) : null}
       <div
         ref={scalerRef}
         className={styles.fitScaler}
         style={
-          narrow
+          adaptive
             ? {
-                width: designWidth * scale,
-                height: Math.max(contentHeight * scale, 1),
-                ...(fitHeightMode ? { marginInline: "auto" } : null),
+                width: canvasWidth,
               }
             : desktopShrink
               ? {
@@ -255,11 +167,9 @@ export function DiagramFit({ designWidth, children }: DiagramFitProps) {
           ref={contentRef}
           className={styles.fitContent}
           style={
-            narrow
+            adaptive
               ? {
-                  width: designWidth,
-                  transform: `scale(${scale})`,
-                  transformOrigin: "top left",
+                  width: canvasWidth,
                 }
               : desktopShrink
                 ? {

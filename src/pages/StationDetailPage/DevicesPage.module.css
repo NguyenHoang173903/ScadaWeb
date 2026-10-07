@@ -212,7 +212,7 @@
   text-align: center;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .page {
     overflow-x: hidden;
   }
@@ -224,13 +224,13 @@
 }
 
 /* tablet-devices */
-@media (min-width: 721px) and (max-width: 900px) {
+@media (min-width: 768px) and (max-width: 1023px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 901px) and (max-width: 1199px) {
+@media (min-width: 1024px) and (max-width: 1279px) {
   .page {
     overflow-x: hidden;
   }

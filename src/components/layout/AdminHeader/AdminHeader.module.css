@@ -179,7 +179,7 @@
 }
 
 /* tablet-admin-header */
-@media (min-width: 721px) and (max-width: 900px) {
+@media (min-width: 768px) and (max-width: 1023px) {
   .clock {
     display: none;
   }
@@ -190,14 +190,27 @@
   }
 }
 
-@media (min-width: 721px) and (max-width: 1199px) {
+@media (min-width: 768px) and (max-width: 1279px) {
   .userButton {
     min-height: 44px;
   }
 }
 
-/* tablet-portrait-clock */
-@media (min-width: 721px) and (max-width: 1199px) and (orientation: portrait) {
+/* tablet portrait clock */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .clock {
+    gap: 0.3rem;
+    font-size: 0.82rem;
+  }
+
+  .clock svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* tablet landscape clock: same proportionate size as portrait */
+@media (min-width: 1024px) and (max-width: 1279px) {
   .clock {
     gap: 0.3rem;
     font-size: 0.82rem;

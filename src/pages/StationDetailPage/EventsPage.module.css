@@ -24,23 +24,27 @@
 .badgeCell {
   display: inline-flex;
   max-width: 100%;
-  overflow: hidden;
+  flex-wrap: wrap;
+  overflow: visible;
 }
 
 .badgeCell :global(span) {
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .cellText {
   display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .tabsWrap {
     overflow: visible;
   }

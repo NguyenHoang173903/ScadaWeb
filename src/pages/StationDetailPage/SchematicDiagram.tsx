@@ -134,11 +134,17 @@ export function SchematicDiagram({
           {pumps.map((pump) => {
             const left = schematicPumpLeftPercent(pump.id)
             if (!left) return null
+            const measureLeft =
+              pump.id === 2
+                ? `calc(${left} + 0.4%)`
+                : [8, 6, 4].includes(pump.id)
+                  ? `calc(${left} + 0.5%)`
+                  : left
             return (
               <div
                 key={`m-${pump.id}`}
                 className={styles.measureBox}
-                style={{ left: pump.id === 2 ? `calc(${left} + 0.4%)` : left }}
+                style={{ left: measureLeft }}
                 aria-label={`Thông số ${pump.label}`}
               >
                 <div>

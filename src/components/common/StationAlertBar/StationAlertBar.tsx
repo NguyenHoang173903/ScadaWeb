@@ -14,8 +14,8 @@ type StationAlertBarProps = {
 }
 
 function useMobileTicker() {
-  // Phones + all portrait tablets (incl. 901-1199px portrait such as iPad Pro 12.9").
-  const query = "(max-width: 900px), (max-width: 1199px) and (orientation: portrait)"
+  // Phones + portrait tablets.
+  const query = "(max-width: 1023px)"
   const [mobile, setMobile] = useState(
     () => typeof window !== "undefined" && window.matchMedia(query).matches,
   )

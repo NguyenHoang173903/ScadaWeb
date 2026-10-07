@@ -41,7 +41,7 @@ select {
   font: inherit;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
   body {
     min-width: 0;
   }

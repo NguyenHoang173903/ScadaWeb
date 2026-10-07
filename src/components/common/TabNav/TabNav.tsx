@@ -16,7 +16,7 @@ type TabNavProps = {
 }
 
 function useNarrow() {
-  const query = '(max-width: 900px)'
+  const query = '(max-width: 1023px)'
   const [narrow, setNarrow] = useState(
     () => typeof window !== 'undefined' && window.matchMedia(query).matches,
   )

@@ -32,7 +32,9 @@
   border-bottom: 1px solid #d7dee3;
   font-size: 0.95rem;
   vertical-align: middle;
-  overflow: hidden;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .table th:last-child,
@@ -47,7 +49,8 @@
   background: #043d59;
   color: #ffffff;
   font-weight: 700;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.3;
 }
 
 .table tbody tr {
@@ -113,10 +116,14 @@
 }
 
 .cellValue {
-  display: contents;
+  display: block;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
   .wrapper {
     overflow: visible;
     border: 0;
@@ -205,11 +212,11 @@
 }
 
 /*
-  tablet-table-headers (721-1199px, both orientations): fixed column widths + nowrap
+  tablet-table-headers (768-1279px): fixed column widths + nowrap
   clipped long headers ("Dòng trung bình", "Đăng nhập lần cuối"). Let header text wrap
   at spaces (two lines) instead; the table still scrolls inside its frame if needed.
 */
-@media (min-width: 721px) and (max-width: 1199px) {
+@media (min-width: 768px) and (max-width: 1279px) {
   .table thead th {
     /* single-line header rows keep their previous 50px height */
     height: 50px;

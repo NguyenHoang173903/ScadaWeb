@@ -67,7 +67,7 @@
   font-size: 0.9rem;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .page {
     position: relative;
     overflow-x: clip;
@@ -161,7 +161,7 @@
 }
 
 /* tablet-users: landscape tab bar */
-@media (min-width: 901px) and (max-width: 1199px) {
+@media (min-width: 1024px) and (max-width: 1279px) {
   .tabNav button {
     padding-inline: 0.75rem;
     font-size: 0.94rem;

@@ -82,7 +82,7 @@
   font-weight: 600;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .bar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -225,11 +225,78 @@
 }
 
 /*
-  tablet-portrait-filter (721-900px, and portrait tablets up to 1199px): tidy 2-row bar.
+  tablet portrait filter (768-1023px): tidy 2-row bar.
   Row 1: Thiết bị | Từ [date] | đến [date] in equal thirds. Row 2: search fills the rest,
   buttons on the right. Every control 44px tall, 12px gaps, full width like the table.
 */
-@media (min-width: 721px) and (max-width: 900px), (min-width: 721px) and (max-width: 1199px) and (orientation: portrait) {
+@media (min-width: 768px) and (max-width: 1023px) {
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .deviceSelect,
+  .bar > .rangeGroup {
+    flex: 1 1 calc((100% - 24px) / 3 - 1px);
+    width: auto;
+    min-width: 0;
+  }
+
+  .bar > .rangeGroup {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .rangeLabel {
+    flex-shrink: 0;
+    font-size: 0.92rem;
+  }
+
+  .rangeGroup .dateField,
+  .rangeGroup .dateButton {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    padding: 0 0.75rem;
+    font-size: 0.92rem;
+  }
+
+  .deviceSelect > button,
+  .rangeGroup .dateField,
+  .rangeGroup .dateButton,
+  .searchField,
+  .actions :global(button) {
+    box-sizing: border-box;
+    height: 44px;
+    min-height: 44px;
+    padding-block: 0;
+  }
+
+  .searchField {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 200px;
+    max-width: none;
+  }
+
+  .actions {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 10px;
+    width: auto;
+    margin-left: auto;
+  }
+
+  .actions :global(button) {
+    flex: none;
+  }
+}
+
+/* tablet landscape filter: same tidy 2-row bar as portrait */
+@media (min-width: 1024px) and (max-width: 1279px) {
   .bar {
     display: flex;
     flex-wrap: wrap;

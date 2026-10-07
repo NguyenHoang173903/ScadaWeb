@@ -153,7 +153,7 @@
   display: none;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .header {
     align-items: center;
     flex-wrap: wrap;
@@ -227,8 +227,21 @@
   }
 }
 
-/* tablet-portrait-clock: clock matches the subtitle size in portrait tablets */
-@media (min-width: 721px) and (max-width: 1199px) and (orientation: portrait) {
+/* tablet portrait: clock matches the subtitle size */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .clock {
+    gap: 0.3rem;
+    font-size: 0.82rem;
+  }
+
+  .clock svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* tablet landscape: same proportionate clock size */
+@media (min-width: 1024px) and (max-width: 1279px) {
   .clock {
     gap: 0.3rem;
     font-size: 0.82rem;
