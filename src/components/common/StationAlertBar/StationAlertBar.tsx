@@ -11,6 +11,7 @@ export type StationAlert = {
 type StationAlertBarProps = {
   count: number
   alerts: StationAlert[]
+  emptyMessage?: string
 }
 
 function useMobileTicker() {
@@ -37,7 +38,11 @@ function alertsSignature(alerts: StationAlert[]) {
     .join('\u0001')
 }
 
-function StationAlertBarView({ count, alerts }: StationAlertBarProps) {
+function StationAlertBarView({
+  count,
+  alerts,
+  emptyMessage = 'Không có lỗi đang tồn tại',
+}: StationAlertBarProps) {
   const tickerRef = useRef<HTMLDivElement>(null)
   const [tickerWidth, setTickerWidth] = useState(0)
   const mobileTicker = useMobileTicker()
@@ -55,12 +60,8 @@ function StationAlertBarView({ count, alerts }: StationAlertBarProps) {
     return () => observer.disconnect()
   }, [hasAlerts])
 
-  if (count <= 0 || alerts.length === 0) {
-    return null
-  }
-
   const alertSignature = alertsSignature(alerts)
-  const shouldAnimate = mobileTicker || count > 3
+  const shouldAnimate = hasAlerts && (mobileTicker || count > 3)
 
   return (
     <div
@@ -72,34 +73,38 @@ function StationAlertBarView({ count, alerts }: StationAlertBarProps) {
         <strong>Lỗi ({count})</strong>
       </div>
       <span className={styles.divider} />
-      <div className={styles.details} ref={tickerRef}>
-        <div
-          className={`${styles.ticker} ${shouldAnimate ? styles.tickerAnimated : styles.tickerStatic}`}
-          key={`${alertSignature}-${shouldAnimate}`}
-        >
-          {(shouldAnimate ? [false, true] : [false]).map((isDuplicate) => (
-            <div
-              className={styles.tickerGroup}
-              key={String(isDuplicate)}
-              aria-hidden={isDuplicate || undefined}
-              style={
-                shouldAnimate ? { minWidth: tickerWidth || undefined } : undefined
-              }
-            >
-              {alerts.map((alert, index) => (
-                <div className={styles.item} key={`${index}-${alert.time}-${alert.device}`}>
-                  {index > 0 ? <span className={styles.divider} /> : null}
-                  <span className={styles.dot} aria-hidden="true" />
-                  <span>{alert.message}</span>
-                  <span className={styles.divider} />
-                  <span>{alert.device}</span>
-                  <span className={styles.divider} />
-                  <span>{alert.time}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+      <div className={styles.details} ref={hasAlerts ? tickerRef : undefined}>
+        {hasAlerts ? (
+          <div
+            className={`${styles.ticker} ${shouldAnimate ? styles.tickerAnimated : styles.tickerStatic}`}
+            key={`${alertSignature}-${shouldAnimate}`}
+          >
+            {(shouldAnimate ? [false, true] : [false]).map((isDuplicate) => (
+              <div
+                className={styles.tickerGroup}
+                key={String(isDuplicate)}
+                aria-hidden={isDuplicate || undefined}
+                style={
+                  shouldAnimate ? { minWidth: tickerWidth || undefined } : undefined
+                }
+              >
+                {alerts.map((alert, index) => (
+                  <div className={styles.item} key={`${index}-${alert.time}-${alert.device}`}>
+                    {index > 0 ? <span className={styles.divider} /> : null}
+                    <span className={styles.dot} aria-hidden="true" />
+                    <span>{alert.message}</span>
+                    <span className={styles.divider} />
+                    <span>{alert.device}</span>
+                    <span className={styles.divider} />
+                    <span>{alert.time}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <span className={styles.emptyMessage}>{emptyMessage}</span>
+        )}
       </div>
     </div>
   )
@@ -112,5 +117,7 @@ function StationAlertBarView({ count, alerts }: StationAlertBarProps) {
 export const StationAlertBar = memo(
   StationAlertBarView,
   (prev, next) =>
-    prev.count === next.count && alertsSignature(prev.alerts) === alertsSignature(next.alerts),
+    prev.count === next.count &&
+    prev.emptyMessage === next.emptyMessage &&
+    alertsSignature(prev.alerts) === alertsSignature(next.alerts),
 )

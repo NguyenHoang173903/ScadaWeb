@@ -82,7 +82,7 @@ export function StationProcessPage() {
       <section className={styles.panel}>
         {ready ? (
           <div className={styles.diagramStage}>
-            <DiagramFit designWidth={1100}>
+            <DiagramFit designWidth={1100} fillDesktopWithoutScaling>
               <div className={`${styles.diagramInner} ${styles.processInner}`}>
                 <ProcessDiagram
                   pumps={pumps}

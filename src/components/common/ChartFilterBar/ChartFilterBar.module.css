@@ -135,12 +135,13 @@
   }
 
   .rangeGroup {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
     gap: 0.35rem;
   }
 
   .rangeLabel {
+    grid-column: 1 / -1;
     grid-row: auto;
     align-self: start;
     min-width: 0;
@@ -149,7 +150,7 @@
 
   .dateField,
   .timeField {
-    grid-column: 1;
+    grid-column: auto;
   }
 
   .actions {

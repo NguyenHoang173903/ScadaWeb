@@ -24,7 +24,7 @@ export function StationActiveAlertBar({ stationId }: StationActiveAlertBarProps)
     const message = isApiError(alarms.error)
       ? alarms.error.message
       : 'Không tải được lỗi đang tồn tại.'
-    return <p role="alert" style={{ color: '#b91c1c', margin: 0 }}>{message}</p>
+    return <StationAlertBar count={0} alerts={[]} emptyMessage={message} />
   }
 
   const alerts: StationAlert[] = (alarms.data?.items ?? []).map((item) => ({
@@ -37,6 +37,7 @@ export function StationActiveAlertBar({ stationId }: StationActiveAlertBarProps)
     <StationAlertBar
       count={alarms.data?.totalCount ?? alarms.data?.items.length ?? 0}
       alerts={alerts}
+      emptyMessage={alarms.isPending ? 'Đang kiểm tra lỗi...' : undefined}
     />
   )
 }

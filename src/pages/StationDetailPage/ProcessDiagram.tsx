@@ -47,63 +47,65 @@ export function ProcessDiagram({
   }, [pumpKey, svgHtml])
 
   return (
-    <div className={styles.diagramLayer}>
-      <div
-        ref={svgHostRef}
-        className={styles.processSvgHost}
-        dangerouslySetInnerHTML={svgMarkup}
-      />
+    <div className={styles.processDiagramViewport}>
+      <div className={styles.diagramLayer}>
+        <div
+          ref={svgHostRef}
+          className={styles.processSvgHost}
+          dangerouslySetInnerHTML={svgMarkup}
+        />
 
-      <div className={styles.processBasinRow}>
-        <span className={styles.processBasinLabel}>Bể Xả</span>
-        <div className={`${styles.processWaterBox} ${styles.processBasinWaterBox}`}>
-          <span>Mực nước:</span>
-          <strong>
-            {typeof basinLevel === 'number' && Number.isFinite(basinLevel)
-              ? `${formatOne(basinLevel)}m`
-              : '—'}
-          </strong>
+        <div className={styles.processBasinRow}>
+          <span className={styles.processBasinLabel}>Bể Xả</span>
+          <div className={`${styles.processWaterBox} ${styles.processBasinWaterBox}`}>
+            <span>Mực nước:</span>
+            <strong>
+              {typeof basinLevel === 'number' && Number.isFinite(basinLevel)
+                ? `${formatOne(basinLevel)}m`
+                : '—'}
+            </strong>
+          </div>
         </div>
-      </div>
 
-      <div className={styles.processRiverRow}>
-        <span className={styles.processRiverLabel}>Sông Hồng</span>
-        <div className={styles.processWaterBox}>
-          <span>Mực nước:</span>
-          <strong>
-            {typeof riverLevel === 'number' && Number.isFinite(riverLevel)
-              ? `${formatOne(riverLevel)}m`
-              : '—'}
-          </strong>
+        <div className={styles.processRiverRow}>
+          <span className={styles.processRiverLabel}>Sông Hồng</span>
+          <div className={styles.processWaterBox}>
+            <span>Mực nước:</span>
+            <strong>
+              {typeof riverLevel === 'number' && Number.isFinite(riverLevel)
+                ? `${formatOne(riverLevel)}m`
+                : '—'}
+            </strong>
+          </div>
         </div>
-      </div>
 
-      {pumps.map((pump) => {
-        const left = processPumpLeftPercent(pump.id)
-        if (!left) return null
-        return (
-          <article
-            key={pump.id}
-            className={`${styles.pumpCard} ${styles.processPumpCard}`}
-            style={{ left }}
-            data-status={pump.status}
-          >
-            <header className={styles.pumpCardHead}>
-              {pump.label} - {pump.powerKw}kW
-            </header>
-            <div className={styles.pumpCardBody}>
-              <div>
-                <span>Dòng điện:</span>
-                <strong>{formatOne(pump.currentA)}A</strong>
+        {pumps.map((pump) => {
+          const left = processPumpLeftPercent(pump.id)
+          if (!left) return null
+          return (
+            <article
+              key={pump.id}
+              className={`${styles.pumpCard} ${styles.processPumpCard}`}
+              style={{ left }}
+              data-status={pump.status}
+            >
+              <header className={styles.pumpCardHead}>
+                {pump.label} - {pump.powerKw}kW
+              </header>
+              <div className={styles.pumpCardBody}>
+                <div>
+                  <span>Dòng điện:</span>
+                  <strong>{formatOne(pump.currentA)}A</strong>
+                </div>
+                <div>
+                  <span>T.Gian:</span>
+                  <strong>{pump.runtimeH}h</strong>
+                </div>
               </div>
-              <div>
-                <span>T.Gian:</span>
-                <strong>{pump.runtimeH}h</strong>
-              </div>
-            </div>
-          </article>
-        )
-      })}
+            </article>
+          )
+        })}
+      </div>
     </div>
   )
 }

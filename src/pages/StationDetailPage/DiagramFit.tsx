@@ -5,10 +5,13 @@ import styles from "./StationPage.module.css"
 type DiagramFitProps = {
   designWidth: number
   children: ReactNode
+  fitHeight?: boolean
+  fillDesktopWithoutScaling?: boolean
 }
 
 /* Desktop + landscape tablet: the diagram page must fit the viewport (no vertical scroll). */
 const FIT_HEIGHT_QUERY = "(min-width: 1024px)"
+const DESKTOP_QUERY = "(min-width: 1280px)"
 const TOUCH_QUERY = "(hover: none), (pointer: coarse)"
 const TABLET_CANVAS_QUERY =
   "(min-width: 768px) and (max-width: 1279px), (min-width: 1280px) and (hover: none) and (pointer: coarse)"
@@ -21,7 +24,12 @@ function pageInnerWidth(page: HTMLElement) {
   return page.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
 }
 
-export function DiagramFit({ designWidth, children }: DiagramFitProps) {
+export function DiagramFit({
+  designWidth,
+  children,
+  fitHeight = true,
+  fillDesktopWithoutScaling = false,
+}: DiagramFitProps) {
   const frameRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const scalerRef = useRef<HTMLDivElement>(null)
@@ -70,6 +78,8 @@ export function DiagramFit({ designWidth, children }: DiagramFitProps) {
     }
 
     const measure = () => {
+      const useDesktopFill =
+        fillDesktopWithoutScaling && window.matchMedia(DESKTOP_QUERY).matches
       const nextCanvasWidth = window.matchMedia(TABLET_CANVAS_QUERY).matches
         ? designWidth * 1.4
         : designWidth
@@ -78,8 +88,15 @@ export function DiagramFit({ designWidth, children }: DiagramFitProps) {
         still have little room after the sidebar, while a narrow window may have more.
       */
       const useAdaptiveFit =
-        frame.clientWidth < nextCanvasWidth || window.matchMedia(TOUCH_QUERY).matches
-      const fitPage = page && window.matchMedia(FIT_HEIGHT_QUERY).matches ? page : null
+        !useDesktopFill &&
+        (frame.clientWidth < nextCanvasWidth || window.matchMedia(TOUCH_QUERY).matches)
+      const fitPage =
+        !useDesktopFill &&
+        fitHeight &&
+        page &&
+        window.matchMedia(FIT_HEIGHT_QUERY).matches
+          ? page
+          : null
       const naturalHeight = content.offsetHeight
       setAdaptive(useAdaptiveFit)
       setCanvasWidth(nextCanvasWidth)
@@ -134,7 +151,7 @@ export function DiagramFit({ designWidth, children }: DiagramFitProps) {
       mutations?.disconnect()
       setColumn(null)
     }
-  }, [designWidth])
+  }, [designWidth, fillDesktopWithoutScaling, fitHeight])
 
   /* Desktop only: shrink (contain) when the diagram is taller than the room left. */
   const desktopShrink = !adaptive && fitHeightMode && heightScale < 0.999 && naturalWidth > 0

@@ -339,6 +339,10 @@
   max-width: 100%;
 }
 
+.processDiagramViewport {
+  width: 100%;
+}
+
 .processInner .diagramLayer {
   position: relative;
   width: 100%;
@@ -458,6 +462,22 @@
 
 .processBasinWaterBox {
   border-color: #9ca3af;
+}
+
+/*
+  Desktop: keep the process diagram at the full available width without scaling it
+  down. Crop 3.022% (22 / 728) from both the top and bottom of the source canvas.
+*/
+@media (min-width: 1280px) {
+  .processDiagramViewport {
+    aspect-ratio: 1644 / 684;
+    overflow: hidden;
+    border-radius: 12px;
+  }
+
+  .processDiagramViewport > .diagramLayer {
+    transform: translateY(-3.022%);
+  }
 }
 
 /* —— Legend —— */
