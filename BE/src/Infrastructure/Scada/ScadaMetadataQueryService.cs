@@ -725,12 +725,22 @@ public class ScadaMetadataQueryService(
             (double? value, string? code) StatusRaw(string key)
             {
                 var def = SchematicParameterCatalog.StatusDefinitions.First(d => d.Key == key);
-                var matched = deviceTags.FirstOrDefault(t =>
-                    SchematicParameterCatalog.Matches(def, t.Code) ||
-                    SchematicParameterCatalog.Matches(def, t.TagName));
-                if (matched is null) return (null, null);
-                latestByTagId.TryGetValue(matched.Id, out var latest);
-                return (latest.Value, matched.TagName);
+                var best = deviceTags
+                    .Select(t =>
+                    {
+                        if (!latestByTagId.TryGetValue(t.Id, out var latest))
+                            return null;
+                        if (!SchematicParameterCatalog.Matches(def, t.Code)
+                            && !SchematicParameterCatalog.Matches(def, t.TagName))
+                            return null;
+                        var rank = AliasRank(def.Aliases, t.Code, t.TagName);
+                        return new { t.TagName, latest.Value, latest.Time, Rank = rank };
+                    })
+                    .Where(x => x is not null)
+                    .OrderByDescending(x => x!.Time)
+                    .ThenBy(x => x!.Rank)
+                    .FirstOrDefault();
+                return best is null ? (null, null) : (best.Value, best.TagName);
             }
 
             var rated = Measure("ratedPowerKw") ?? 160;
@@ -1052,10 +1062,20 @@ public class ScadaMetadataQueryService(
                     .FirstOrDefault(v => v is not null);
             }
 
+            // Nhiều alias (FB_Fault, FB_Fault_SS, …): lấy tag Redis có Timestamp mới nhất.
+            // Cùng thời điểm → ưu tiên alias đứng trước trong catalog (FB_Fault trước FB_Fault_SS).
             bool? Feedback(IEnumerable<DeviceMonitorTagRow> tags, string key)
             {
-                var v = Pick(tags, key);
-                return v is null ? null : v != 0;
+                var def = DeviceMonitorParameterCatalog.Definitions.First(d => d.Key == key);
+                var best = tags
+                    .Where(t =>
+                        t.Value is not null
+                        && (DeviceMonitorParameterCatalog.Matches(def, t.Code)
+                            || DeviceMonitorParameterCatalog.Matches(def, t.TagName)))
+                    .OrderByDescending(t => t.Timestamp ?? DateTimeOffset.MinValue)
+                    .ThenBy(t => AliasRank(def.Aliases, t.Code, t.TagName))
+                    .FirstOrDefault();
+                return best?.Value is null ? null : best.Value != 0;
             }
 
             var levelTags = levelDevice is null ? [] : TagsFor(levelDevice.Id);
@@ -1170,6 +1190,29 @@ public class ScadaMetadataQueryService(
     }
 
     private static bool? AsBool(double? value) => value is null ? null : value != 0;
+
+    /// <summary>
+    /// Ưu tiên alias đứng trước trong catalog khi Timestamp bằng nhau
+    /// (vd. <c>FB_Fault</c> trước <c>FB_Fault_SS</c>).
+    /// </summary>
+    private static int AliasRank(IReadOnlyList<string> aliases, string? code, string? tagName)
+    {
+        static string Norm(string? s) =>
+            (s ?? string.Empty).Trim().ToUpperInvariant().Replace('-', '_').Replace(' ', '_');
+
+        var codeN = Norm(code);
+        var tagN = Norm(tagName);
+        var best = int.MaxValue;
+        for (var i = 0; i < aliases.Count; i++)
+        {
+            var alias = Norm(aliases[i]);
+            if (codeN == alias || tagN == alias
+                || codeN.EndsWith("_" + alias, StringComparison.Ordinal)
+                || tagN.EndsWith("_" + alias, StringComparison.Ordinal))
+                best = Math.Min(best, i);
+        }
+        return best;
+    }
 
     public Task<Result<PaginationResult<WaterLevelReportRowDto>>> GetWaterLevelReportAsync(
         long stationId,
