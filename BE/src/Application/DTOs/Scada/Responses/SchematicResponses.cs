@@ -35,5 +35,8 @@ public class SchematicPumpDto
     public double? V2 { get; set; }
     public double? V3 { get; set; }
     public double? CurrentA { get; set; }
+    /// <summary>Tổng giờ chạy = Total_Time_Run_H + Total_Time_Run_M/60.</summary>
     public double? RuntimeH { get; set; }
+    /// <summary>Chuỗi hiển thị tổng thời gian, ví dụ <c>58h22m</c>.</summary>
+    public string? RuntimeText { get; set; }
 }

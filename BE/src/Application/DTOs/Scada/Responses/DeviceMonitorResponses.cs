@@ -67,7 +67,12 @@ public class DeviceMonitorWaterLevelDto
 public class DeviceMonitorRuntimeDto
 {
     public double? InstantH { get; set; }
+    /// <summary>Tổng giờ chạy = Total_Time_Run_H + Total_Time_Run_M/60.</summary>
     public double? TotalH { get; set; }
+    /// <summary>Chuỗi hiển thị tổng thời gian, ví dụ <c>58h22m</c>.</summary>
+    public string? TotalText { get; set; }
+    /// <summary>Chuỗi hiển thị thời gian tức thời, ví dụ <c>3h20m</c>.</summary>
+    public string? InstantText { get; set; }
 }
 
 /// <summary>8 thông số điện — đúng block UI.</summary>

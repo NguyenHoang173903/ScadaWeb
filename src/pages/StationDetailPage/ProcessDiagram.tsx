@@ -99,7 +99,7 @@ export function ProcessDiagram({
                 </div>
                 <div>
                   <span>T.Gian:</span>
-                  <strong>{pump.runtimeH}h</strong>
+                  <strong>{pump.runtimeText ?? `${pump.runtimeH}h`}</strong>
                 </div>
               </div>
             </article>

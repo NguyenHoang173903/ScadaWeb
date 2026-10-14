@@ -17,7 +17,9 @@ public static class SchematicParameterCatalog
         new("v2", ElectricalAliases("voltageSt")),
         new("v3", ElectricalAliases("voltageTr")),
         new("currentA", ["I_PH", "CURRENT", "I_LOAD", "DONG_DIEN", "I_A"]),
-        new("runtimeH", ["TOTAL_TIME_RUN_H", "TOTAL_TIME_RUN_M", "TIME_RUN_M", "RUNTIME", "RUNTIME_H", "RUN_HOURS", "T_GIAN", "HOURS"]),
+        // Chỉ giờ — phút lấy riêng Total_Time_Run_M rồi cộng trong query service.
+        new("runtimeH", ["TOTAL_TIME_RUN_H", "RUNTIME", "RUNTIME_H", "RUN_HOURS", "T_GIAN", "HOURS"]),
+        new("runtimeM", ["TOTAL_TIME_RUN_M"]),
         new("ratedPowerKw", ["RATED_POWER", "RATED_KW", "POWER_RATED", "PN"]),
     ];
 

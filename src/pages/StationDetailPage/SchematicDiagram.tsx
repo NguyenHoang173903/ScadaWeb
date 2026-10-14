@@ -197,9 +197,7 @@ export function SchematicDiagram({
                   </div>
                   <div>
                     <span>T.gian:</span>
-                    <strong>
-                      {pump.runtimeH} <em>(h)</em>
-                    </strong>
+                    <strong>{pump.runtimeText ?? `${pump.runtimeH}h`}</strong>
                   </div>
                 </div>
               </article>

@@ -83,7 +83,12 @@ export type DeviceMonitorItemDto = {
   bearingTop: { actual?: number | null; allowed?: number | null }
   bearingBottom: { actual?: number | null; allowed?: number | null }
   waterLevel: { river?: number | null; basin?: number | null }
-  runtime: { instantH?: number | null; totalH?: number | null }
+  runtime: {
+    instantH?: number | null
+    totalH?: number | null
+    instantText?: string | null
+    totalText?: string | null
+  }
   electrical: {
     voltageRs?: number | null
     voltageSt?: number | null
@@ -114,6 +119,8 @@ export type SchematicPumpDto = {
   v3?: number | null
   currentA?: number | null
   runtimeH?: number | null
+  /** BE: Total_Time_Run_H + Total_Time_Run_M, ví dụ 58h22m */
+  runtimeText?: string | null
 }
 
 export type StationSchematicDto = {

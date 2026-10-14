@@ -19,6 +19,8 @@ export type ProcessPumpCard = {
   powerKw: number
   currentA: number
   runtimeH: number
+  /** BE: Total_Time_Run_H + M, ví dụ 58h22m */
+  runtimeText?: string
   status: ProcessPumpStatus
 }
 

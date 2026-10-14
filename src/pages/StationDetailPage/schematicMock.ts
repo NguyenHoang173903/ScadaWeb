@@ -37,6 +37,8 @@ export type PumpBranch = {
   v3: number
   currentA: number
   runtimeH: number
+  /** BE: Total_Time_Run_H + M, ví dụ 58h22m */
+  runtimeText?: string
 }
 
 export type ElectricalParams = {

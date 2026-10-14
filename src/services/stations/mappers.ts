@@ -21,11 +21,16 @@ function num(value: number | null | undefined, fallback = 0) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
 
-function formatRuntime(hours: number | null | undefined) {
+function formatRuntime(
+  hours: number | null | undefined,
+  text?: string | null,
+) {
+  const trimmed = text?.trim()
+  if (trimmed) return trimmed
   const h = num(hours)
   const whole = Math.floor(h)
   const minutes = Math.round((h - whole) * 60)
-  return `${whole}h${minutes}'`
+  return `${whole}h${minutes}m`
 }
 
 function formatDateOnly(value?: string | null) {
@@ -156,8 +161,8 @@ export function mapDeviceMonitorItem(item: DeviceMonitorItemDto): DevicePump {
     },
     waterRiverM: num(item.waterLevel.river),
     waterBasinM: num(item.waterLevel.basin),
-    runtimeInstant: formatRuntime(item.runtime.instantH),
-    runtimeTotal: formatRuntime(item.runtime.totalH),
+    runtimeInstant: formatRuntime(item.runtime.instantH, item.runtime.instantText),
+    runtimeTotal: formatRuntime(item.runtime.totalH, item.runtime.totalText),
     voltageRs: num(e.voltageRs),
     voltageSt: num(e.voltageSt),
     voltageTr: num(e.voltageTr),
@@ -193,6 +198,7 @@ export function mapSchematicPumps(
       v3: num(api.v3, branch.v3),
       currentA: num(api.currentA, branch.currentA),
       runtimeH: num(api.runtimeH, branch.runtimeH),
+      runtimeText: formatRuntime(api.runtimeH, api.runtimeText),
     }
   })
 }
@@ -211,6 +217,7 @@ export function mapProcessPumps(
       powerKw: api.powerKw || pump.powerKw,
       currentA: num(api.currentA, pump.currentA),
       runtimeH: num(api.runtimeH, pump.runtimeH),
+      runtimeText: formatRuntime(api.runtimeH, api.runtimeText),
       status: asProcessStatus(api.motorStatus),
     }
   })

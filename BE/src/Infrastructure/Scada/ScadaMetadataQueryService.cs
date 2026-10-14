@@ -768,11 +768,10 @@ public class ScadaMetadataQueryService(
                 : SchematicParameterCatalog.MapLockStatus(null, lockRaw);
 
             var currentA = Measure("currentA") ?? MeasureElec("currentA");
-            var runtimeRaw = Measure("runtimeH");
-            // Time_Run_M is minutes; Total_Time_Run_H is hours.
-            var runtimeH = runtimeRaw;
-            if (runtimeH is > 24 * 30)
-                runtimeH = runtimeH / 60.0; // likely minutes mis-tagged
+            // Total_Time_Run_H (giờ) + Total_Time_Run_M (phút) → vd. 58h22m
+            var (runtimeH, runtimeText) = CombineRunHoursMinutes(
+                Measure("runtimeH"),
+                Measure("runtimeM"));
 
             pumps.Add(new SchematicPumpDto
             {
@@ -792,7 +791,8 @@ public class ScadaMetadataQueryService(
                 V2 = Measure("v2") ?? MeasureElec("voltageSt"),
                 V3 = Measure("v3") ?? MeasureElec("voltageTr"),
                 CurrentA = currentA,
-                RuntimeH = runtimeH is null ? null : Math.Round(runtimeH.Value, 1)
+                RuntimeH = runtimeH,
+                RuntimeText = runtimeText
             });
         }
 
@@ -1104,17 +1104,13 @@ public class ScadaMetadataQueryService(
                     Feedback(deviceTags, "motorStatus"),
                     Feedback(deviceTags, "stopStatus"));
 
-                // Time_* tags in Excel are minutes; Total_Time_Run_H is hours.
-                var instantMin = Pick(deviceTags, "runtimeInstant");
-                var totalMin = deviceTags.FirstOrDefault(t =>
-                    DeviceMonitorParameterCatalog.Matches(
-                        DeviceMonitorParameterCatalog.Definitions.First(d => d.Key == "runtimeTotal"),
-                        t.Code) &&
-                    t.Code.Contains("Time_Run_M", StringComparison.OrdinalIgnoreCase))?.Value
-                    ?? Pick(deviceTags, "runtimeTotal");
-                var totalH = deviceTags.FirstOrDefault(t =>
-                    string.Equals(t.Code, "Total_Time_Run_H", StringComparison.OrdinalIgnoreCase)
-                    || t.TagName.Contains("Total_Time_Run_H", StringComparison.OrdinalIgnoreCase))?.Value;
+                // Instant: Time_Run_H + Time_Run_M. Total: Total_Time_Run_H + Total_Time_Run_M.
+                var (instantH, instantText) = CombineRunHoursMinutes(
+                    PickExactCode(deviceTags, "Time_Run_H"),
+                    PickExactCode(deviceTags, "Time_Run_M") ?? Pick(deviceTags, "runtimeInstant"));
+                var (totalH, totalText) = CombineRunHoursMinutes(
+                    PickExactCode(deviceTags, "Total_Time_Run_H"),
+                    PickExactCode(deviceTags, "Total_Time_Run_M"));
 
                 var displayName = string.IsNullOrWhiteSpace(p.Device.DisplayName) ? p.Device.Name : p.Device.DisplayName;
                 if (!displayName.Contains("Bơm", StringComparison.OrdinalIgnoreCase)
@@ -1156,8 +1152,10 @@ public class ScadaMetadataQueryService(
                     },
                     Runtime = new DeviceMonitorRuntimeDto
                     {
-                        InstantH = instantMin is null ? null : instantMin / 60.0,
-                        TotalH = totalH ?? (totalMin is null ? null : totalMin / 60.0)
+                        InstantH = instantH,
+                        InstantText = instantText,
+                        TotalH = totalH,
+                        TotalText = totalText
                     },
                     Electrical = new DeviceMonitorElectricalDto
                     {
@@ -1190,6 +1188,42 @@ public class ScadaMetadataQueryService(
     }
 
     private static bool? AsBool(double? value) => value is null ? null : value != 0;
+
+    /// <summary>
+    /// Ghép Total_Time_Run_H + Total_Time_Run_M → giờ thập phân + chuỗi <c>58h22m</c>.
+    /// </summary>
+    private static (double? TotalHours, string? Display) CombineRunHoursMinutes(
+        double? hours,
+        double? minutes)
+    {
+        if (hours is null && minutes is null)
+            return (null, null);
+
+        var h = (long)Math.Truncate(hours ?? 0);
+        var m = (long)Math.Round(minutes ?? 0, MidpointRounding.AwayFromZero);
+        if (h < 0) h = 0;
+        if (m < 0) m = 0;
+        if (m >= 60)
+        {
+            h += m / 60;
+            m %= 60;
+        }
+
+        return (h + m / 60.0, $"{h}h{m}m");
+    }
+
+    private static double? PickExactCode(IEnumerable<DeviceMonitorTagRow> tags, string code)
+    {
+        var exact = tags.FirstOrDefault(t =>
+            string.Equals(t.Code, code, StringComparison.OrdinalIgnoreCase));
+        if (exact?.Value is not null)
+            return exact.Value;
+
+        var suffix = "_" + code;
+        return tags.FirstOrDefault(t =>
+            t.TagName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(t.TagName, code, StringComparison.OrdinalIgnoreCase))?.Value;
+    }
 
     /// <summary>
     /// Ưu tiên alias đứng trước trong catalog khi Timestamp bằng nhau
