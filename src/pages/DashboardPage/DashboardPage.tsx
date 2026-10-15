@@ -246,15 +246,27 @@ export function DashboardPage() {
     () => buildMapStations(layers),
     [layers, stationCatalogVersion],
   )
-  const pumpStations = useMemo(
-    () => mapStations.filter((station) => station.type === 'pump'),
-    [mapStations],
-  )
+  const pumpStations = useMemo(() => {
+    const catalog = new Map(
+      getAllPumpStations().map((station) => [station.id, station]),
+    )
+    const isActive = (station: MapStation) => {
+      const item = catalog.get(station.routeId ?? station.id)
+      return item?.isActive === true
+    }
+
+    return mapStations
+      .filter((station) => station.type === 'pump')
+      .sort(
+        (a, b) =>
+          Number(isActive(b)) - Number(isActive(a)) ||
+          a.name.localeCompare(b.name, 'vi'),
+      )
+  }, [mapStations, stationCatalogVersion])
   const activePumpStationCount = useMemo(
     () =>
       getAllPumpStations().filter(
-        (station) =>
-          station.isActive ?? station.status === 'Đang hoạt động',
+        (station) => station.isActive,
       ).length,
     [stationCatalogVersion],
   )

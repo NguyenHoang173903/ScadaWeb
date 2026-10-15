@@ -31,9 +31,7 @@ function resolveCard(station: MapStation) {
       .toUpperCase() || '—'
   const code = catalog?.code ?? fallbackCode
 
-  const isActive = catalog
-    ? (catalog.isActive ?? catalog.status === 'Đang hoạt động')
-    : true
+  const isActive = catalog ? catalog.isActive === true : true
   const online = isActive && (catalog?.online ?? true)
   const statusLabel = online ? 'Online' : 'Offline'
 
