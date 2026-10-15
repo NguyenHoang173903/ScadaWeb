@@ -11,6 +11,7 @@ export type StationDto = {
   longitude?: number | null
   description?: string | null
   isActive: boolean
+  online: boolean
 }
 
 export type StationDetailDto = {
@@ -22,6 +23,7 @@ export type StationDetailDto = {
   longitude?: number | null
   description?: string | null
   isActive: boolean
+  online: boolean
 }
 
 export type UpdateStationPayload = {

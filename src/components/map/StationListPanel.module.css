@@ -8,7 +8,7 @@
   flex-direction: column;
   width: min(360px, 42vw);
   overflow: hidden;
-  border-right: 1px solid rgba(79, 209, 197, 0.35);
+  border-right: 1px solid rgba(118, 211, 204, 0.38);
   background: transparent;
   box-shadow: 8px 0 28px rgba(0, 0, 0, 0.28);
   color: #ffffff;
@@ -21,7 +21,7 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: #06547B;
+  background: linear-gradient(180deg, #075663 0%, #064b58 100%);
   opacity: 1;
   pointer-events: none;
 }
@@ -38,7 +38,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 1rem 1rem 0.85rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(190, 230, 227, 0.2);
 }
 
 .header h2 {
@@ -83,7 +83,7 @@
 
 .list::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(79, 209, 197, 0.55);
+  background: rgba(118, 211, 204, 0.62);
 }
 
 .card {
@@ -97,17 +97,25 @@
   width: 100%;
   min-height: 72px;
   padding: 0.85rem 0.9rem 0.85rem 0.85rem;
-  border: 1px solid rgba(186, 230, 253, 0.55);
+  border: 1px solid rgba(155, 220, 215, 0.5);
   border-radius: 14px;
-  background: linear-gradient(90deg, rgba(4, 61, 89, 0.98) 0%, rgba(9, 131, 191, 0.78) 100%);
+  background: linear-gradient(105deg, rgba(5, 69, 79, 0.98) 0%, rgba(8, 119, 134, 0.88) 100%);
   color: #ffffff;
   text-align: left;
   cursor: pointer;
 }
 
 .card:hover {
-  border-color: rgba(186, 230, 253, 0.9);
-  background: linear-gradient(90deg, rgba(4, 61, 89, 1) 0%, rgba(9, 131, 191, 0.9) 100%);
+  border-color: rgba(170, 235, 229, 0.9);
+  background: linear-gradient(105deg, #064b58 0%, #098b94 100%);
+}
+
+.cardInactive,
+.cardInactive:hover {
+  border-color: rgba(148, 163, 184, 0.42);
+  background: linear-gradient(105deg, rgba(48, 76, 82, 0.96), rgba(69, 91, 96, 0.9));
+  cursor: not-allowed;
+  opacity: 0.78;
 }
 
 .dot {
@@ -164,13 +172,18 @@
 }
 
 .badgeOnline {
-  background: #0cff0c;
-  color: #065f46;
+  background: #34d399;
+  color: #064e3b;
 }
 
 .badgeOffline {
-  background: #f07167;
-  color: #7f1d1d;
+  background: #d1d5db;
+  color: #4b5563;
+}
+
+.badgeInactive {
+  background: #94a3b8;
+  color: #1f2937;
 }
 
 .empty {

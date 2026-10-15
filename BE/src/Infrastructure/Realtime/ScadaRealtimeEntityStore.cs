@@ -23,6 +23,43 @@ public sealed class ScadaRealtimeEntityStore(
         NumberHandling = JsonNumberHandling.AllowReadingFromString
     };
 
+    public async Task<RealtimeStationConfigRedisModel?> GetStationConfigAsync(
+        string stationCode,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var code = (stationCode ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(code))
+            return null;
+
+        var stationPrefix = options.Value.StationKeyPrefix?.Trim().TrimEnd(':') ?? "scada:station";
+        var key = $"{stationPrefix}:{code}:config";
+        RedisValue value;
+        try
+        {
+            value = await multiplexer.Connection.GetDatabase().StringGetAsync(key).ConfigureAwait(false);
+        }
+        catch (RedisException ex)
+        {
+            logger.LogWarning(ex, "Redis unavailable while reading station config {Key}", key);
+            return null;
+        }
+        if (value.IsNullOrEmpty)
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<RealtimeStationConfigRedisModel>(
+                (string)value!,
+                JsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(ex, "Invalid Redis station config JSON for key {Key}", key);
+            return null;
+        }
+    }
+
     public Task<IReadOnlyList<RealtimeAlarmRedisModel>> GetAlarmsAsync(
         string stationCode,
         CancellationToken cancellationToken = default) =>
@@ -169,6 +206,11 @@ public sealed class ScadaRealtimeEntityStore(
 /// <summary>No-op khi không dùng StationSnapshot / RealtimeRedis.</summary>
 public sealed class NoopScadaRealtimeEntityStore : IScadaRealtimeEntityStore
 {
+    public Task<RealtimeStationConfigRedisModel?> GetStationConfigAsync(
+        string stationCode,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<RealtimeStationConfigRedisModel?>(null);
+
     public Task<IReadOnlyList<RealtimeAlarmRedisModel>> GetAlarmsAsync(
         string stationCode,
         CancellationToken cancellationToken = default) =>

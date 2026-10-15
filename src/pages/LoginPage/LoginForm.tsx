@@ -1,7 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Eye, EyeOff, Lock, LogIn, UserRound } from 'lucide-react'
-import logoTlhn from '@/assets/images/Logo_TLHN.svg'
-import { APP_COMPANY } from '@/constants/config'
+import { ArrowRight, Eye, EyeOff, Lock, ShieldCheck, UserRound } from 'lucide-react'
 import { firstError, validateLoginPassword, validateUsername } from '@/validation'
 import styles from './LoginPage.module.css'
 
@@ -57,13 +55,16 @@ export function LoginForm({
   return (
     <section className={styles.loginCard}>
       <div className={styles.brand}>
-        <img src={logoTlhn} alt="UBND Thành phố Hà Nội" className={styles.logo} />
-        <h1 className={styles.title}>HỆ THỐNG CƠ SỞ DỮ LIỆU SỐ</h1>
-        <p className={styles.subtitle}>{APP_COMPANY}</p>
+        <p className={styles.eyebrow}>CỔNG ĐIỀU HÀNH THỦY LỢI</p>
+        <h2 className={styles.title}>ĐĂNG NHẬP HỆ THỐNG</h2>
+        <p className={styles.subtitle}>
+          Đăng nhập để truy cập bảng điều khiển giám sát và vận hành.
+        </p>
       </div>
 
       <form className={styles.form} onSubmit={handleSubmit}>
         <label className={styles.field}>
+          <span className={styles.fieldLabel}>Tên đăng nhập</span>
           <UserRound size={18} className={styles.fieldIcon} />
           <input
             type="text"
@@ -84,6 +85,7 @@ export function LoginForm({
         </label>
 
         <label className={styles.field}>
+          <span className={styles.fieldLabel}>Mật khẩu</span>
           <Lock size={18} className={styles.fieldIcon} />
           <input
             type={showPassword ? 'text' : 'password'}
@@ -129,9 +131,18 @@ export function LoginForm({
         {warning ? <p className={styles.policyNotice}>{warning}</p> : null}
 
         <button type="submit" className={styles.primaryButton} disabled={isBlocked}>
-          <LogIn size={18} />
-          {isBlocked ? `TẠM KHÓA (${Math.ceil(blockedMs / 1000)}s)` : 'ĐĂNG NHẬP'}
+          {isBlocked ? `TẠM KHÓA (${Math.ceil(blockedMs / 1000)}s)` : 'VÀO HỆ THỐNG'}
+          <ArrowRight size={17} />
         </button>
+
+        <p className={styles.sessionNote}>
+          <ShieldCheck size={16} />
+          Phiên làm việc được ghi nhận theo ca trực
+        </p>
+
+        <p className={styles.copyrightNote}>
+          Bản quyền thuộc CTY VASCO. Version 1.0
+        </p>
       </form>
     </section>
   )

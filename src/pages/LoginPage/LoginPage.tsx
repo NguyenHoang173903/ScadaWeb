@@ -1,25 +1,8 @@
-import { useEffect, useState, type ComponentType } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, type LucideProps } from 'lucide-react'
-import locationOnMapIcon from '@/assets/icons/location_on_map.svg'
-import gaugeIcon from '@/assets/icons/gauge.svg'
-import rainyIcon from '@/assets/icons/rainy.svg'
-import pumpIcon from '@/assets/icons/Pump.svg'
-import reportIcon from '@/assets/icons/report_1.svg'
-import { DashboardMap } from '@/components/map'
-import type { MapOverlayLayer } from '@/components/map/layerTypes'
-import {
-  APP_COPYRIGHT,
-  APP_SUPPORT_EMAIL,
-  APP_VERSION,
-  MAP_ENABLED,
-} from '@/constants/config'
+import loginBackground from '@/assets/images/Background_Login.png'
+import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { ROUTES } from '@/constants/routes'
-import {
-  getLoginLayerVisible,
-  subscribeLoginLayerVisible,
-} from '@/settings/loginLayerSettings'
-import { peekCachedMapLayers, resolveMapLayers } from '@/services/mapLayers'
 import { reportAuthEvent } from '@/services/auditLog'
 import {
   changePasswordWithApi,
@@ -51,23 +34,6 @@ const PASSWORD_CHALLENGE_COPY: Record<PasswordChallengeReason, string> = {
     'Tài khoản đã bị khóa vì mật khẩu hết hạn hiệu lực. Đặt mật khẩu mới để tự động mở khóa.',
 }
 
-type ServiceItem = {
-  id: string
-  lines: readonly string[]
-  iconSrc?: string
-  Icon?: ComponentType<LucideProps>
-  flipHorizontal?: boolean
-}
-
-const SERVICE_ITEMS: ServiceItem[] = [
-  { id: 'gis', lines: ['BẢN ĐỒ', 'GIS'], iconSrc: locationOnMapIcon },
-  { id: 'level', lines: ['QUAN TRẮC', 'MỰC NƯỚC'], iconSrc: gaugeIcon },
-  { id: 'rain', lines: ['QUAN TRẮC', 'LƯỢNG MƯA'], iconSrc: rainyIcon, flipHorizontal: true },
-  { id: 'pump', lines: ['QUẢN LÝ HỆ', 'THỐNG THUỶ LỢI'], iconSrc: pumpIcon },
-  { id: 'report', lines: ['BÁO CÁO', 'THỐNG KÊ'], iconSrc: reportIcon },
-  { id: 'alert', lines: ['CẢNH BÁO', 'SỰ KIỆN'], Icon: Bell },
-]
-
 function challengeFromAuth(data: AuthTokenResponse): PasswordChallengeReason | null {
   if (data.mustChangePassword) return 'default'
   if (data.passwordExpiringSoon) return 'interval'
@@ -92,10 +58,6 @@ function enterApp(
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const [layers, setLayers] = useState<MapOverlayLayer[]>(() =>
-    getLoginLayerVisible() ? peekCachedMapLayers() : [],
-  )
-  const [loginLayerVisible, setLoginLayerVisibleState] = useState(getLoginLayerVisible)
   const [loginError, setLoginError] = useState('')
   const [loginWarning, setLoginWarning] = useState('')
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null)
@@ -121,41 +83,27 @@ export function LoginPage() {
     }
   }, [navigate])
 
-  useEffect(() => {
-    return subscribeLoginLayerVisible(setLoginLayerVisibleState)
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-
-    void (async () => {
-      if (!MAP_ENABLED || !loginLayerVisible) {
-        setLayers([])
-        return
-      }
-
-      try {
-        const loaded = await resolveMapLayers()
-        if (cancelled) return
-        setLayers(loaded)
-      } catch {
-        // Login page still works without the map layer.
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [loginLayerVisible])
-
   return (
     <div className={styles.page}>
       <div className={styles.shell}>
-        <div className={styles.workspace}>
-          <div className={styles.mapPane}>
-            {MAP_ENABLED ? <DashboardMap layers={layers} zoomLocked /> : null}
+        <header className={styles.header}>
+          <img
+            src={logoTlhn}
+            alt="Biểu trưng Công ty Thủy lợi Hà Nội"
+            className={styles.headerLogo}
+          />
+          <div className={styles.headerCopy}>
+            <p>ỦY BAN NHÂN DÂN THÀNH PHỐ HÀ NỘI</p>
+            <p>CÔNG TY TNHH MTV ĐẦU TƯ PHÁT TRIỂN THỦY LỢI HÀ NỘI</p>
+            <h1>
+              PHẦN MỀM TRUY CẬP GIAO DIỆN SCADA THÔNG QUA TRÌNH DUYỆT WEB - WEB
+              BROWSER
+            </h1>
           </div>
+        </header>
 
+        <div className={styles.workspace}>
+          <main className={styles.authPane}>
           {resetToken ? (
             <ChangePasswordForm
               username={resetToken.username}
@@ -297,39 +245,22 @@ export function LoginPage() {
               }}
             />
           )}
+          </main>
+
+          <div className={styles.imagePane}>
+            <img
+              src={loginBackground}
+              alt="Công trình thủy lợi Hà Nội"
+              className={styles.loginImage}
+            />
+          </div>
         </div>
 
-        <nav className={styles.services} aria-label="Dịch vụ hệ thống">
-          {SERVICE_ITEMS.map(({ id, lines, iconSrc, Icon, flipHorizontal }) => (
-            <button key={id} type="button" className={styles.serviceItem}>
-              <span className={styles.serviceIcon}>
-                {iconSrc ? (
-                  <img
-                    src={iconSrc}
-                    alt=""
-                    className={`${styles.serviceGlyph}${flipHorizontal ? ` ${styles.serviceGlyphFlipX}` : ''}`}
-                  />
-                ) : Icon ? (
-                  <Icon size={30} strokeWidth={1.8} />
-                ) : null}
-              </span>
-              <span className={styles.serviceLabel}>
-                {lines.map((line) => (
-                  <span key={line}>{line}</span>
-                ))}
-              </span>
-            </button>
-          ))}
-        </nav>
+        <footer className={styles.footer}>
+          <span>PHẦN MỀM WEB SCADA</span>
+          <span>THỦY LỢI HÀ NỘI</span>
+        </footer>
       </div>
-
-      <footer className={styles.footer}>
-        <span className={styles.footerVersion}>Version V{APP_VERSION}</span>
-        <div className={styles.footerRight}>
-          <span>{APP_COPYRIGHT}</span>
-          <a href={`mailto:${APP_SUPPORT_EMAIL}`}>{APP_SUPPORT_EMAIL}</a>
-        </div>
-      </footer>
     </div>
   )
 }

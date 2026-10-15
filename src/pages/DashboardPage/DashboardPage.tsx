@@ -12,7 +12,11 @@ import {
 import type { MapOverlayLayer } from '@/components/map/layerTypes'
 import { ROUTES, stationDataUpdatePath, stationDetailPath } from '@/constants/routes'
 import { APP_COMPANY, MAP_ENABLED } from '@/constants/config'
-import { registerPumpStation, resolvePumpStationRouteId } from '@/data/pumpStations'
+import {
+  getAllPumpStations,
+  registerPumpStation,
+  resolvePumpStationRouteId,
+} from '@/data/pumpStations'
 import { logoutCurrentUser } from '@/services/auditLog'
 import { getStation, listStations as fetchStationsApi } from '@/services/stations/stationsApi'
 import { prefetchStationOverview } from '@/services/stations/stationQueries'
@@ -82,7 +86,7 @@ export function DashboardPage() {
     let cancelled = false
     void (async () => {
       try {
-        const result = await fetchStationsApi({ isActive: true })
+        const result = await fetchStationsApi()
         if (cancelled) return
         for (const item of result.items ?? []) {
           registerPumpStation({
@@ -91,6 +95,8 @@ export function DashboardPage() {
             code: item.code,
             address: '—',
             status: item.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động',
+            isActive: item.isActive,
+            online: item.online,
             pumps: 0,
             capacity: '—',
             lat: 0,
@@ -105,6 +111,8 @@ export function DashboardPage() {
                 code: detail.code,
                 address: detail.address?.trim() || '—',
                 status: detail.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động',
+                isActive: detail.isActive,
+                online: detail.online,
                 pumps: 0,
                 capacity: '—',
                 lat: detail.latitude ?? 0,
@@ -238,9 +246,29 @@ export function DashboardPage() {
     () => buildMapStations(layers),
     [layers, stationCatalogVersion],
   )
-  const pumpStations = useMemo(
-    () => mapStations.filter((station) => station.type === 'pump'),
-    [mapStations],
+  const pumpStations = useMemo(() => {
+    const catalog = new Map(
+      getAllPumpStations().map((station) => [station.id, station]),
+    )
+    const isActive = (station: MapStation) => {
+      const item = catalog.get(station.routeId ?? station.id)
+      return item?.isActive === true
+    }
+
+    return mapStations
+      .filter((station) => station.type === 'pump')
+      .sort(
+        (a, b) =>
+          Number(isActive(b)) - Number(isActive(a)) ||
+          a.name.localeCompare(b.name, 'vi'),
+      )
+  }, [mapStations, stationCatalogVersion])
+  const activePumpStationCount = useMemo(
+    () =>
+      getAllPumpStations().filter(
+        (station) => station.isActive,
+      ).length,
+    [stationCatalogVersion],
   )
   const rainStations = useMemo(
     () => mapStations.filter((station) => station.type === 'rain'),
@@ -273,8 +301,12 @@ export function DashboardPage() {
         <div className={styles.brand}>
           <img src={logoTlhn} alt="Logo thủy lợi Hà Nội" className={styles.logo} />
           <div className={styles.brandText}>
-            <p className={styles.brandTitle}>HỆ THỐNG CƠ SỞ DỮ LIỆU SỐ</p>
-            <p className={styles.brandSubtitle}>{APP_COMPANY}</p>
+            <p className={styles.brandTitle}>ỦY BAN NHÂN DÂN THÀNH PHỐ HÀ NỘI</p>
+            <p className={styles.brandCompany}>{APP_COMPANY}</p>
+            <p className={styles.brandSubtitle}>
+              PHẦN MỀM TRUY CẬP GIAO DIỆN SCADA THÔNG QUA TRÌNH DUYỆT WEB - WEB
+              BROWSER
+            </p>
           </div>
         </div>
 
@@ -287,7 +319,7 @@ export function DashboardPage() {
               onClick={() => openStationList('pump')}
             >
               <span className={styles.statDot} style={{ background: '#0CFF0C' }} />
-              <strong>{pumpStations.length}</strong>
+              <strong>{activePumpStationCount}</strong>
               <span>trạm bơm</span>
             </button>
 

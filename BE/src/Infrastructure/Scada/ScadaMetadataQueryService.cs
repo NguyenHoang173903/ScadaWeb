@@ -120,6 +120,22 @@ public class ScadaMetadataQueryService(
             })
             .ToListAsync(cancellationToken);
 
+        await Task.WhenAll(items.Select(async item =>
+        {
+            var config = await realtimeEntities.GetStationConfigAsync(item.Code, cancellationToken);
+            if (config is null)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(config.Name))
+                item.Name = config.Name.Trim();
+            if (!string.IsNullOrWhiteSpace(config.Address))
+                item.Address = config.Address.Trim();
+            item.Latitude = config.Latitude ?? item.Latitude;
+            item.Longitude = config.Longitude ?? item.Longitude;
+            item.IsActive = config.IsActive;
+            item.Online = config.Online;
+        }));
+
         return Result<PaginationResult<StationDto>>.Success(PaginationResult<StationDto>.Create(items, total, query));
         });
 
@@ -140,6 +156,24 @@ public class ScadaMetadataQueryService(
                 IsActive = s.IsActive
             })
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (dto is not null)
+        {
+            var config = await realtimeEntities.GetStationConfigAsync(dto.Code, cancellationToken);
+            if (config is not null)
+            {
+                if (!string.IsNullOrWhiteSpace(config.Name))
+                    dto.Name = config.Name.Trim();
+                if (!string.IsNullOrWhiteSpace(config.Address))
+                    dto.Address = config.Address.Trim();
+                if (!string.IsNullOrWhiteSpace(config.Description))
+                    dto.Description = config.Description.Trim();
+                dto.Latitude = config.Latitude ?? dto.Latitude;
+                dto.Longitude = config.Longitude ?? dto.Longitude;
+                dto.IsActive = config.IsActive;
+                dto.Online = config.Online;
+            }
+        }
 
         return dto is null
             ? Result<StationDetailDto>.Failure(ScadaErrorCodes.StationNotFound, ScadaApiMessages.StationNotFoundFor(id))
@@ -1585,21 +1619,18 @@ public class ScadaMetadataQueryService(
             q = category switch
             {
                 "value-change" or "valuechange" or "value_change" => q.Where(a =>
-                    (a.EventTypeId != null && (a.EventTypeId == 4 || a.EventTypeId == 5))
-                    || (a.Type != null && (
-                        a.Type == "START" || a.Type == "STOP" || a.Type == "PUMP"
-                        || a.Type == "INFO"))),
+                    a.EventTypeId.HasValue
+                    && a.EventTypeId.Value >= 11
+                    && a.EventTypeId.Value <= 20),
                 "system" => q.Where(a =>
-                    (a.EventTypeId != null && a.EventTypeId == 6)
-                    || (a.Type != null && (
-                        a.Type == "SYSTEM" || a.Type == "Communication"
-                        || a.Type == "EVENT"))),
+                    a.EventTypeId.HasValue
+                    && a.EventTypeId.Value >= 21
+                    && a.EventTypeId.Value <= 30),
                 // status = Lỗi/Trạng thái (mặc định)
                 _ => q.Where(a =>
-                    (a.EventTypeId != null && (a.EventTypeId == 1 || a.EventTypeId == 2 || a.EventTypeId == 7))
-                    || (a.Type != null && (
-                        a.Type == "ERROR" || a.Type == "ALARM" || a.Type == "WARNING"
-                        || a.Type == "FAULT")))
+                    a.EventTypeId.HasValue
+                    && a.EventTypeId.Value >= 0
+                    && a.EventTypeId.Value <= 10)
             };
 
             if (query.HasKeyword)

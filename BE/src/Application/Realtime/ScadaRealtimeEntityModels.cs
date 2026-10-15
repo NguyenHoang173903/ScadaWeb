@@ -1,6 +1,22 @@
 namespace Backend.Application.Realtime;
 
 /// <summary>
+/// Cấu hình/trạng thái trạm từ Redis —
+/// key <c>scada:station:{stationCode}:config</c>.
+/// </summary>
+public sealed class RealtimeStationConfigRedisModel
+{
+    public string? Code { get; set; }
+    public string? Name { get; set; }
+    public string? Address { get; set; }
+    public string? Description { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public bool IsActive { get; set; }
+    public bool Online { get; set; }
+}
+
+/// <summary>
 /// JSON alarm/lỗi trên Redis — key <c>SCADA:{stationCode}:ALARM:{id}</c>.
 /// </summary>
 public sealed class RealtimeAlarmRedisModel

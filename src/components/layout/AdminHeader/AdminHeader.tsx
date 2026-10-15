@@ -67,8 +67,12 @@ export function AdminHeader({
       >
         <img src={logoTlhn} alt="Logo thủy lợi Hà Nội" className={styles.logo} />
         <span className={styles.brandText}>
-          <strong>HỆ THỐNG CƠ SỞ DỮ LIỆU SỐ</strong>
-          <small>{APP_COMPANY}</small>
+          <strong>ỦY BAN NHÂN DÂN THÀNH PHỐ HÀ NỘI</strong>
+          <small className={styles.brandCompany}>{APP_COMPANY}</small>
+          <small className={styles.brandSubtitle}>
+            PHẦN MỀM TRUY CẬP GIAO DIỆN SCADA THÔNG QUA TRÌNH DUYỆT WEB - WEB
+            BROWSER
+          </small>
         </span>
       </button>
 

@@ -8,6 +8,10 @@ namespace Backend.Application.Interfaces.Services.Scada;
 /// </summary>
 public interface IScadaRealtimeEntityStore
 {
+    Task<RealtimeStationConfigRedisModel?> GetStationConfigAsync(
+        string stationCode,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<RealtimeAlarmRedisModel>> GetAlarmsAsync(
         string stationCode,
         CancellationToken cancellationToken = default);
