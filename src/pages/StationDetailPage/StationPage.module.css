@@ -157,17 +157,17 @@
   flex-direction: column;
   justify-content: center;
   gap: 0.28em;
-  width: 5.2%;
-  min-width: 52px;
-  max-width: 78px;
+  width: 5%;
+  min-width: 55px;
+  max-width: 74px;
   /* % theo chiều rộng ô; gần -100% = mép phải sát cột hơn */
   transform: translateX(-95%);
-  padding: 0.35em 0.45em;
+  padding: 0.34em 0.22em;
   box-sizing: border-box;
   background: #ffffff;
   border: 1px solid #1f2937;
   font-family: Poppins, "Be Vietnam Pro", sans-serif;
-  font-size: clamp(0.5rem, 0.7vw, 0.64rem);
+  font-size: clamp(0.43rem, 0.56vw, 0.56rem);
   font-weight: 500;
   line-height: 1.35;
   color: #111827;
@@ -216,12 +216,12 @@
 .schematicPumpCard {
   top: 81%;
   z-index: 2;
-  width: 7.54%;
+  width: 8.2%;
   min-width: 88px;
-  max-width: 125px;
+  max-width: 132px;
   transform: translateX(-50%);
   border-radius: 8px;
-  font-size: clamp(0.52rem, 0.65vw, 0.65rem);
+  font-size: clamp(0.48rem, 0.6vw, 0.6rem);
   line-height: 1.25;
   pointer-events: none;
 }
@@ -240,8 +240,8 @@
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
-  min-height: 7.26em;
-  padding: 0.9em 0.35em 0.99em;
+  min-height: 5.8em;
+  padding: 0.58em 0.3em 0.64em;
 }
 
 .schematicPumpCard .pumpCardBody > div {
@@ -553,11 +553,11 @@
 /* Keep fixed desktop coordinates, but compact overlay cards on scrollable tablet/mobile canvases. */
 .fitFrameAdaptive .measureBox {
   width: 5%;
-  min-width: 54px;
-  max-width: 64px;
+  min-width: 55px;
+  max-width: 70px;
   gap: 0.15em;
-  padding: 0.2em 0.25em;
-  font-size: 0.4rem;
+  padding: 0.34em 0.22em;
+  font-size: 0.47rem;
   transform: translateX(-100%);
 }
 
@@ -611,24 +611,24 @@
 @media (min-width: 768px) and (max-width: 1279px),
   (min-width: 1280px) and (hover: none) and (pointer: coarse) {
   .fitFrameAdaptive .measureBox {
-    width: 4.4%;
-    min-width: 60px;
-    max-width: 68px;
+    width: 4.8%;
+    min-width: 57px;
+    max-width: 74px;
     margin-left: -0.4%;
-    padding: 0.2em 0.25em;
-    font-size: 0.48rem;
+    padding: 0.34em 0.22em;
+    font-size: 0.47rem;
   }
 
   .fitFrameAdaptive .schematicPumpCard {
-    width: 6.6%;
+    width: 7.5%;
     min-width: 96px;
-    max-width: 112px;
-    font-size: 0.52rem;
+    max-width: 120px;
+    font-size: 0.48rem;
   }
 
   .fitFrameAdaptive .schematicPumpCard .pumpCardBody {
-    min-height: 5.8em;
-    padding: 0.5em 0.2em 0.55em;
+    min-height: 5.4em;
+    padding: 0.45em 0.2em 0.5em;
   }
 
   .fitFrameAdaptive .electricalBox {
