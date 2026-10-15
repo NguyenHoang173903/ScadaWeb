@@ -137,6 +137,21 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "Backend.Api terminated unexpectedly");
+    // Chỉ lưu khi lỗi — không ghi start/stop bình thường.
+    try
+    {
+        var alarms = app.Services.GetService<Backend.Application.Interfaces.Services.Scada.ISystemAlarmHistoryWriter>();
+        if (alarms is not null)
+        {
+            await alarms.WriteApiErrorAsync(
+                "Backend.Api dừng bất thường hoặc không khởi động được",
+                ex.Message);
+        }
+    }
+    catch (Exception writeEx)
+    {
+        Log.Warning(writeEx, "Could not write API error to alarm_history");
+    }
 }
 finally
 {
