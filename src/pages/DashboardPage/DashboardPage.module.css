@@ -12,6 +12,31 @@
   font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
 }
 
+.staticMapPane {
+  position: absolute;
+  top: var(--dashboard-topbar-height, 100px);
+  right: 0;
+  bottom: 0;
+  left: min(360px, 42vw);
+  z-index: 0;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.staticMapImage {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: contain;
+  object-position: center;
+  transform: scale(2);
+  transform-origin: center;
+}
+
 .topBar,
 .stationDropdown {
   z-index: 20;

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown, KeyRound, Layers, LogOut, UserRound, Users } from 'lucide-react'
+import dashboardMapImage from '@/assets/images/bando.jpg'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { DashboardMap, FeatureInfoPanel, LayerPanel, StationListPanel } from '@/components/map'
 import {
@@ -295,7 +296,15 @@ export function DashboardPage() {
             setLayersOpen(false)
           }}
         />
-      ) : null}
+      ) : (
+        <div className={styles.staticMapPane}>
+          <img
+            src={dashboardMapImage}
+            alt="Bản đồ khu vực thủy lợi Hà Nội"
+            className={styles.staticMapImage}
+          />
+        </div>
+      )}
 
       <header ref={topBarRef} className={styles.topBar}>
         <div className={styles.brand}>

@@ -9,7 +9,7 @@ export { SCHEMATIC_WIDTH, SCHEMATIC_HEIGHT } from './schematicLayout'
 /** Trạng thái khối M (+ thẻ / chú thích tổng) */
 export type MotorStatus = PumpVisualStatus
 
-/** Trạng thái khối KĐM — độc lập với M (không có xám / bảo trì) */
+/** Trạng thái KĐM từ API — màu hiển thị được đồng bộ theo M. */
 export type KdmStatus = 'running' | 'error' | 'stopped'
 
 /** Khoá điện trên feeder — 2 hình đóng / mở */
@@ -227,9 +227,9 @@ export function setSchematicPumpColors(
   root: ParentNode,
   pumpId: number,
   motorStatus: MotorStatus,
-  kdmStatus: KdmStatus,
+  _kdmStatus: KdmStatus,
 ) {
-  const kdm = SCHEMATIC_KDM_COLORS[resolveKdmStatus(motorStatus, kdmStatus)]
+  const kdm = PUMP_STATUS_COLORS[motorStatus]
 
   root
     .querySelectorAll(
