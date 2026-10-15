@@ -128,6 +128,8 @@ public static class DependencyInjection
         services.AddScoped<IScadaEventLogQueryService>(sp => sp.GetRequiredService<HistoryQueryService>());
         services.AddScoped<IUserActivityLogQueryService>(sp => sp.GetRequiredService<HistoryQueryService>());
         services.AddScoped<IScreenRealtimeQueryService, ScreenRealtimeQueryService>();
+        services.AddSingleton<ISystemAlarmHistoryWriter, SystemAlarmHistoryWriter>();
+        services.AddHostedService<ApiAbruptStopAlarmHostedService>();
         services.AddHostedService<TagDefinitionExcelSeedHostedService>();
     }
 
@@ -235,6 +237,7 @@ public static class DependencyInjection
 
             services.AddSingleton<IScadaRealtimeEntityStore, ScadaRealtimeEntityStore>();
             services.AddHostedService<StationSnapshotChangeHostedService>();
+            services.AddHostedService<RedisConnectionAlarmHostedService>();
         }
         else if (string.Equals(provider, "Redis", StringComparison.OrdinalIgnoreCase))
         {

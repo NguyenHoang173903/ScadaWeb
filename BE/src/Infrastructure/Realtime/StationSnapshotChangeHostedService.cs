@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using Backend.Application.Interfaces.Services.Scada;
 using Backend.Application.Options;
 using Backend.Application.Realtime;
 using Backend.Application.Scada;
@@ -24,6 +25,7 @@ public sealed class StationSnapshotChangeHostedService(
     IStationRealtimeMultiplexer multiplexer,
     ITagStationCodeLookup tagStationLookup,
     IScadaRealtimeBroadcaster broadcaster,
+    ISystemAlarmHistoryWriter systemAlarms,
     IOptions<RealtimeOptions> options,
     ILogger<StationSnapshotChangeHostedService> logger) : BackgroundService
 {
@@ -38,6 +40,9 @@ public sealed class StationSnapshotChangeHostedService(
 
     private readonly ConcurrentDictionary<string, string> _lastHash =
         new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>1 = lần poll trước đọc Redis thành công (đang kết nối).</summary>
+    private int _redisWasHealthy;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -88,8 +93,17 @@ public sealed class StationSnapshotChangeHostedService(
         catch (RedisException ex)
         {
             logger.LogWarning(ex, "Redis unavailable in station snapshot watcher");
+            var wasHealthy = Interlocked.Exchange(ref _redisWasHealthy, 0) == 1;
+            await systemAlarms.WriteRedisErrorAsync(
+                wasHealthy
+                    ? "Kết nối Redis bị dừng đột ngột khi đọc snapshot trạm"
+                    : "Mất kết nối Redis khi đọc snapshot trạm",
+                ex.Message,
+                cancellationToken);
             return;
         }
+
+        Interlocked.Exchange(ref _redisWasHealthy, 1);
 
         Dictionary<string, long> stationIdByCode;
         using (var scope = scopeFactory.CreateScope())
