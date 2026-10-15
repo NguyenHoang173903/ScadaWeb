@@ -32,11 +32,13 @@ export function StationActiveAlertBar({ stationId }: StationActiveAlertBarProps)
     device: item.deviceName || '—',
     message: item.description || item.title,
   }))
+  const count = alarms.data?.totalCount ?? alarms.data?.items.length ?? 0
 
   return (
     <StationAlertBar
-      count={alarms.data?.totalCount ?? alarms.data?.items.length ?? 0}
+      count={count}
       alerts={alerts}
+      healthy={!alarms.isPending && count === 0}
       emptyMessage={alarms.isPending ? 'Đang kiểm tra lỗi...' : undefined}
     />
   )

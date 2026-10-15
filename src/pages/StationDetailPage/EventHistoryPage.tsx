@@ -47,6 +47,12 @@ const HISTORY_COLUMNS: DataTableColumn<HistoryEventRow>[] = [
     render: (row) => <span className={styles.cellText}>{row.time}</span>,
   },
   {
+    key: 'device',
+    header: 'Thiết bị',
+    width: 110,
+    render: (row) => <span className={styles.cellText}>{row.device}</span>,
+  },
+  {
     key: 'type',
     header: 'Loại',
     width: 150,
@@ -58,22 +64,10 @@ const HISTORY_COLUMNS: DataTableColumn<HistoryEventRow>[] = [
     ),
   },
   {
-    key: 'title',
-    header: 'Tiêu đề',
-    width: 200,
-    render: (row) => <span className={styles.cellText}>{row.title}</span>,
-  },
-  {
     key: 'detail',
     header: 'Mô tả chi tiết',
     width: 280,
     render: (row) => <span className={styles.cellText}>{row.detail || ''}</span>,
-  },
-  {
-    key: 'device',
-    header: 'Thiết bị',
-    width: 110,
-    render: (row) => <span className={styles.cellText}>{row.device}</span>,
   },
   {
     key: 'tag',

@@ -18,7 +18,7 @@
   padding: 0;
   background: transparent;
   color: #043d59;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -31,16 +31,34 @@
 
 .brandText {
   display: grid;
-  gap: 0.2rem;
-  font-family: Poppins, "Be Vietnam Pro", sans-serif;
+  gap: 0.22rem;
+  font-family: "Be Vietnam Pro", "Segoe UI", Arial, sans-serif;
   line-height: 1.25;
+  text-align: left;
 }
 
-.brandText strong,
-.brandText small {
-  font-size: 1rem;
-  font-weight: 650;
+.brandText strong {
+  color: #064b58;
+  font-size: 0.96rem;
+  font-weight: 750;
   white-space: nowrap;
+}
+
+.brandText small {
+  display: block;
+  white-space: nowrap;
+}
+
+.brandCompany {
+  color: #b38716;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.brandSubtitle {
+  color: #064b58;
+  font-size: 0.88rem;
+  font-weight: 750;
 }
 
 .right {
@@ -184,9 +202,17 @@
     display: none;
   }
 
-  .brandText strong,
-  .brandText small {
-    font-size: 0.9rem;
+  .brandText strong {
+    font-size: 0.82rem;
+  }
+
+  .brandCompany {
+    font-size: 0.68rem;
+  }
+
+  .brandSubtitle {
+    font-size: 0.74rem;
+    white-space: normal;
   }
 }
 

@@ -4,6 +4,8 @@ export type PumpStation = {
   code: string
   address: string
   status: 'Đang hoạt động' | 'Ngưng hoạt động'
+  isActive?: boolean
+  online?: boolean
   pumps: number
   capacity: string
   lat: number
@@ -18,6 +20,8 @@ export const PUMP_STATIONS: PumpStation[] = [
     code: 'TBAB',
     address: 'Thôn Võng La, xã Võng La, thành phố Hà Nội',
     status: 'Đang hoạt động',
+    isActive: true,
+    online: true,
     pumps: 10,
     capacity: '1.200 m³/h',
     lat: 21.10288377154832,
@@ -189,7 +193,7 @@ export function resolvePumpStationRouteId(station: {
 /** Register / overwrite a station in the dynamic catalog (API). */
 export function registerPumpStation(station: PumpStation) {
   const all = readDynamicStations()
-  all[station.id] = { ...station }
+  all[station.id] = { ...all[station.id], ...station }
   writeDynamicStations(all)
 }
 

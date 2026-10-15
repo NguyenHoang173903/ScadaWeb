@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import { TriangleAlert } from 'lucide-react'
+import { CircleCheck, TriangleAlert } from 'lucide-react'
 import styles from './StationAlertBar.module.css'
 
 export type StationAlert = {
@@ -12,6 +12,7 @@ type StationAlertBarProps = {
   count: number
   alerts: StationAlert[]
   emptyMessage?: string
+  healthy?: boolean
 }
 
 function useMobileTicker() {
@@ -42,6 +43,7 @@ function StationAlertBarView({
   count,
   alerts,
   emptyMessage = 'Không có lỗi đang tồn tại',
+  healthy = false,
 }: StationAlertBarProps) {
   const tickerRef = useRef<HTMLDivElement>(null)
   const [tickerWidth, setTickerWidth] = useState(0)
@@ -62,6 +64,17 @@ function StationAlertBarView({
 
   const alertSignature = alertsSignature(alerts)
   const shouldAnimate = hasAlerts && (mobileTicker || count > 3)
+
+  if (healthy) {
+    return (
+      <div className={`${styles.alert} ${styles.alertHealthy}`} role="status">
+        <div className={styles.left}>
+          <CircleCheck size={18} />
+          <strong>Hệ Thống Hoạt động Bình Thường</strong>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -118,6 +131,7 @@ export const StationAlertBar = memo(
   StationAlertBarView,
   (prev, next) =>
     prev.count === next.count &&
+    prev.healthy === next.healthy &&
     prev.emptyMessage === next.emptyMessage &&
     alertsSignature(prev.alerts) === alertsSignature(next.alerts),
 )

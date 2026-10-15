@@ -118,6 +118,8 @@ export function stationDetailToPumpStation(dto: StationDetailDto): PumpStation {
     code: dto.code,
     address: dto.address?.trim() || '—',
     status: dto.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động',
+    isActive: dto.isActive,
+    online: dto.online,
     pumps: 0,
     capacity: '—',
     lat: dto.latitude ?? 0,

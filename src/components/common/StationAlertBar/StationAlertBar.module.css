@@ -19,6 +19,17 @@
   font-size: 0.82rem;
 }
 
+.alertHealthy {
+  border-color: #34d399;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.alertHealthy .left {
+  width: 100%;
+  justify-content: center;
+}
+
 .details {
   flex: 1;
   min-width: 0;

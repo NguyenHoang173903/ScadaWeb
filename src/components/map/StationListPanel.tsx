@@ -9,8 +9,8 @@ const TYPE_TITLE: Record<MapStationType, string> = {
   level: 'DANH SÁCH ĐO MỰC NƯỚC',
 }
 
-const ONLINE_COLOR = '#0CFF0C'
-const OFFLINE_COLOR = '#F07167'
+const ONLINE_COLOR = '#34D399'
+const INACTIVE_COLOR = '#94A3B8'
 
 type Props = {
   type: MapStationType
@@ -31,18 +31,20 @@ function resolveCard(station: MapStation) {
       .toUpperCase() || '—'
   const code = catalog?.code ?? fallbackCode
 
-  const online = catalog ? catalog.status === 'Đang hoạt động' : true
+  const isActive = catalog
+    ? (catalog.isActive ?? catalog.status === 'Đang hoạt động')
+    : true
+  const online = isActive && (catalog?.online ?? true)
   const statusLabel = online ? 'Online' : 'Offline'
-  const statusColor = online ? ONLINE_COLOR : OFFLINE_COLOR
 
   return {
     // Ưu tiên tên catalog BE khi đã resolve được id số.
     name: catalog?.name || station.name || '—',
     code,
+    isActive,
     online,
     statusLabel,
-    statusColor,
-    dotColor: statusColor,
+    dotColor: isActive ? ONLINE_COLOR : INACTIVE_COLOR,
   }
 }
 
@@ -68,7 +70,8 @@ export function StationListPanel({ type, stations, onClose, onSelect }: Props) {
               <button
                 key={station.id}
                 type="button"
-                className={styles.card}
+                className={`${styles.card} ${!card.isActive ? styles.cardInactive : ''}`}
+                disabled={!card.isActive}
                 onClick={() => onSelect(station)}
               >
                 <span className={styles.dot} style={{ background: card.dotColor }} />
@@ -77,7 +80,13 @@ export function StationListPanel({ type, stations, onClose, onSelect }: Props) {
                   <span className={styles.code}>{card.code}</span>
                 </span>
                 <span
-                  className={`${styles.badge} ${card.online ? styles.badgeOnline : styles.badgeOffline}`}
+                  className={`${styles.badge} ${
+                    !card.isActive
+                      ? styles.badgeInactive
+                      : card.online
+                        ? styles.badgeOnline
+                        : styles.badgeOffline
+                  }`}
                 >
                   {card.statusLabel}
                 </span>
