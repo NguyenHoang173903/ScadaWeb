@@ -9,10 +9,10 @@ import {
 } from '@/services/frontendConfig/frontendConfigApi'
 import {
   applyServerRuntimeConfig,
+  getCurrentDashboardMapView,
   getRuntimeConfig,
   getRuntimeConfigSource,
 } from '@/settings/runtimeConfig'
-import { validateSecretKey } from '@/validation'
 import styles from './PasswordPolicyForm.module.css'
 
 const SOURCE_LABEL = {
@@ -24,7 +24,14 @@ const SOURCE_LABEL = {
 
 export function SystemConfigForm() {
   const [apiBaseUrl, setApiBaseUrl] = useState(() => getRuntimeConfig().apiBaseUrl)
-  const [arcgisApiKey, setArcgisApiKey] = useState('')
+  const [mapZoom, setMapZoom] = useState('2')
+  const [mapOffsetX, setMapOffsetX] = useState('0')
+  const [mapOffsetY, setMapOffsetY] = useState('0')
+  const [savedMapView, setSavedMapView] = useState({
+    zoom: 2,
+    offsetX: 0,
+    offsetY: 0,
+  })
   const [source, setSource] = useState(() => getRuntimeConfigSource())
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -36,7 +43,18 @@ export function SystemConfigForm() {
       try {
         const remote = await fetchFrontendConfig()
         if (cancelled) return
-        applyServerRuntimeConfig({ arcgisApiKey: remote.arcgisApiKey })
+        applyServerRuntimeConfig(remote)
+        const runtime = getRuntimeConfig()
+        const databaseView = {
+          zoom: runtime.dashboardMapZoom,
+          offsetX: runtime.dashboardMapOffsetX,
+          offsetY: runtime.dashboardMapOffsetY,
+        }
+        const currentView = getCurrentDashboardMapView() ?? databaseView
+        setSavedMapView(databaseView)
+        setMapZoom(String(currentView.zoom))
+        setMapOffsetX(String(currentView.offsetX))
+        setMapOffsetY(String(currentView.offsetY))
         setApiBaseUrl(getRuntimeConfig().apiBaseUrl)
         setSource(getRuntimeConfigSource())
       } catch (requestError) {
@@ -58,12 +76,21 @@ export function SystemConfigForm() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const keyToSave = arcgisApiKey.trim()
-    const check = keyToSave
-      ? validateSecretKey(keyToSave, 'Khóa ArcGIS', 16)
-      : { ok: true as const }
-    if (!check.ok) {
-      setError(check.message)
+    const zoom = Number(mapZoom)
+    const offsetX = Number(mapOffsetX)
+    const offsetY = Number(mapOffsetY)
+    if (!Number.isFinite(zoom) || zoom < 1 || zoom > 4) {
+      setError('Mức phóng bản đồ phải nằm trong khoảng từ 1 đến 4.')
+      setSaved(false)
+      return
+    }
+    if (
+      !Number.isFinite(offsetX) ||
+      !Number.isFinite(offsetY) ||
+      Math.abs(offsetX) > 5000 ||
+      Math.abs(offsetY) > 5000
+    ) {
+      setError('Tọa độ X và Y phải nằm trong khoảng từ -5000 đến 5000.')
       setSaved(false)
       return
     }
@@ -73,11 +100,22 @@ export function SystemConfigForm() {
     setLoading(true)
     void (async () => {
       try {
-        const remote = await updateFrontendConfig(
-          keyToSave ? { arcgisApiKey: keyToSave } : {},
-        )
-        applyServerRuntimeConfig({ arcgisApiKey: remote.arcgisApiKey })
-        setArcgisApiKey('')
+        const remote = await updateFrontendConfig({
+          dashboardMapZoom: zoom,
+          dashboardMapOffsetX: offsetX,
+          dashboardMapOffsetY: offsetY,
+        })
+        applyServerRuntimeConfig(remote)
+        const runtime = getRuntimeConfig()
+        const savedView = {
+          zoom: runtime.dashboardMapZoom,
+          offsetX: runtime.dashboardMapOffsetX,
+          offsetY: runtime.dashboardMapOffsetY,
+        }
+        setSavedMapView(savedView)
+        setMapZoom(String(savedView.zoom))
+        setMapOffsetX(String(savedView.offsetX))
+        setMapOffsetY(String(savedView.offsetY))
         setSource(getRuntimeConfigSource())
         setSaved(true)
       } catch (requestError) {
@@ -92,13 +130,26 @@ export function SystemConfigForm() {
     })()
   }
 
+  const numericMapView = {
+    zoom: Number(mapZoom),
+    offsetX: Number(mapOffsetX),
+    offsetY: Number(mapOffsetY),
+  }
+  const mapViewChanged =
+    Number.isFinite(numericMapView.zoom) &&
+    Number.isFinite(numericMapView.offsetX) &&
+    Number.isFinite(numericMapView.offsetY) &&
+    (numericMapView.zoom !== savedMapView.zoom ||
+      numericMapView.offsetX !== savedMapView.offsetX ||
+      numericMapView.offsetY !== savedMapView.offsetY)
+
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.panel}>
         <h3 className={styles.heading}>Thông tin xác thực và kết nối</h3>
         <p className={styles.hint}>
           Bí mật và endpoint không được hardcode trong mã nguồn. Thiết lập tại đây hoặc qua file
-          môi trường. URL API là cấu hình khởi động của máy FE; khóa ArcGIS được lưu trong DB.
+          môi trường. URL API là cấu hình khởi động của máy FE; vị trí bản đồ được lưu trong DB.
         </p>
 
         <div className={styles.grid}>
@@ -112,29 +163,21 @@ export function SystemConfigForm() {
               required
             />
           </FormField>
-          <FormField label="Khóa API bản đồ ArcGIS" htmlFor="arcgisApiKey">
+          <FormField
+            label="Vị trí mặc định bản đồ (Tọa độ hiện tại)"
+            htmlFor="dashboardMapPosition"
+          >
             <TextField
-              id="arcgisApiKey"
-              name="arcgisApiKey"
-              type="password"
-              autoComplete="off"
-              value={arcgisApiKey}
-              placeholder={
-                source.arcgisApiKey === 'none'
-                  ? 'Chưa có khóa — nhập để dùng nền vệ tinh'
-                  : 'Để trống nếu giữ khóa hiện tại'
-              }
-              onChange={(event) => {
-                setArcgisApiKey(event.target.value)
-                setSaved(false)
-              }}
+              id="dashboardMapPosition"
+              value={`(${mapOffsetX}, ${mapOffsetY}), ${mapZoom}`}
+              readOnly
             />
           </FormField>
         </div>
 
         <p className={styles.hint}>
-          URL API đang lấy từ {SOURCE_LABEL[source.apiBaseUrl]}. Khóa ArcGIS đang lấy từ{' '}
-          {SOURCE_LABEL[source.arcgisApiKey]}.
+          URL API đang lấy từ {SOURCE_LABEL[source.apiBaseUrl]}. Các thông số trên là vị trí gần
+          nhất tại Dashboard; chỉ có thể lưu khi khác vị trí đang có trong DB.
         </p>
       </div>
 
@@ -146,7 +189,7 @@ export function SystemConfigForm() {
         ) : (
           <span />
         )}
-        <Button type="submit" variant="success" disabled={loading}>
+        <Button type="submit" variant="success" disabled={loading || !mapViewChanged}>
           {loading ? 'Đang xử lý...' : 'Lưu cấu hình'}
         </Button>
       </div>

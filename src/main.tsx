@@ -11,7 +11,7 @@ import './styles/index.css'
 
 void fetchFrontendConfig()
   .then((config) => {
-    applyServerRuntimeConfig({ arcgisApiKey: config.arcgisApiKey })
+    applyServerRuntimeConfig(config)
     setLoginLayerVisible(config.loginLayerVisible)
   })
   .catch(() => {

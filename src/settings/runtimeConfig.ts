@@ -5,6 +5,9 @@
 export type RuntimeConfig = {
   apiBaseUrl: string
   arcgisApiKey: string
+  dashboardMapZoom: number
+  dashboardMapOffsetX: number
+  dashboardMapOffsetY: number
 }
 
 export type RuntimeConfigSource = {
@@ -12,8 +15,20 @@ export type RuntimeConfigSource = {
   arcgisApiKey: 'server' | 'env' | 'none'
 }
 
+export type DashboardMapView = {
+  zoom: number
+  offsetX: number
+  offsetY: number
+}
+
 const DEFAULT_API_BASE_URL = 'http://localhost:5140/api/v1'
 let serverArcgisApiKey = ''
+let serverDashboardMapView = {
+  zoom: 2,
+  offsetX: 0,
+  offsetY: 0,
+}
+let currentDashboardMapView: DashboardMapView | null = null
 
 function envApiBaseUrl() {
   return import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '').trim() ?? ''
@@ -35,6 +50,9 @@ export function getRuntimeConfig(): RuntimeConfig {
   return {
     apiBaseUrl: envApiBaseUrl() || DEFAULT_API_BASE_URL,
     arcgisApiKey: serverArcgisApiKey || envArcgisApiKey(),
+    dashboardMapZoom: serverDashboardMapView.zoom,
+    dashboardMapOffsetX: serverDashboardMapView.offsetX,
+    dashboardMapOffsetY: serverDashboardMapView.offsetY,
   }
 }
 
@@ -58,8 +76,37 @@ export function getArcgisApiKey() {
   return getRuntimeConfig().arcgisApiKey
 }
 
-export function applyServerRuntimeConfig(config: { arcgisApiKey?: string | null }) {
+export function setCurrentDashboardMapView(view: DashboardMapView) {
+  currentDashboardMapView = { ...view }
+}
+
+export function getCurrentDashboardMapView() {
+  return currentDashboardMapView ? { ...currentDashboardMapView } : null
+}
+
+export function applyServerRuntimeConfig(config: {
+  arcgisApiKey?: string | null
+  dashboardMapZoom?: number | null
+  dashboardMapOffsetX?: number | null
+  dashboardMapOffsetY?: number | null
+}) {
   serverArcgisApiKey = config.arcgisApiKey?.trim() ?? ''
+  serverDashboardMapView = {
+    zoom:
+      typeof config.dashboardMapZoom === 'number' &&
+      config.dashboardMapZoom >= 1 &&
+      config.dashboardMapZoom <= 4
+        ? config.dashboardMapZoom
+        : 2,
+    offsetX:
+      typeof config.dashboardMapOffsetX === 'number'
+        ? config.dashboardMapOffsetX
+        : 0,
+    offsetY:
+      typeof config.dashboardMapOffsetY === 'number'
+        ? config.dashboardMapOffsetY
+        : 0,
+  }
   notify()
 }
 

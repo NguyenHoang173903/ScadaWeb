@@ -119,4 +119,7 @@ public class FrontendConfigDto
 {
     public string ArcgisApiKey { get; set; } = string.Empty;
     public bool LoginLayerVisible { get; set; } = true;
+    public double DashboardMapZoom { get; set; } = 2;
+    public double DashboardMapOffsetX { get; set; }
+    public double DashboardMapOffsetY { get; set; }
 }

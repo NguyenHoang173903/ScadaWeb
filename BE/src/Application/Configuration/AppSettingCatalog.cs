@@ -123,6 +123,27 @@ public static class AppSettingCatalog
             "boolean",
             "Whether map layers are visible on the login page.",
             AppSettingSourceKind.DatabaseAppSettings,
+            EditableViaApi: false),
+
+        new(
+            "frontend.dashboardMapZoom",
+            "number",
+            "Default zoom level of the static dashboard map.",
+            AppSettingSourceKind.DatabaseAppSettings,
+            EditableViaApi: false),
+
+        new(
+            "frontend.dashboardMapOffsetX",
+            "number",
+            "Default horizontal offset of the static dashboard map.",
+            AppSettingSourceKind.DatabaseAppSettings,
+            EditableViaApi: false),
+
+        new(
+            "frontend.dashboardMapOffsetY",
+            "number",
+            "Default vertical offset of the static dashboard map.",
+            AppSettingSourceKind.DatabaseAppSettings,
             EditableViaApi: false)
     ];
 

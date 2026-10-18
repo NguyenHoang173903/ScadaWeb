@@ -21,6 +21,16 @@
   z-index: 0;
   overflow: hidden;
   background: #ffffff;
+  cursor: grab;
+  touch-action: none;
+}
+
+.staticMapPane[data-dragging] {
+  cursor: grabbing;
+}
+
+.staticMapPane[data-dragging] .staticMapImage {
+  transition: none;
 }
 
 .staticMapImage {
@@ -33,8 +43,56 @@
   min-height: 0;
   object-fit: contain;
   object-position: center;
-  transform: scale(2);
   transform-origin: center;
+  transition: transform 180ms ease;
+  user-select: none;
+  pointer-events: none;
+}
+
+.staticMapControls {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 2;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid rgba(7, 86, 99, 0.24);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+  cursor: default;
+  touch-action: manipulation;
+}
+
+.staticMapControls button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  place-items: center;
+  color: #075663;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid rgba(7, 86, 99, 0.16);
+  cursor: pointer;
+}
+
+.staticMapControls button:last-child {
+  border-right: 0;
+}
+
+.staticMapControls button:hover:not(:disabled) {
+  background: #e5f5f5;
+}
+
+.staticMapControls button:disabled {
+  color: #94a3b8;
+  cursor: default;
+}
+
+.staticMapControls svg {
+  width: 19px;
+  height: 19px;
 }
 
 .topBar,

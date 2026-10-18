@@ -1,7 +1,24 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ChevronDown, KeyRound, Layers, LogOut, UserRound, Users } from 'lucide-react'
+import {
+  ChevronDown,
+  KeyRound,
+  Layers,
+  LogOut,
+  Minus,
+  Plus,
+  RotateCcw,
+  UserRound,
+  Users,
+} from 'lucide-react'
 import dashboardMapImage from '@/assets/images/bando.jpg'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
 import { DashboardMap, FeatureInfoPanel, LayerPanel, StationListPanel } from '@/components/map'
@@ -23,6 +40,11 @@ import { getStation, listStations as fetchStationsApi } from '@/services/station
 import { prefetchStationOverview } from '@/services/stations/stationQueries'
 import { getSessionUsername, isSessionAdmin } from '@/settings/session'
 import {
+  getRuntimeConfig,
+  setCurrentDashboardMapView,
+  subscribeRuntimeConfig,
+} from '@/settings/runtimeConfig'
+import {
   deleteMapLayer,
   getMapLayerStorageMode,
   peekCachedMapLayers,
@@ -40,6 +62,37 @@ const LEGEND_ITEMS = [
   { id: 'level', label: 'Điểm đo mực nước tự động', color: '#2D7DD2' },
 ] as const
 
+const MIN_STATIC_MAP_ZOOM = 1
+const MAX_STATIC_MAP_ZOOM = 4
+const STATIC_MAP_ZOOM_STEP = 0.25
+
+type MapOffset = { x: number; y: number }
+
+function clampStaticMapOffset(
+  offset: MapOffset,
+  zoom: number,
+  pane: HTMLDivElement | null,
+  image: HTMLImageElement | null,
+): MapOffset {
+  if (!pane || !image || !image.naturalWidth || !image.naturalHeight) {
+    return offset
+  }
+
+  const paneWidth = pane.clientWidth
+  const paneHeight = pane.clientHeight
+  const imageRatio = image.naturalWidth / image.naturalHeight
+  const paneRatio = paneWidth / paneHeight
+  const baseWidth = imageRatio > paneRatio ? paneWidth : paneHeight * imageRatio
+  const baseHeight = imageRatio > paneRatio ? paneWidth / imageRatio : paneHeight
+  const maxX = Math.max(0, (baseWidth * zoom - paneWidth) / 2)
+  const maxY = Math.max(0, (baseHeight * zoom - paneHeight) / 2)
+
+  return {
+    x: Math.min(maxX, Math.max(-maxX, offset.x)),
+    y: Math.min(maxY, Math.max(-maxY, offset.y)),
+  }
+}
+
 function formatNow(date: Date) {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
@@ -50,6 +103,12 @@ export function DashboardPage() {
   const queryClient = useQueryClient()
   const userName = getSessionUsername() ?? 'Admin'
   const canUpdateStation = isSessionAdmin()
+  const initialRuntimeConfig = getRuntimeConfig()
+  const initialStaticMapViewRef = useRef({
+    zoom: initialRuntimeConfig.dashboardMapZoom,
+    x: initialRuntimeConfig.dashboardMapOffsetX,
+    y: initialRuntimeConfig.dashboardMapOffsetY,
+  })
   const [menuOpen, setMenuOpen] = useState(false)
   const [listType, setListType] = useState<MapStationType>('pump')
   const [layersOpen, setLayersOpen] = useState(false)
@@ -60,9 +119,25 @@ export function DashboardPage() {
   const [selectedStation, setSelectedStation] = useState<MapStation | null>(null)
   const [now, setNow] = useState(() => formatNow(new Date()))
   const [stationCatalogVersion, setStationCatalogVersion] = useState(0)
+  const [staticMapZoom, setStaticMapZoom] = useState(initialStaticMapViewRef.current.zoom)
+  const [staticMapOffset, setStaticMapOffset] = useState({
+    x: initialStaticMapViewRef.current.x,
+    y: initialStaticMapViewRef.current.y,
+  })
+  const [isStaticMapDragging, setIsStaticMapDragging] = useState(false)
+  const staticMapDragRef = useRef({
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  })
   const menuRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
   const topBarRef = useRef<HTMLElement>(null)
+  const staticMapPaneRef = useRef<HTMLDivElement>(null)
+  const staticMapImageRef = useRef<HTMLImageElement>(null)
+  const staticMapZoomRef = useRef(staticMapZoom)
 
   // Tablet: the header can wrap to two rows; panels below it read this height.
   useLayoutEffect(() => {
@@ -76,11 +151,80 @@ export function DashboardPage() {
     return () => observer.disconnect()
   }, [])
 
+  useLayoutEffect(() => {
+    const pane = staticMapPaneRef.current
+    if (!pane || MAP_ENABLED) return
+    const keepMapInBounds = () => {
+      setStaticMapOffset((offset) =>
+        clampStaticMapOffset(offset, staticMapZoom, pane, staticMapImageRef.current),
+      )
+    }
+    keepMapInBounds()
+    const observer = new ResizeObserver(keepMapInBounds)
+    observer.observe(pane)
+    return () => observer.disconnect()
+  }, [staticMapZoom])
+
   useEffect(() => {
     const timer = window.setInterval(() => {
       setNow(formatNow(new Date()))
     }, 1000)
     return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(
+    () =>
+      subscribeRuntimeConfig((config) => {
+        const next = {
+          zoom: config.dashboardMapZoom,
+          x: config.dashboardMapOffsetX,
+          y: config.dashboardMapOffsetY,
+        }
+        initialStaticMapViewRef.current = next
+        setStaticMapZoom(next.zoom)
+        setStaticMapOffset({ x: next.x, y: next.y })
+      }),
+    [],
+  )
+
+  useEffect(() => {
+    setCurrentDashboardMapView({
+      zoom: staticMapZoom,
+      offsetX: Math.round(staticMapOffset.x),
+      offsetY: Math.round(staticMapOffset.y),
+    })
+  }, [staticMapZoom, staticMapOffset])
+
+  useEffect(() => {
+    staticMapZoomRef.current = staticMapZoom
+  }, [staticMapZoom])
+
+  useEffect(() => {
+    const pane = staticMapPaneRef.current
+    if (!pane || MAP_ENABLED) return
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      if (event.deltaY === 0) return
+      const delta = event.deltaY < 0 ? STATIC_MAP_ZOOM_STEP : -STATIC_MAP_ZOOM_STEP
+      const nextZoom = Math.min(
+        MAX_STATIC_MAP_ZOOM,
+        Math.max(MIN_STATIC_MAP_ZOOM, staticMapZoomRef.current + delta),
+      )
+      staticMapZoomRef.current = nextZoom
+      setStaticMapZoom(nextZoom)
+      setStaticMapOffset((offset) =>
+        clampStaticMapOffset(
+          offset,
+          nextZoom,
+          staticMapPaneRef.current,
+          staticMapImageRef.current,
+        ),
+      )
+    }
+
+    pane.addEventListener('wheel', handleWheel, { passive: false })
+    return () => pane.removeEventListener('wheel', handleWheel)
   }, [])
 
   useEffect(() => {
@@ -286,6 +430,69 @@ export function DashboardPage() {
     return []
   }, [listType, pumpStations, rainStations, levelStations])
 
+  const handleStaticMapPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
+    const target = event.target as HTMLElement
+    if (target.closest(`.${styles.staticMapControls}`)) return
+
+    staticMapDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: staticMapOffset.x,
+      originY: staticMapOffset.y,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setIsStaticMapDragging(true)
+  }
+
+  const handleStaticMapPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = staticMapDragRef.current
+    if (drag.pointerId !== event.pointerId) return
+    setStaticMapOffset(
+      clampStaticMapOffset(
+        {
+          x: drag.originX + event.clientX - drag.startX,
+          y: drag.originY + event.clientY - drag.startY,
+        },
+        staticMapZoom,
+        staticMapPaneRef.current,
+        staticMapImageRef.current,
+      ),
+    )
+  }
+
+  const stopStaticMapDragging = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (staticMapDragRef.current.pointerId !== event.pointerId) return
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    staticMapDragRef.current.pointerId = -1
+    setIsStaticMapDragging(false)
+  }
+
+  const resetStaticMap = () => {
+    const initial = initialStaticMapViewRef.current
+    setStaticMapZoom(initial.zoom)
+    setStaticMapOffset({ x: initial.x, y: initial.y })
+  }
+
+  const changeStaticMapZoom = (delta: number) => {
+    const nextZoom = Math.min(
+      MAX_STATIC_MAP_ZOOM,
+      Math.max(MIN_STATIC_MAP_ZOOM, staticMapZoom + delta),
+    )
+    setStaticMapZoom(nextZoom)
+    setStaticMapOffset((offset) =>
+      clampStaticMapOffset(
+        offset,
+        nextZoom,
+        staticMapPaneRef.current,
+        staticMapImageRef.current,
+      ),
+    )
+  }
+
   return (
     <div ref={pageRef} className={styles.page}>
       {MAP_ENABLED ? (
@@ -297,12 +504,68 @@ export function DashboardPage() {
           }}
         />
       ) : (
-        <div className={styles.staticMapPane}>
+        <div
+          ref={staticMapPaneRef}
+          className={styles.staticMapPane}
+          data-dragging={isStaticMapDragging || undefined}
+          onPointerDown={handleStaticMapPointerDown}
+          onPointerMove={handleStaticMapPointerMove}
+          onPointerUp={stopStaticMapDragging}
+          onPointerCancel={stopStaticMapDragging}
+        >
           <img
+            ref={staticMapImageRef}
             src={dashboardMapImage}
             alt="Bản đồ khu vực thủy lợi Hà Nội"
             className={styles.staticMapImage}
+            draggable={false}
+            onLoad={() =>
+              setStaticMapOffset((offset) =>
+                clampStaticMapOffset(
+                  offset,
+                  staticMapZoom,
+                  staticMapPaneRef.current,
+                  staticMapImageRef.current,
+                ),
+              )
+            }
+            style={{
+              transform: `translate(${staticMapOffset.x}px, ${staticMapOffset.y}px) scale(${staticMapZoom})`,
+            }}
           />
+          <div className={styles.staticMapControls} aria-label="Điều khiển bản đồ">
+            <button
+              type="button"
+              onClick={() => changeStaticMapZoom(-STATIC_MAP_ZOOM_STEP)}
+              disabled={staticMapZoom <= MIN_STATIC_MAP_ZOOM}
+              title="Thu nhỏ"
+              aria-label="Thu nhỏ bản đồ"
+            >
+              <Minus aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={resetStaticMap}
+              disabled={
+                staticMapZoom === initialStaticMapViewRef.current.zoom &&
+                staticMapOffset.x === initialStaticMapViewRef.current.x &&
+                staticMapOffset.y === initialStaticMapViewRef.current.y
+              }
+              title="Đặt lại vị trí và mức phóng ban đầu"
+              aria-label="Đặt lại bản đồ"
+            >
+              <RotateCcw aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => changeStaticMapZoom(STATIC_MAP_ZOOM_STEP)}
+              disabled={staticMapZoom >= MAX_STATIC_MAP_ZOOM}
+              title="Phóng to"
+              aria-label="Phóng to bản đồ"
+            >
+              <Plus aria-hidden="true" />
+            </button>
+          </div>
         </div>
       )}
 

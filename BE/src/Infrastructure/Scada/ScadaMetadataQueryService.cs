@@ -3438,7 +3438,10 @@ public class ScadaMetadataQueryService(
         {
             var rows = await db.AppSettings.AsNoTracking()
                 .Where(s => s.SettingKey == "frontend.arcgisApiKey"
-                            || s.SettingKey == "frontend.loginLayerVisible")
+                            || s.SettingKey == "frontend.loginLayerVisible"
+                            || s.SettingKey == "frontend.dashboardMapZoom"
+                            || s.SettingKey == "frontend.dashboardMapOffsetX"
+                            || s.SettingKey == "frontend.dashboardMapOffsetY")
                 .ToDictionaryAsync(s => s.SettingKey, s => s.SettingValue, cancellationToken);
 
             return Result<FrontendConfigDto>.Success(new FrontendConfigDto
@@ -3447,7 +3450,10 @@ public class ScadaMetadataQueryService(
                 LoginLayerVisible =
                     !rows.TryGetValue("frontend.loginLayerVisible", out var visible)
                     || !bool.TryParse(visible, out var parsed)
-                    || parsed
+                    || parsed,
+                DashboardMapZoom = ReadDouble(rows, "frontend.dashboardMapZoom", 2),
+                DashboardMapOffsetX = ReadDouble(rows, "frontend.dashboardMapOffsetX", 0),
+                DashboardMapOffsetY = ReadDouble(rows, "frontend.dashboardMapOffsetY", 0)
             });
         });
 
@@ -3460,6 +3466,15 @@ public class ScadaMetadataQueryService(
                 return Result<FrontendConfigDto>.Failure(
                     "ValidationError",
                     "ArcGIS API key must contain at least 16 characters.");
+            if (request.DashboardMapZoom is { } zoom && (zoom < 1 || zoom > 4))
+                return Result<FrontendConfigDto>.Failure(
+                    "ValidationError",
+                    "Mức phóng bản đồ phải nằm trong khoảng từ 1 đến 4.");
+            if (request.DashboardMapOffsetX is { } offsetX && Math.Abs(offsetX) > 5000
+                || request.DashboardMapOffsetY is { } offsetY && Math.Abs(offsetY) > 5000)
+                return Result<FrontendConfigDto>.Failure(
+                    "ValidationError",
+                    "Tọa độ bản đồ phải nằm trong khoảng từ -5000 đến 5000.");
 
             var now = DateTimeOffset.UtcNow;
             if (request.ArcgisApiKey is not null)
@@ -3477,6 +3492,33 @@ public class ScadaMetadataQueryService(
                     "frontend.loginLayerVisible",
                     loginLayerVisible.ToString().ToLowerInvariant(),
                     "boolean",
+                    now,
+                    cancellationToken);
+            }
+            if (request.DashboardMapZoom is { } dashboardMapZoom)
+            {
+                await UpsertFrontendSettingAsync(
+                    "frontend.dashboardMapZoom",
+                    dashboardMapZoom.ToString(CultureInfo.InvariantCulture),
+                    "number",
+                    now,
+                    cancellationToken);
+            }
+            if (request.DashboardMapOffsetX is { } dashboardMapOffsetX)
+            {
+                await UpsertFrontendSettingAsync(
+                    "frontend.dashboardMapOffsetX",
+                    dashboardMapOffsetX.ToString(CultureInfo.InvariantCulture),
+                    "number",
+                    now,
+                    cancellationToken);
+            }
+            if (request.DashboardMapOffsetY is { } dashboardMapOffsetY)
+            {
+                await UpsertFrontendSettingAsync(
+                    "frontend.dashboardMapOffsetY",
+                    dashboardMapOffsetY.ToString(CultureInfo.InvariantCulture),
+                    "number",
                     now,
                     cancellationToken);
             }
@@ -3745,6 +3787,15 @@ public class ScadaMetadataQueryService(
         int fallback) =>
         values.TryGetValue(key, out var raw)
         && int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : fallback;
+
+    private static double ReadDouble(
+        IReadOnlyDictionary<string, string?> values,
+        string key,
+        double fallback) =>
+        values.TryGetValue(key, out var raw)
+        && double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : fallback;
 

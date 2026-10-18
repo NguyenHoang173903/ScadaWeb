@@ -27,6 +27,9 @@ public class UpdateFrontendConfigRequest
 {
     public string? ArcgisApiKey { get; set; }
     public bool? LoginLayerVisible { get; set; }
+    public double? DashboardMapZoom { get; set; }
+    public double? DashboardMapOffsetX { get; set; }
+    public double? DashboardMapOffsetY { get; set; }
 }
 
 public class AppSettingCatalogItemDto

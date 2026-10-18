@@ -3,6 +3,9 @@ import { apiClient } from '@/services/api/client'
 export type FrontendConfig = {
   arcgisApiKey: string
   loginLayerVisible: boolean
+  dashboardMapZoom: number
+  dashboardMapOffsetX: number
+  dashboardMapOffsetY: number
 }
 
 export function fetchFrontendConfig() {
@@ -10,7 +13,16 @@ export function fetchFrontendConfig() {
 }
 
 export function updateFrontendConfig(
-  patch: Partial<Pick<FrontendConfig, 'arcgisApiKey' | 'loginLayerVisible'>>,
+  patch: Partial<
+    Pick<
+      FrontendConfig,
+      | 'arcgisApiKey'
+      | 'loginLayerVisible'
+      | 'dashboardMapZoom'
+      | 'dashboardMapOffsetX'
+      | 'dashboardMapOffsetY'
+    >
+  >,
 ) {
   return apiClient.put<FrontendConfig>('/frontend-config', patch)
 }
