@@ -35,8 +35,7 @@ export function DeviceCard({ pump }: DeviceCardProps) {
     <div className={styles.column}>
       <article className={styles.pumpCard}>
         <header className={styles.cardHead}>
-          <span>{pump.label}</span>
-          {pump.description ? <span>{pump.description}</span> : null}
+          {[pump.label, pump.description].filter(Boolean).join(' - ')}
         </header>
 
         <div className={styles.pumpBody}>
