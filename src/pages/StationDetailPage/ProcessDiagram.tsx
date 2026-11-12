@@ -90,7 +90,8 @@ export function ProcessDiagram({
               data-status={pump.status}
             >
               <header className={styles.pumpCardHead}>
-                {pump.label} - {pump.powerKw}kW
+                <span>{pump.label}</span>
+                <span>{pump.powerKw}kW - 3600m3/h</span>
               </header>
               <div className={styles.pumpCardBody}>
                 <div>

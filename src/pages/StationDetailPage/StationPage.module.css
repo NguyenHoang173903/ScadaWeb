@@ -236,6 +236,18 @@
   text-overflow: clip;
 }
 
+.schematicPumpCard .pumpCardHead span {
+  display: block;
+}
+
+.schematicPumpCard .pumpCardHead span:first-child {
+  font-size: 1.1em;
+}
+
+.schematicPumpCard .pumpCardHead span + span {
+  margin-top: 0.12em;
+}
+
 .schematicPumpCard .pumpCardBody {
   display: flex;
   flex-direction: column;
@@ -381,6 +393,18 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: clip;
+}
+
+.processPumpCard .pumpCardHead span {
+  display: block;
+}
+
+.processPumpCard .pumpCardHead span:first-child {
+  font-size: 1.1em;
+}
+
+.processPumpCard .pumpCardHead span + span {
+  margin-top: 0.12em;
 }
 
 .processPumpCard .pumpCardBody {
@@ -923,4 +947,3 @@
     padding: 0 0 4px;
   }
 }
-

@@ -182,7 +182,8 @@ export function SchematicDiagram({
                 data-status={pump.motorStatus}
               >
                 <header className={styles.pumpCardHead}>
-                  {pump.label} - {pump.powerKw}kW
+                  <span>{pump.label}</span>
+                  <span>{pump.powerKw}kW - 3600m3/h</span>
                 </header>
                 <div className={styles.pumpCardBody}>
                   <div>
