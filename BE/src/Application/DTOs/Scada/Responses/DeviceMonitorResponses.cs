@@ -17,6 +17,10 @@ public class DeviceMonitorItemDto
     /// <summary>Header: "Bơm 1".</summary>
     public string Name { get; set; } = string.Empty;
 
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string? Description { get; set; }
+
     /// <summary>Công suất định mức (kW) — "160kW".</summary>
     public double? RatedPowerKw { get; set; }
 

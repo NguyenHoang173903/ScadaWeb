@@ -23,6 +23,8 @@ public class SchematicPumpDto
     public long DeviceId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Label { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public double PowerKw { get; set; }
     public string MccbCode { get; set; } = string.Empty;
     public string MotorStatus { get; set; } = ScadaStatusCodes.Unknown;

@@ -22,6 +22,7 @@ export type PumpStatus = MotorStatus
 export type PumpBranch = {
   id: number
   label: string
+  description: string
   powerKw: number
   /** Trạng thái khối M */
   motorStatus: MotorStatus
@@ -67,7 +68,7 @@ export function resolveKdmStatus(
 
 type PumpMeasures = Omit<
   PumpBranch,
-  'id' | 'label' | 'powerKw' | 'motorStatus' | 'kdmStatus' | 'lockStatus'
+  'id' | 'label' | 'description' | 'powerKw' | 'motorStatus' | 'kdmStatus' | 'lockStatus'
 >
 
 const DEFAULT_MEASURES: PumpMeasures = {
@@ -90,6 +91,7 @@ function branch(
   return {
     id,
     label: `Bơm ${id}`,
+    description: '',
     powerKw: 160,
     motorStatus,
     kdmStatus,

@@ -28,21 +28,16 @@ type DeviceCardProps = {
   pump: DevicePump
 }
 
-function getPumpHeader(pump: DevicePump) {
-  const label = pump.label.trim()
-  if (/\b\d+(?:[.,]\d+)?\s*kW\b/i.test(label) || pump.powerKw <= 0) {
-    return `${label} - 3600m3/h`
-  }
-  return `${label} – ${formatMetric(pump.powerKw)}kW - 3600m3/h`
-}
-
 export function DeviceCard({ pump }: DeviceCardProps) {
   const statusMeta = DEVICE_STATUS_META[pump.status]
 
   return (
     <div className={styles.column}>
       <article className={styles.pumpCard}>
-        <header className={styles.cardHead}>{getPumpHeader(pump)}</header>
+        <header className={styles.cardHead}>
+          <span>{pump.label}</span>
+          {pump.description ? <span>{pump.description}</span> : null}
+        </header>
 
         <div className={styles.pumpBody}>
           <section className={styles.section}>

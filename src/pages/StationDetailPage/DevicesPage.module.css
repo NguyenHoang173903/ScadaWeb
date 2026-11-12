@@ -41,12 +41,19 @@
 }
 
 .cardHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
   padding: 0.52rem 0.45rem;
   background: #2f3e46;
   color: #ffffff;
   font-size: 0.84rem;
   font-weight: 600;
   text-align: center;
+}
+
+.cardHead span + span {
+  font-size: 0.9em;
 }
 
 .pumpBody {

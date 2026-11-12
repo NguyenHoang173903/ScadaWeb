@@ -183,7 +183,7 @@ export function SchematicDiagram({
               >
                 <header className={styles.pumpCardHead}>
                   <span>{pump.label}</span>
-                  <span>{pump.powerKw}kW - 3600m3/h</span>
+                  {pump.description ? <span>{pump.description}</span> : null}
                 </header>
                 <div className={styles.pumpCardBody}>
                   <div>

@@ -642,7 +642,8 @@ public class ScadaMetadataQueryService(
             {
                 d.Id,
                 d.Code,
-                Name = string.IsNullOrWhiteSpace(d.DisplayName) ? d.Name : d.DisplayName,
+                d.Name,
+                d.DisplayName,
                 d.Description
             })
             .ToListAsync(cancellationToken);
@@ -657,7 +658,8 @@ public class ScadaMetadataQueryService(
                 {
                     d.Id,
                     d.Code,
-                    Name = string.IsNullOrWhiteSpace(d.DisplayName) ? d.Name : d.DisplayName,
+                    d.Name,
+                    d.DisplayName,
                     d.Description
                 })
                 .ToListAsync(cancellationToken);
@@ -812,7 +814,9 @@ public class ScadaMetadataQueryService(
                 Id = branchId,
                 DeviceId = device.Id,
                 Code = device.Code,
-                Label = $"Bơm {branchId}",
+                Label = string.IsNullOrWhiteSpace(device.DisplayName) ? device.Name : device.DisplayName,
+                DisplayName = device.DisplayName,
+                Description = device.Description,
                 PowerKw = rated,
                 MccbCode = $"MCCB{branchId}",
                 MotorStatus = motorStatus,
@@ -993,7 +997,7 @@ public class ScadaMetadataQueryService(
             var allDevices = await db.Devices.AsNoTracking()
                 .Where(d => d.Plc.StationId == stationId)
                 .OrderBy(d => d.Code)
-                .Select(d => new { d.Id, d.Code, d.Name, d.DisplayName, d.DeviceType })
+                .Select(d => new { d.Id, d.Code, d.Name, d.DisplayName, d.Description, d.DeviceType })
                 .ToListAsync(cancellationToken);
 
             static int? PumpIndex(string? code)
@@ -1155,6 +1159,8 @@ public class ScadaMetadataQueryService(
                 {
                     DeviceId = p.Device.Id,
                     Name = displayName,
+                    DisplayName = p.Device.DisplayName,
+                    Description = p.Device.Description,
                     RatedPowerKw = Pick(deviceTags, "ratedPowerKw") ?? 160,
                     Status = status,
                     WindingTempActual = new DeviceMonitorAbcValueDto

@@ -140,7 +140,8 @@ export function mapDeviceMonitorItem(item: DeviceMonitorItemDto): DevicePump {
   return {
     id: item.deviceId,
     pumpIndex,
-    label: item.name,
+    label: item.displayName?.trim() || item.name,
+    description: item.description?.trim() || '',
     powerKw: num(item.ratedPowerKw, 0),
     status: asDeviceStatus(item.status),
     coilTempActual: [
@@ -187,7 +188,8 @@ export function mapSchematicPumps(
     if (!api) return branch
     return {
       ...branch,
-      label: api.label || branch.label,
+      label: api.displayName?.trim() || api.label || branch.label,
+      description: api.description?.trim() || '',
       powerKw: api.powerKw || branch.powerKw,
       motorStatus: asMotorStatus(api.motorStatus),
       kdmStatus: asKdmStatus(api.kdmStatus),
@@ -215,7 +217,8 @@ export function mapProcessPumps(
     if (!api) return pump
     return {
       ...pump,
-      label: api.label || pump.label,
+      label: api.displayName?.trim() || api.label || pump.label,
+      description: api.description?.trim() || '',
       powerKw: api.powerKw || pump.powerKw,
       currentA: num(api.currentA, pump.currentA),
       runtimeH: num(api.runtimeH, pump.runtimeH),

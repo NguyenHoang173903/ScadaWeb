@@ -77,6 +77,8 @@ export type DeviceMonitorItemDto = {
   /** Chỉ số bơm 1..10 khi BE expose (ưu tiên). */
   pumpIndex?: number | null
   name: string
+  displayName?: string | null
+  description?: string | null
   code?: string | null
   ratedPowerKw?: number | null
   status: string
@@ -108,6 +110,8 @@ export type SchematicPumpDto = {
   deviceId: number
   code: string
   label: string
+  displayName?: string | null
+  description?: string | null
   powerKw: number
   mccbCode: string
   motorStatus: string

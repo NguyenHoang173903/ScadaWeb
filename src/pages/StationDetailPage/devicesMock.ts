@@ -25,6 +25,7 @@ export type DevicePump = {
    */
   pumpIndex: number
   label: string
+  description: string
   powerKw: number
   status: DevicePumpStatus
   coilTempActual: [number, number, number]
@@ -50,6 +51,7 @@ function basePump(id: number, status: DevicePumpStatus): DevicePump {
     id,
     pumpIndex: id,
     label: `Bơm ${id}`,
+    description: '',
     powerKw: 160,
     status,
     coilTempActual: [31, 32, 33],

@@ -16,6 +16,7 @@ export const PROCESS_PUMP_COLORS: Record<ProcessPumpStatus, string> =
 export type ProcessPumpCard = {
   id: number
   label: string
+  description: string
   powerKw: number
   currentA: number
   runtimeH: number
@@ -26,16 +27,16 @@ export type ProcessPumpCard = {
 
 /** Seed / fallback (layout xem processLayout.ts). */
 export const PROCESS_PUMPS: ProcessPumpCard[] = [
-  { id: 10, label: 'Bơm 10', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
-  { id: 9, label: 'Bơm 9', powerKw: 160, currentA: 0, runtimeH: 130, status: 'error' },
-  { id: 8, label: 'Bơm 8', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
-  { id: 7, label: 'Bơm 7', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
-  { id: 6, label: 'Bơm 6', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
-  { id: 5, label: 'Bơm 5', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
-  { id: 4, label: 'Bơm 4', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
-  { id: 3, label: 'Bơm 3', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
-  { id: 2, label: 'Bơm 2', powerKw: 160, currentA: 0, runtimeH: 130, status: 'unknown' },
-  { id: 1, label: 'Bơm 1', powerKw: 160, currentA: 0, runtimeH: 130, status: 'unknown' },
+  { id: 10, label: 'Bơm 10', description: '', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
+  { id: 9, label: 'Bơm 9', description: '', powerKw: 160, currentA: 0, runtimeH: 130, status: 'error' },
+  { id: 8, label: 'Bơm 8', description: '', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
+  { id: 7, label: 'Bơm 7', description: '', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
+  { id: 6, label: 'Bơm 6', description: '', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
+  { id: 5, label: 'Bơm 5', description: '', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
+  { id: 4, label: 'Bơm 4', description: '', powerKw: 160, currentA: 0, runtimeH: 130, status: 'running' },
+  { id: 3, label: 'Bơm 3', description: '', powerKw: 160, currentA: 0, runtimeH: 130, status: 'stopped' },
+  { id: 2, label: 'Bơm 2', description: '', powerKw: 160, currentA: 0, runtimeH: 130, status: 'unknown' },
+  { id: 1, label: 'Bơm 1', description: '', powerKw: 160, currentA: 0, runtimeH: 130, status: 'unknown' },
 ]
 
 export function formatOne(n: number) {
