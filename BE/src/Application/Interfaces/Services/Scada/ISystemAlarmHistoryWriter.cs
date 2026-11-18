@@ -1,11 +1,15 @@
 namespace Backend.Application.Interfaces.Services.Scada;
 
 /// <summary>
-/// Ghi sự cố hệ thống (API / Redis) vào <c>public.alarm_history</c>.
-/// Chỉ gọi khi có lỗi — không ghi start/stop bình thường.
+/// Ghi sự kiện hệ thống (vòng đời API / lỗi API / Redis) vào <c>public.alarm_history</c>.
 /// </summary>
 public interface ISystemAlarmHistoryWriter
 {
+    /// <summary>
+    /// Type = SYSTEM (EventTypeId=21) — backend khởi động hoặc dừng bình thường.
+    /// </summary>
+    Task WriteApiLifecycleAsync(string description, string? detail = null, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Type = SYSTEM (EventTypeId=22) — API không start / dừng bất thường / lỗi host.
     /// </summary>

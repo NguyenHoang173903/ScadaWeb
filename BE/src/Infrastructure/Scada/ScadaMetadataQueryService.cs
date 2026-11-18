@@ -1612,16 +1612,21 @@ public class ScadaMetadataQueryService(
                     ScadaErrorCodes.DeviceNotFound,
                     ScadaApiMessages.DeviceNotFound);
 
+            var category = (query.Category ?? "status").Trim().ToLowerInvariant();
             var q = db.AlarmHistories.AsNoTracking()
-                .Where(a => a.StartTime >= from && a.StartTime <= to)
-                .Where(a =>
+                .Where(a => a.StartTime >= from && a.StartTime <= to);
+            q = category == "system"
+                ? q.Where(a =>
+                    a.StationId == stationId
+                    || (a.DeviceId != null && stationDeviceIds.Contains(a.DeviceId.Value))
+                    || (a.StationId == null && a.DeviceId == null))
+                : q.Where(a =>
                     a.StationId == stationId
                     || (a.DeviceId != null && stationDeviceIds.Contains(a.DeviceId.Value)));
 
             if (query.DeviceId is { } filterDeviceId && filterDeviceId > 0)
                 q = q.Where(a => a.DeviceId == filterDeviceId);
 
-            var category = (query.Category ?? "status").Trim().ToLowerInvariant();
             q = category switch
             {
                 "value-change" or "valuechange" or "value_change" => q.Where(a =>
@@ -2076,10 +2081,10 @@ public class ScadaMetadataQueryService(
 
                 if (!liveByTag.TryGetValue(tagId, out var live))
                     continue;
-                if (live.Time < from)
+                if (live.Time < from || live.Time > to)
                     continue;
 
-                var tipTime = live.Time > to ? to : live.Time;
+                var tipTime = live.Time;
                 if (!samplesByTag.TryGetValue(tagId, out var pts))
                 {
                     samplesByTag[tagId] = [(tipTime, live.Value)];

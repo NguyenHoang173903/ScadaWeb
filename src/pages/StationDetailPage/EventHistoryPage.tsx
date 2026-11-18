@@ -201,9 +201,15 @@ export function EventHistoryPage() {
       id: String(row.id),
       stt: index + 1,
       time: new Date(row.startTime).toLocaleString('vi-VN'),
-      type: (['ERROR', 'INFO', 'WARNING', 'PUMP', 'Communication', 'Security'].includes(
-        row.type,
-      )
+      type: ([
+        'ERROR',
+        'INFO',
+        'WARNING',
+        'PUMP',
+        'SYSTEM',
+        'Communication',
+        'Security',
+      ].includes(row.type)
         ? row.type
         : 'INFO') as HistoryEventRow['type'],
       title: row.title,

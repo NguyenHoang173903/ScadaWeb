@@ -5,8 +5,8 @@ using Microsoft.Extensions.Logging;
 namespace Backend.Infrastructure.Realtime;
 
 /// <summary>
-/// Ghi <c>alarm_history</c> (SYSTEM) khi process API bị dừng đột ngột
-/// (ProcessExit mà chưa qua StopAsync bình thường). Không ghi khi stop/graceful shutdown.
+/// Ghi sự kiện vòng đời backend vào <c>alarm_history</c> và ghi thêm lỗi nếu
+/// process thoát bất thường trước khi host gọi StopAsync.
 /// </summary>
 public sealed class ApiAbruptStopAlarmHostedService(
     ISystemAlarmHistoryWriter alarms,
@@ -15,19 +15,23 @@ public sealed class ApiAbruptStopAlarmHostedService(
     private int _gracefulStop;
     private int _started;
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         Interlocked.Exchange(ref _started, 1);
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
-        logger.LogInformation("API abrupt-stop alarm watcher registered");
-        return Task.CompletedTask;
+        logger.LogInformation("API lifecycle and abrupt-stop alarm watcher registered");
+        await alarms.WriteApiLifecycleAsync(
+            "Backend.Api khởi động",
+            cancellationToken: cancellationToken);
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         Interlocked.Exchange(ref _gracefulStop, 1);
         AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
-        return Task.CompletedTask;
+        await alarms.WriteApiLifecycleAsync(
+            "Backend.Api dừng bình thường",
+            cancellationToken: cancellationToken);
     }
 
     private void OnProcessExit(object? sender, EventArgs e)

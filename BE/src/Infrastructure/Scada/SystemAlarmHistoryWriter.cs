@@ -8,8 +8,9 @@ using Microsoft.Extensions.Logging;
 namespace Backend.Infrastructure.Scada;
 
 /// <summary>
-/// Insert lỗi hệ thống vào <c>alarm_history</c>.
+/// Insert sự kiện hệ thống vào <c>alarm_history</c>.
 /// <list type="bullet">
+/// <item><c>SYSTEM</c> / EventTypeId 21 — vòng đời backend</item>
 /// <item><c>SYSTEM</c> / EventTypeId 22 — lỗi API</item>
 /// <item><c>Communication</c> / EventTypeId 23 — lỗi Redis</item>
 /// </list>
@@ -21,12 +22,26 @@ public sealed class SystemAlarmHistoryWriter(
 {
     public const string TypeSystem = "SYSTEM";
     public const string TypeCommunication = "Communication";
+    public const long EventTypeApiLifecycle = 21;
     public const long EventTypeSystem = 22;
     public const long EventTypeCommunication = 23;
 
     private static readonly TimeSpan RedisErrorMinInterval = TimeSpan.FromMinutes(2);
     private DateTimeOffset _lastRedisErrorAt = DateTimeOffset.MinValue;
     private readonly object _redisGate = new();
+
+    public Task WriteApiLifecycleAsync(
+        string description,
+        string? detail = null,
+        CancellationToken cancellationToken = default) =>
+        WriteCoreAsync(
+            TypeSystem,
+            EventTypeApiLifecycle,
+            deviceName: "Backend.Api",
+            tagName: "Api_Status",
+            description,
+            detail,
+            cancellationToken);
 
     public Task WriteApiErrorAsync(
         string description,
