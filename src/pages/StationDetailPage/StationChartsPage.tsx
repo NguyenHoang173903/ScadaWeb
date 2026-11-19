@@ -112,8 +112,13 @@ export function StationChartsPage() {
     if (!devices?.length) return
     const options = devices.map((d) => ({ value: String(d.id), label: d.name }))
     setDeviceOptions(options)
-    setDraft((prev) => ({ ...prev, deviceId: options[0].value }))
-    setApplied((prev) => ({ ...prev, deviceId: options[0].value }))
+    // Keep current pump when still in the list; only fall back to first option.
+    const pickDevice = (prev: ChartFilterValues) =>
+      options.some((option) => option.value === prev.deviceId)
+        ? prev
+        : { ...prev, deviceId: options[0].value }
+    setDraft(pickDevice)
+    setApplied(pickDevice)
   }, [chartDevices.data, validChartType, waterDevices.data])
 
   const deviceId = Number(applied.deviceId)
@@ -226,13 +231,19 @@ export function StationChartsPage() {
           setDraft(next)
         }}
         onFilter={() => {
-          const next = followCurrentTime ? createDefaultChartFilter() : draft
+          // Refresh the live time window without wiping the selected pump.
+          const next = followCurrentTime
+            ? { ...createDefaultChartFilter(), deviceId: draft.deviceId }
+            : draft
           setDraft(next)
           setApplied(next)
           if (followCurrentTime) setLiveTo(new Date())
         }}
         onReset={() => {
-          const defaultFilter = createDefaultChartFilter()
+          const defaultFilter = {
+            ...createDefaultChartFilter(),
+            deviceId: draft.deviceId,
+          }
           setDraft(defaultFilter)
           setApplied(defaultFilter)
           setLiveTo(new Date())

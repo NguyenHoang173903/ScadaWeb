@@ -72,13 +72,13 @@ export function StationSideNav({ mobileOpen = false, onNavigate }: StationSideNa
                   className={`${styles.navItem} ${styles.navParent} ${parentActive ? styles.active : ''}`}
                   title={item.label}
                   onClick={() => {
-                    setOpenGroups((prev) => {
-                      const nextOpen = !prev[item.id]
-                      if (nextOpen && !parentActive) {
-                        navigate(firstChildTo)
-                      }
-                      return { ...prev, [item.id]: nextOpen }
-                    })
+                    const nextOpen = !openGroups[item.id]
+                    setOpenGroups((prev) => ({ ...prev, [item.id]: nextOpen }))
+                    // navigate must not run inside a setState updater (updates BrowserRouter during render).
+                    if (nextOpen && !parentActive) {
+                      navigate(firstChildTo)
+                    }
+                    onNavigate?.()
                   }}
                 >
                   <Icon size={22} />

@@ -363,6 +363,14 @@
   font-size: 0.8rem;
 }
 
+.footerLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .footerVersion {
   flex-shrink: 0;
 }

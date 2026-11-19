@@ -11,8 +11,23 @@
   font-size: 0.82rem;
 }
 
+.leftGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  min-width: 0;
+}
+
 .left {
   min-width: 0;
+}
+
+.version {
+  /* Match .left (“Hệ thống giám sát thủy lợi Hà Nội”) — inherit footer color/size. */
+  flex-shrink: 0;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .rightGroup {
@@ -53,6 +68,7 @@
 }
 
 @media (max-width: 767px) {
+  .version,
   .copyright,
   .right {
     white-space: normal;
