@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import { logoutCurrentUser } from '@/services/auditLog'
@@ -18,6 +18,7 @@ export function SessionGuard() {
   const location = useLocation()
   const navigate = useNavigate()
   const [expired, setExpired] = useState(false)
+  const expiredRef = useRef(false)
 
   useEffect(() => {
     if (location.pathname === ROUTES.login) return
@@ -33,7 +34,9 @@ export function SessionGuard() {
 
   useEffect(() => {
     // 401 / failed refresh (http.ts cleared tokens): back to login.
+    // Do not override an idle-timeout dialog already on screen.
     const handleUnauthorized = () => {
+      if (expiredRef.current) return
       setExpired(false)
       navigate(ROUTES.login, { replace: true })
     }
@@ -58,6 +61,7 @@ export function SessionGuard() {
 
     const check = () => {
       if (isSessionExpired()) {
+        expiredRef.current = true
         logoutCurrentUser('session-expired')
         setExpired(true)
       }
@@ -81,7 +85,8 @@ export function SessionGuard() {
   }
 
   // Deep link without a session: redirect before any protected page renders or fetches.
-  if (!hasActiveSession() || !getRefreshToken()) {
+  // After idle logout the session/tokens are cleared on purpose — keep the dialog visible.
+  if (!expired && (!hasActiveSession() || !getRefreshToken())) {
     return <Navigate to={ROUTES.login} replace />
   }
 
@@ -91,6 +96,7 @@ export function SessionGuard() {
       {expired ? (
         <SessionExpiredDialog
           onLogin={() => {
+            expiredRef.current = false
             setExpired(false)
             navigate(ROUTES.login, { replace: true })
           }}
