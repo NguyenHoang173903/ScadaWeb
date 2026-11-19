@@ -24,8 +24,9 @@
 }
 
 .version {
+  /* Match .left (“Hệ thống giám sát thủy lợi Hà Nội”) — inherit footer color/size. */
   flex-shrink: 0;
-  color: #4b5563;
+  min-width: 0;
   white-space: nowrap;
 }
 
@@ -67,6 +68,7 @@
 }
 
 @media (max-width: 767px) {
+  .version,
   .copyright,
   .right {
     white-space: normal;

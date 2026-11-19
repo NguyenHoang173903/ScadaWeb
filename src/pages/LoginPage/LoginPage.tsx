@@ -258,11 +258,11 @@ export function LoginPage() {
         </div>
 
         <footer className={styles.footer}>
-          <span className={styles.footerVersion}>{APP_VERSION_LABEL}</span>
-          <div className={styles.footerRight}>
+          <div className={styles.footerLeft}>
             <span>PHẦN MỀM WEB SCADA</span>
-            <span>THỦY LỢI HÀ NỘI</span>
+            <span className={styles.footerVersion}>{APP_VERSION_LABEL}</span>
           </div>
+          <span>THỦY LỢI HÀ NỘI</span>
         </footer>
       </div>
     </div>
