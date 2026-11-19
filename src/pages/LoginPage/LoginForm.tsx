@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ArrowRight, Eye, EyeOff, Lock, ShieldCheck, UserRound } from 'lucide-react'
+import { APP_VERSION } from '@/constants/config'
 import { firstError, validateLoginPassword, validateUsername } from '@/validation'
 import styles from './LoginPage.module.css'
 
@@ -141,7 +142,7 @@ export function LoginForm({
         </p>
 
         <p className={styles.copyrightNote}>
-          Bản quyền thuộc CTY VASCO. Version 1.0
+          Bản quyền thuộc CTY VASCO. Version {APP_VERSION}
         </p>
       </form>
     </section>

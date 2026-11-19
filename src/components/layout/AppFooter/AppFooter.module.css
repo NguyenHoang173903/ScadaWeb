@@ -11,8 +11,22 @@
   font-size: 0.82rem;
 }
 
+.leftGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  min-width: 0;
+}
+
 .left {
   min-width: 0;
+}
+
+.version {
+  flex-shrink: 0;
+  color: #4b5563;
+  white-space: nowrap;
 }
 
 .rightGroup {

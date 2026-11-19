@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import loginBackground from '@/assets/images/Background_Login.png'
 import logoTlhn from '@/assets/images/Logo_TLHN.svg'
+import { APP_VERSION_LABEL } from '@/constants/config'
 import { ROUTES } from '@/constants/routes'
 import { reportAuthEvent } from '@/services/auditLog'
 import {
@@ -257,8 +258,11 @@ export function LoginPage() {
         </div>
 
         <footer className={styles.footer}>
-          <span>PHẦN MỀM WEB SCADA</span>
-          <span>THỦY LỢI HÀ NỘI</span>
+          <span className={styles.footerVersion}>{APP_VERSION_LABEL}</span>
+          <div className={styles.footerRight}>
+            <span>PHẦN MỀM WEB SCADA</span>
+            <span>THỦY LỢI HÀ NỘI</span>
+          </div>
         </footer>
       </div>
     </div>
